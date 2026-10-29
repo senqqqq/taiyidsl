@@ -1,0 +1,11 @@
+.venv/
+.uv-cache/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.test-tmp*/
+.pytest-tmp*/
+*.egg-info/
+output/
+dist/
+artiq_demo/

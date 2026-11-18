@@ -16,7 +16,8 @@ from taiyidsl.backends.artiq_spectrum.awg import materialize_segment
 
 from .._artifact_io import atomic_json
 from ..compiler.store import ArtifactSegments
-from .output_simulator import _card_views, _dds_views
+from .gate_annotations import point_gate_annotations
+from .output_simulator import _annotated_pulses, _card_views, _dds_views
 from .resources import asset_bytes
 from .viewer_execution import execution_axis
 
@@ -56,6 +57,7 @@ def export_store_report(store, directory, *, captures=()):
         }
         points = []
         for local, point in enumerate(compiled.points):
+            labels, virtual_z = point_gate_annotations(compiled, point)
             cards = []
             for view in _card_views(compiled, point):
                 program = view["program"]
@@ -114,7 +116,7 @@ def export_store_report(store, directory, *, captures=()):
                         ],
                         "segments": segments,
                         "steps": program["steps"],
-                        "pulses": program["pulses"],
+                        "pulses": _annotated_pulses(program["pulses"], labels),
                     }
                 )
             points.append(
@@ -122,6 +124,7 @@ def export_store_report(store, directory, *, captures=()):
                     "index": chunk_info["points"][local],
                     "coordinates": point.coordinates,
                     "cards": cards,
+                    "virtual_z": virtual_z,
                     "dds": list(
                         _dds_views(compiled, point, control_window=windows[point.index])
                     ),
@@ -207,6 +210,8 @@ nominal voltage and DDS curves are not measured waveforms.</p></header>
 <div class="controls"><label>Chunk<select id="chunk"></select></label>
 <label>Global point<select id="point"></select></label>
 <label>Inspect card / channel<select id="channel"></select></label>
+<label>AWG color<select id="color-by"><option value="pulse">By physical pulse</option>
+<option value="channel">By channel</option></select></label>
 <label>Start from logical T0 (µs)<input id="start" value="0"></label>
 <label>Window (µs)<input id="duration" value="1"></label>
 <button id="render">View window</button>
@@ -220,6 +225,8 @@ samples. DDS frequency (MHz) and amplitude (FS) remain command predictions with
 no RF phase reconstruction. Nonzero DDS hold extends through known control
 intervals; host waits and shot gaps have no assigned duration.
 AWG samples outside finite programs are omitted.
+AWG pulse colors are stable across zooms; gray marks samples outside pulse intervals.
+The legend hides the entire channel in either color mode.
 Chunk switching does not reset the compiled frame.
 Files work offline via local classic scripts; keep this directory together.</p>
 <script id="paged-plan" type="application/json">__PLAN__</script>

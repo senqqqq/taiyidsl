@@ -8,80 +8,16 @@ from importlib.util import resolve_name
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "src/taiyidsl"
-LEGACY_MODULES = {
-    "artiq",
-    "artiq_polar",
-    "artiq_ram",
-    "artiq_square",
-    "polar_validation",
-    "submission",
-    "waveforms",
-    "spectrum_schedule",
-    "spectrum_phase",
-    "spectrum_export",
-    "spectrum_banks",
-    "spectrum_dds",
-    "spectrum_waveforms",
-    "ramsey",
-    "cooling",
-    "templates",
-    "rb",
-    "rb_dsl",
-    "authoring",
-    "sections",
-    "operations",
-    "hardware",
-    "models",
-    "parameters",
-    "role_parameters",
-    "editable_parameters",
-    "optics",
-    "descriptor",
-    "spectrum_config",
-    "transport",
-    "pair_calibration",
-    "scheduling",
-    "section_schedule",
-    "shared_fields",
-    "chunking",
-    "streaming",
-    "_stream_initializer",
-    "analysis",
-    "imaging",
-    "rb_analysis",
-    "rb_results",
-    "session",
-    "session_worker",
-    "stream_runtime",
-    "run_store",
-    "readout",
-    "spectrum_runtime",
-    "spectrum_dds_runtime",
-    "capture_view",
-    "dds_view",
-    "experiment_report",
-    "native_audit",
-    "native_component_export",
-    "native_components",
-    "native_export",
-    "native_sources",
-    "native_view",
-    "output_simulator",
-    "paged_output",
-    "spectrum_bank_report",
-    "spectrum_dds_report",
-    "spectrum_report",
-    "viewer_execution",
-    "visualization",
-}
+COMPAT = ROOT / "_compat"
 
 
 def test_implementations_do_not_import_compatibility_forwarders():
-    forbidden = {f"taiyidsl.{name}" for name in LEGACY_MODULES}
+    forbidden = {f"taiyidsl.{path.stem}" for path in COMPAT.glob("*.py")}
+    assert forbidden, "No compatibility modules discovered"
     violations = []
     for path in ROOT.rglob("*.py"):
         relative = path.relative_to(ROOT)
-        if len(relative.parts) == 1 and path.stem in LEGACY_MODULES:
+        if path.is_relative_to(COMPAT):
             continue
         package = ".".join(("taiyidsl", *relative.parts[:-1]))
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -95,7 +31,9 @@ def test_implementations_do_not_import_compatibility_forwarders():
                 imported = [module, *(f"{module}.{a.name}" for a in node.names)]
             else:
                 continue
-            if set(imported) & forbidden:
+            if set(imported) & forbidden or any(
+                name.startswith("taiyidsl._compat") for name in imported
+            ):
                 violations.append(f"{relative}:{node.lineno}: {imported}")
     assert not violations, "\n".join(violations)
 

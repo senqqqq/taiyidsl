@@ -1,9 +1,9 @@
 """Owned resources and failure boundaries, with no drivers or subprocesses."""
 
 import hashlib
-import importlib.util
 import io
 import json
+import runpy
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -428,9 +428,6 @@ def test_failed_process_launch_closes_worker_log(tmp_path, monkeypatch):
 def test_legacy_worker_module_remains_an_executable_entry(monkeypatch):
     calls = []
     monkeypatch.setattr(worker_module, "main", action(calls, "main"))
-    legacy = Path(worker_module.__file__).resolve().parents[1] / "session_worker.py"
-    spec = importlib.util.spec_from_file_location("taiyidsl.session_worker", legacy)
-    module = importlib.util.module_from_spec(spec)
-    module.__name__ = "__main__"
-    exec(spec.loader.get_code(spec.name), module.__dict__)
+    monkeypatch.delitem(sys.modules, "taiyidsl.session_worker", raising=False)
+    runpy.run_module("taiyidsl.session_worker", run_name="__main__")
     assert calls == ["main"]

@@ -8,8 +8,8 @@
 | 内容 | Git / 发行包策略 |
 | --- | --- |
 | `src/taiyidsl/`，包括 viewer JS | Git、wheel、sdist |
-| `tests/`、`tests/data/`、`tests/fixtures/` | Git、sdist；基线是有效测试输入 |
-| `examples/`、`scripts/`、`docs/` 与无输出 notebook | Git、sdist；保留教程的全部源码输入 |
+| `tests/` | Git、sdist。回归测试读取 `fixtures/` 中的事件基线，`data/artiq_reference.json` 单独保留早期版本的校验和以供追溯 |
+| `examples/`、[维护工具 `scripts/`](../scripts/README.md)、`docs/` 与无输出 notebook | Git、sdist；保留教程的全部源码输入 |
 | README、CONTRIBUTING、AGENTS、CI、uv 配置与锁文件 | Git、sdist |
 | `.venv/`、`.uv-cache/` | 本地依赖与缓存，不上传 |
 | `.toolchains/` | 独立 ARTIQ 发行环境与安装器，不上传 |

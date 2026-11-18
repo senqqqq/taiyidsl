@@ -128,6 +128,13 @@ is a physical measurement or a model of the atoms.
 
 ## Contributing and checking changes
 
+| If you want to... | Start here |
+| --- | --- |
+| Write an experiment or a lab extension | [Tutorials](docs/tutorials/README.md) and [examples](examples/) |
+| Change the library | [Source packages](src/taiyidsl/) and their [responsibilities](docs/source_layout.md) |
+| Regenerate a notebook, inspect a driver export, or prepare a release | [Repository tools by task](scripts/README.md) |
+| Check a behavior change | The corresponding [tests](tests/) and the [test selection guide](CONTRIBUTING.md#during-development) |
+
 Read [CONTRIBUTING](CONTRIBUTING.md) and the [developer guide](docs/development.md)
 for code ownership, extension contracts and test selection. Use focused tests
 for the behavior changed, plus Ruff on edited Python files. A prose-only edit

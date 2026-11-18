@@ -42,8 +42,8 @@ CI 配置覆盖 Windows/Linux 完整离线检查及四份教程；本次未触�
   与找回、完整 Clifford 群和矩阵 recovery、配对分析、最终 DAC/捕获一致性。
 - 流式 RB host mock 保存 32 次观测，已提交项恢复不重复 dispatch。人工数据与 mock
   journal 均有明确来源，不是实验数据，也未执行生成的 ARTIQ kernel。
-- 交付复核脚本：`scripts/verify_extended_hybrid_delivery.py`；
-  统一证据：`output/extended_hybrid/verification_summary.json`。
+- 当时的复核脚本读取本机归档的 XML、ELF 和报告，汇总记录见
+  `output/extended_hybrid/verification_summary.json`。[历史脚本](https://github.com/TaiyiQ/pulse-dsl/blob/4faa94d269d130d3b7d6cb129e217c2cbe156afa/scripts/verify_extended_hybrid_delivery.py)
 - 浏览器实际查看未完成：桌面 app 授权超时，内置浏览器禁止本地 file:// URL。
   HTML 链接、JS 解码和 packed DAC 对等检查不替代浏览器视觉/交互验收。
   同步偏斜、模拟幅相、RTIO 吞吐、真实采集恢复和 CZ 门保真度仍需硬件验收。

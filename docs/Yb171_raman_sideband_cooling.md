@@ -39,7 +39,7 @@
 |---|---|---|
 | 设备、资源、接线和触发 | [labs/rsc.json](../examples/config/labs/rsc.json) | `LabConfig.load()` |
 | 共享光学参数 | [optics/rsc.json](../examples/config/optics/rsc.json) | `OpticsConfig.load()` |
-| 参数校验和字典序列化 | [optics.py](../src/taiyidsl/optics.py) | 轻量 schema 2 参数表 |
+| 参数校验和字典序列化 | [optics.py](../src/taiyidsl/config/optics.py) | 轻量 schema 2 参数表 |
 | 组合操作 | [cooling.py](../src/taiyidsl/experiments/cooling.py) | Python 函数展开为 DSL |
 | 实验 builder | [raman_sideband_cooling.py](../examples/raman_sideband_cooling.py) | 轴顺序、循环次数、读出方式、扫描和平均 |
 

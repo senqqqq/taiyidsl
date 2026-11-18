@@ -89,7 +89,7 @@ has a resolved `sdk_calls.txt` inspection listing. Explicit clock calibration is
 separate from normal shots; these listings are not hardware execution receipts.
 Regenerate `ramsey_long_delay.py` to inspect the updated Ramsey report first.
 
-Alternatively, `uv run --locked python scripts/export_hybrid_examples.py` exports
+Alternatively, `uv run --locked python scripts/spectrum/export_hybrid_examples.py` exports
 all five experiments plus the existing parallel clock/Rydberg demonstration and
 creates a single entry page at `output/artiq_spectrum/index.html`.
 It also includes `staged_workflow`, whose explicit offline fixture builders show
@@ -133,7 +133,7 @@ clears carried modulation and reestablishes a zero carrier reference. Spin locki
 has `--persist-frame` to retain terminal F=-pi/2 for comparison. This is a logical
 frame demonstration, not a physical qubit-state simulator.
 
-The original `scripts/explain_spectrum_ramsey.py` remains available to create
+The original `scripts/spectrum/explain_spectrum_ramsey.py` remains available to create
 static RF/timing figures and its detailed Chinese walkthrough from the Ramsey
 export. See [the viewer guide](../../docs/compiled_viewers.md) for controls,
 Python snippet access, precision and scope.

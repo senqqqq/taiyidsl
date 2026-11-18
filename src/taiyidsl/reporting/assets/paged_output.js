@@ -44,6 +44,7 @@
       for (const view of point.cards) bounds.push(view.sample0_time_s,
         view.sample0_time_s + view.physical_duration_samples / view.sample_rate_hz);
       for (const view of point.dds || []) bounds.push(view.command_start_s, view.command_end_s);
+      for (const event of point.virtual_z || []) bounds.push(event.time_s);
       if (!bounds.length) return {start_s: "0", duration_s: "0.000001"};
       const start = Math.min(...bounds), end = Math.max(...bounds);
       return {start_s: String(start), duration_s: String(Math.max(end - start, 1e-9))};
@@ -115,16 +116,16 @@
       const result = await TaiyiOutputSimulator.replayExecutions(
         {points: [point], packed, max_samples: 100000},
         [{point: point.index, ordinal: 0, shot: 0, offset_s: 0}], window,
-        {units: "voltage", cancelled: () => token !== generation});
+        {units: "voltage", color_by: $("color-by").value, cancelled: () => token !== generation});
       if (token !== generation) return;
-      for (const trace of result.traces) trace.visible = hiddenChannels.has(trace.uid) ? "legendonly" : true;
+      for (const trace of result.traces) trace.visible = hiddenChannels.has(trace.legendgroup || trace.uid) ? "legendonly" : true;
       const start = Number(window.start_s), duration = Number(window.duration_s);
       await Plotly.react("wave", result.traces, {
         margin:{l:90,r:25,t:45,b:110}, hovermode:"closest", dragmode:"zoom",
         legend:{orientation:"h",y:-0.18,itemdoubleclick:false},
         xaxis:{title:{text:"Local shot / control T0 (µs)"},anchor:"free",position:0,
           range:[start * 1e6, (start + duration) * 1e6]},
-        ...TaiyiOutputSimulator.outputAxes("voltage", result.hasDDS, point.cards.length > 0),
+        ...TaiyiOutputSimulator.outputAxes("voltage", result.hasDDS, result.inventory.length > 0),
         title:{text:`Point ${point.index} · all card channels · representative shot`}
       }, {responsive:true,displaylogo:false,scrollZoom:true,
         modeBarButtonsToRemove:["select2d","lasso2d","autoScale2d"]});
@@ -135,16 +136,16 @@
         $("wave").on("plotly_legendclick", event => {
           const trace = current?.result.traces[event.curveNumber];
           if (!trace) return false;
-          if (hiddenChannels.has(trace.uid)) hiddenChannels.delete(trace.uid); else hiddenChannels.add(trace.uid);
-          trace.visible = hiddenChannels.has(trace.uid) ? "legendonly" : true;
-          Plotly.restyle("wave", {visible:trace.visible}, [event.curveNumber]);
+          const {visible, indices} = TaiyiOutputSimulator.toggleChannel(current.result.traces, hiddenChannels, trace);
+          Plotly.restyle("wave", {visible}, indices);
           return false;
         });
         plotEventsBound = true;
       }
       const awg = result.overview ? `${result.bins} exact DAC min/max bins; zoom for individual samples` : `${result.exact} exact DAC samples`;
       const dds = result.hasDDS ? ` DDS: ${result.ddsVertices} command vertices; frequency MHz / amplitude FS. Hold continues; unknown host/shot gaps have no assigned duration.` : "";
-      $("notice").textContent = `${awg}; ${Object.keys(packed).length} packed segments loaded.${dds} Not hardware acceptance.`;
+      const frames = result.virtualZCount ? ` ${result.virtualZCount} virtual Z updates (zero duration).` : "";
+      $("notice").textContent = `${awg}; ${Object.keys(packed).length} packed segments loaded.${frames}${dds} Not hardware acceptance.`;
     } catch (error) { if (token === generation) $("notice").textContent = error.message; }
   }
   function onRelayout(event) {
@@ -176,6 +177,7 @@
   $("chunk").addEventListener("change", chunkChanged);
   $("point").addEventListener("change", pointChanged);
   $("channel").addEventListener("change", metadata);
+  $("color-by").addEventListener("change", render);
   $("render").addEventListener("click", render);
   $("full-sequence").addEventListener("click", () => {fitSelection(); render();});
   chunkChanged();

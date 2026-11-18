@@ -69,11 +69,12 @@ class Element {
   on(name, callback) { this.events[name] = callback; }
   remove() {}
 }
-for (const id of ['paged-plan','chunk','point','channel','start','duration',
+for (const id of ['paged-plan','chunk','point','channel','color-by','start','duration',
   'render','full-sequence','wave','metadata','notice']) {
   elements.set(id,new Element());
 }
 elements.get('paged-plan').textContent = '[{"index":0,"points":[0]}]';
+elements.get('color-by').value = 'pulse';
 const context = {TaiyiOutputSimulator:decoder, Promise, console,
   Plotly:{react:async (id,traces,layout) => {calls.push({traces,layout});},
     purge:() => {}, restyle:() => {}},

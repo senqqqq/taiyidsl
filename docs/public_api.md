@@ -40,6 +40,11 @@ Ramsey 的构造器；目录调整不会把两者合并成语义不同的同一�
 
 ## 继续支持的其他写法
 
+例如旧实验使用 `from taiyidsl.sections import Section`，仍会取得同一个类。
+新实验使用 `from taiyidsl import Section`，修改组合逻辑请打开
+[dsl/sections.py](../src/taiyidsl/dsl/sections.py)。下表中原先平铺的转发文件
+集中在 `_compat/`，只供旧导入按需解析。开发新代码直接使用表中的推荐入口。
+
 | 接口 | 保留范围与使用建议 |
 | --- | --- |
 | `compile_experiment(exp, setup, mapping, ...)` | 低层显式编译入口；实验室配置集中时通常用 `LabConfig` |

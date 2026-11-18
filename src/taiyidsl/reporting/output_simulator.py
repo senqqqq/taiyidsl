@@ -26,6 +26,7 @@ from taiyidsl.backends.artiq_spectrum.awg import materialize_segment, reconstruc
 from ..ir import CompileError
 from ..serialization import to_jsonable
 from .dds_view import dds_card_views as _dds_views
+from .gate_annotations import point_gate_annotations
 from .resources import asset_text
 
 DEFAULT_MAX_SAMPLES = 100_000
@@ -171,6 +172,17 @@ def simulate_output(
     return result
 
 
+def _annotated_pulses(pulses, labels):
+    """Join display-only gate labels through compiled logical IDs, without mutation."""
+    result = []
+    for pulse in pulses:
+        gates = [
+            dict(labels[key]) for key in pulse.get("logical_id", ()) if key in labels
+        ]
+        result.append({**pulse, "gate_annotations": gates} if gates else pulse)
+    return result
+
+
 def _payload(compiled, *, max_embedded_bytes=DEFAULT_MAX_EMBEDDED_BYTES):
     """Lossless resident bytes; zero loops stay symbolic and hashes deduplicate."""
     _point(compiled, 0)
@@ -204,6 +216,7 @@ def _payload(compiled, *, max_embedded_bytes=DEFAULT_MAX_EMBEDDED_BYTES):
     control_windows = {point["index"]: point["control"] for point in axis["points"]}
     points, packed = [], {}
     for index, point in enumerate(compiled.points):
+        labels, virtual_z = point_gate_annotations(compiled, point)
         views = []
         for view in _card_views(compiled, point):
             program = view["program"]
@@ -246,7 +259,7 @@ def _payload(compiled, *, max_embedded_bytes=DEFAULT_MAX_EMBEDDED_BYTES):
                     ],
                     "calibration_status": view["calibration_status"],
                     "physical_duration_samples": program["physical_duration_samples"],
-                    "pulses": program["pulses"],
+                    "pulses": _annotated_pulses(program["pulses"], labels),
                     "segments": segments,
                     "steps": program["steps"],
                 }
@@ -256,6 +269,7 @@ def _payload(compiled, *, max_embedded_bytes=DEFAULT_MAX_EMBEDDED_BYTES):
                 "index": index,
                 "coordinates": point.coordinates,
                 "cards": views,
+                "virtual_z": virtual_z,
                 "dds": list(
                     _dds_views(
                         compiled, point, control_window=control_windows[point.index]
@@ -309,6 +323,15 @@ def write_output_simulator(
     visibility across zooms. Windows exceeding the sample budget use labelled
     exact min/max DAC bins; zoom switches to individual samples. Display offsets
     do not enter sample decoding or rephase repeated shots.
+
+    AWG colors default to physical pulse occurrences, stable across zooms and
+    repeated shots; idle samples are gray. The toolbar switches to channel
+    colors (also ``color_by=channel`` in links). Bins split at pulse boundaries,
+    and the legend hides the entire channel in either mode.
+    Frozen RB gate metadata adds native gate/Clifford/recovery labels through
+    compiled logical event IDs. Spectrum virtual-Z events appear as zero-time
+    lines on a separate overlay axis; coincident events retain ordered hover
+    text and terminal frame updates are included without adding DAC samples.
 
     ``max_embedded_bytes`` defaults to 64 MiB of unique raw resident bytes across
     points, before compression; symbolic-zero recipes are exempt. Preflight
@@ -407,6 +430,7 @@ frequency/amplitude commands · all channels and repeated shots on one time axis
 </p></div>
 <span class="badge">OFFLINE · SPECTRUM</span></header>
 <div class="toolbar"><button id="full-sequence">Fit sequence</button>
+<label>AWG color <select id="color-by" aria-label="AWG color"></select></label>
 <span id="execution-summary"></span>
 <button id="page-previous" hidden>Previous executions</button>
 <button id="page-next" hidden>Next executions</button></div>
@@ -461,6 +485,14 @@ boundaries omit other preparation/readout stages and unknown host waits;
 this is not elapsed wall-clock time.
 Advanced can show full known control windows or a single local shot.<br>
 Each shot replays its compiled bytes. Display offsets never change the carrier phase.
+By physical pulse colors each occurrence on a channel in time order; repeated shots
+keep the same colors. Gray marks samples outside pulse intervals. Switch to By channel
+for fixed output colors; the legend always controls the entire channel.
+Pulse numbers identify physical pulses, not Clifford gates or virtual Z operations.
+When frozen RB metadata is present, hover also identifies the native gate,
+Clifford index and recovery. Dotted vertical lines with triangle tips mark virtual Z:
+hover for the angle and frame update. Coincident VZ operations share one line with
+ordered details; these zero-duration annotations do not change the DAC waveform.
 Long windows show exact min/max DAC bins; zoom loads individual samples.
 No RF is regenerated, and samples outside finite AWG programs remain undefined.
 Native Spectrum DDS tones appear in separate frequency (MHz) and amplitude (FS)

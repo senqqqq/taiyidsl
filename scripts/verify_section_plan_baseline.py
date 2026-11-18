@@ -11,8 +11,8 @@ import runpy
 from pathlib import Path
 
 from taiyidsl import LabConfig, Qubit, compile_experiment, ramsey, reference_setup, us
+from taiyidsl.backends.artiq_spectrum.awg import materialize_segment
 from taiyidsl.dsl import json_value
-from taiyidsl.spectrum_waveforms import materialize_segment
 
 ROOT = Path(__file__).resolve().parents[1]
 

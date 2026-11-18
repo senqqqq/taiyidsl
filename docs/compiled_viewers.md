@@ -22,8 +22,19 @@
 `compiled.waveform_simulator(path)` 是 Spectrum AWG/DDS 共用的输出查看器；
 `compiled.export_report(...)` 自动生成相同的 `waveform.html`。
 默认将多个 point/shot 的完整 Spectrum 窗口按执行顺序放到一条横轴，并在同一张图上显示
-**全部卡的全部已启用通道**。每条物理输出使用固定颜色，点击图例可显示/隐藏该输出
-在所有 executions 中的波形；缩放后保留图例显隐状态。卡/通道选择不再是查看主图的前提，
+**全部卡的全部已启用通道**。AWG 默认按每个物理 pulse 分色，顶部 **AWG color** 可切换
+**By physical pulse / By channel**。前者按同一 point、同一通道内的时间顺序给 pulse 编号，
+缩放、重复 shot 和跨硬件 segment 均保留颜色；通道外观的分段不改变最终 DAC 样本。
+空闲及声明 pulse 区间外的样本显示为灰色，悬停可查看 pulse 编号、局部起止时间、时长和
+编译后的 RF 轴相位。连续相邻的同类型 pulse 也分别着色；颜色不代表 Clifford 或 virtual Z。
+RF RB 教程提供冻结 basis、门词和恢复门信息时，查看器核对对应逻辑事件，并通过
+logical ID 将 native gate 名称、Clifford 编号及 RECOVERY 标记附到物理 pulse 悬停信息。
+标签来自已声明的实验记录，不根据幅度或相位猜测门；记录与编译事件不一致时拒绝导出。
+Spectrum 的 virtual Z 显示为带三角端点的零时长竖虚线，悬停包含旋转角及 frame 前后值。
+同一时刻、同一通道的多个 virtual Z 共用一条线，提示按原执行顺序逐项列出；末尾 recovery
+的 virtual Z 仍保留。竖线使用独立的显示轴，不改变 DAC 纵轴范围，也不添加 pulse 或等待。
+**By channel** 恢复每条物理输出的固定颜色。点击图例可显示/隐藏该输出的所有彩色段及 virtual Z 标记，
+在所有 executions 中一起生效；缩放、切换着色模式后保留显隐状态。卡/通道选择不再是查看主图的前提，
 高级选项仅用于定位某个脉冲或精确时间窗口。
 
 两种累计时间轴都属于编译结果的展示投影，不是实测墙钟时间。Pulse sheet 保留已知
@@ -34,7 +45,9 @@ Spectrum 窗口，保留组内空闲、不同卡的补偿和物理尾段。主�
 
 全序列概览从最终量化 int16 segment bytes 和静态 step table 回放，支持跨 segment
 边界和长零段循环，不压掉门内等待。长窗口显示标注的 min/max：每个连续时间 bin
-保存真实 DAC 最小/最大值，不抽取稀疏点冒充 RF。放大后在预算内显示逐样本值。
+保存真实 DAC 最小/最大值，不抽取稀疏点冒充 RF。概览 bin 在 pulse 边界额外拆分，
+不将跨门的统计区间归给其中一个 pulse。放大后在预算内显示逐样本值；着色边界的连线
+共享相邻真实样本端点，不补零、不插等待、不重置相位。
 与多次执行相交的解码工作按窗口限制；重复 shot 复用已有 packed 样本。
 
 HTML 按内容 hash 去重、压缩非零 segment，零段保持符号表示。文件大小随不同驻留
@@ -87,7 +100,7 @@ window = compiled.simulate_output(point=0, start_s=20e-6, duration_s=2e-6)
 ## 五个独立实验
 
 运行 `uv run --locked python examples/artiq_spectrum/<文件名>.py`。
-也可运行 `uv run --locked python scripts/export_hybrid_examples.py` 一次生成全部
+也可运行 `uv run --locked python scripts/spectrum/export_hybrid_examples.py` 一次生成全部
 示例及已有的并行 clock/Rydberg 演示，总入口为 `output/artiq_spectrum/index.html`。
 另有 `staged_workflow.py` 展示把多个操作封装为准备/冷却/读出 DSL 函数。
 这不是已有原生 `@kernel` 的接入器，见 [原生 ARTIQ 接入边界与方案](native_artiq_integration.md)。

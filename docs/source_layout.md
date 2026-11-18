@@ -1,25 +1,38 @@
-# 源码分层与分阶段重构
+# 源码分层与开发入口
 
-目录按职责组织，设备或具体功能作为二级划分。迁移保持实验时序、相位、扫描顺序、
-采集索引、native 生命周期和 notebook 的主要教学结构；公开 API 可通过薄转发兼容。
-每阶段同时处理实际依赖，不只移动文件。阶段状态以本页为准，不把目标目录写成已完成。
+编写实验从 [Ramsey 教程](tutorials/ramsey_clock_plain.ipynb) 开始。
+修改主库时先在下表选择源码包，再到对应测试检查行为。生成 notebook 或核验导出内容时，
+从[维护工具索引](../scripts/README.md)选择命令。
 
-## 阶段与验收范围
+## 职责与依赖方向
 
-| 阶段 | 实施内容 | 必要验证 | 状态 |
-| --- | --- | --- | --- |
-| 1 | `reporting/`、`native/`；资源及真实源码清单；生成 AST 的命名结构；底层 artifact I/O | 报告样本与触发、分页与 JS、native 生命周期及生成源码等价、导入与安装资源 | 已完成 |
-| 2 | `runtime/`、`results/`；资源所有权、执行阶段、数据提交边界 | 失败清理、已完成 shot 不重做、缺帧区别、存档兼容 | 已完成 |
-| 3 | `dsl/`、`config/`、`compiler/`；配置快照、编译阶段与 point sink、排程资源接口 | 来源定位、扫描与采集、相关时序/相位、内存与磁盘编译等价 | 已完成 |
-| 4 | 后端内部与可复用实验归类；生成与验证分离；保留旧入口 | 受影响后端的执行效果、源码／样本等价与对应实验示例；必要时离线编译 | 已完成 |
+| 位置 | 唯一职责 |
+| --- | --- |
+| `dsl/` | 记录实验意图；Experiment、指令、pulse、Section 和 operation 组合 |
+| `config/` | Qubit/设备/接线/标定模型、参数快照和配置解析 |
+| `compiler/` | 编译阶段、扫描、排程、采集索引与分块编译 |
+| `backends/artiq/` | AD9910/TTL 目标展开、代码生成、独立 mock 执行与验证 |
+| `backends/artiq_spectrum/` | 混合时间域、AWG/DDS 计划、bank 和导出 |
+| `native/` | 外部原生类的声明、源码固定、审计和组合；不是实验室 kernel 集合 |
+| `runtime/` | 显式连接、上传、执行、生命周期、运行 journal 与读出接口 |
+| `results/` | 标量/图像结果、存档与数据分析 |
+| `reporting/` | 计划、样本、源码和执行证据的展示 |
+| `experiments/` | 可复用实验／操作及纯序列数学；DSL 构建与理想算法分别归属，专用实验仍放实验室包 |
 
-阶段之间保留可运行的检查点。结构迁移与异常路径修复分别审阅；不顺带增加真实相机、
-新硬件能力或插件自动发现。每阶段只跑实际影响的检查，沿用仍然有效的证据。
+`lab.py` 保留使用入口；单位与唯一的计划事件模型继续保持轻量。不会同时建立
+`models`、`domain`、`contracts` 三套重复模型。真正共享的数据格式要写清字段、单位、
+拥有者和序列化规则，业务规则仍属于各自模块。
 
-## 当前已迁移的归属
+依赖约束：配置不调用编译/执行/报告；DSL 不加载驱动；编译器通过后端契约完成
+目标展开；runtime 消费产物；reporting 只观察快照。应用和实验室包使用公共 API。
+SDK 只在明确的硬件适配入口加载。
+
+## 包内导航
 
 ```text
 src/taiyidsl/
+├── __init__.py            # 实验作者使用的公开 API
+├── _compat/               # 旧平铺导入的适配文件
 ├── dsl/
 │   ├── values.py           # SweepParameter、维度/计数验证与绑定值解析
 │   ├── pulses.py           # 命名 pulse 与相位调制声明
@@ -132,6 +145,9 @@ src/taiyidsl/
 │   ├── analysis.py         # 通用拟合与校准建议
 │   ├── rb_results.py       # 同 shot 联合统计
 │   └── rb_analysis.py      # RB 拟合
+├── units.py               # 量纲与单位换算
+├── execution.py           # 已用输出与共享资源的初始化约定
+├── serialization.py       # 供导出和查看器复用的编码
 ├── spectrum_identity.py   # 编译与执行共享的纯标定/硬件指纹
 ├── spectrum_calibration.py # 标定分析与运行时解析共用，保留根层
 ├── host_plan.py           # 已编译 host 计划的顺序/布局读取，无编译依赖
@@ -140,9 +156,11 @@ src/taiyidsl/
 └── _artifact_io.py         # 规范字节、哈希、原子 JSON 发布
 ```
 
-后端和可复用实验已归入上述包。已迁移模块的平铺路径保留为兼容入口，不再承担
-第二份实现；库内部导入规范位置，不经兼容入口绕行。拆分到多个所有者的旧模块按符号
-解析，仍使用同一对象；单一所有者的旧模块转发到该实现。
+包根包含公开入口、实验室配置入口和跨包共享的实现。旧平铺导入集中在 `_compat/`：
+Python 先在正常包目录中查找模块，再按需从此目录加载旧入口。
+例如修改 Section 组合打开 `dsl/sections.py`，修正放置算法打开
+`compiler/section_schedule.py`。新增功能直接写入其职责包。各旧入口的推荐用法
+见[公共 API 与迁移表](public_api.md)。
 根层并非必须清空：`lab` 是应用入口，`units/ir/host_plan/_artifact_io` 是共享基础能力。
 `spectrum_calibration` 同时服务标定分析和运行时解析，保留根层共享边界，不能为按设备
 归档而让运行器反向依赖实验或分析流程。
@@ -151,29 +169,6 @@ src/taiyidsl/
 
 `_artifact_io` 不依赖编译器、运行器或报告。`RunStore`、编译存储和报告各自使用它，
 避免为了文件哈希或写 JSON 而导入完整的编译存储模块。编码和持久化顺序保持原契约。
-
-## 职责与依赖方向
-
-| 位置 | 唯一职责 |
-| --- | --- |
-| `dsl/` | 记录实验意图；Experiment、指令、pulse、Section 和 operation 组合 |
-| `config/` | Qubit/设备/接线/标定模型、参数快照和配置解析 |
-| `compiler/` | 编译阶段、扫描、排程、采集索引与分块编译 |
-| `backends/artiq/` | AD9910/TTL 目标展开、代码生成、独立 mock 执行与验证 |
-| `backends/artiq_spectrum/` | 混合时间域、AWG/DDS 计划、bank 和导出 |
-| `native/` | 外部原生类的声明、源码固定、审计和组合；不是实验室 kernel 集合 |
-| `runtime/` | 显式连接、上传、执行、生命周期、运行 journal 与读出接口 |
-| `results/` | 标量/图像结果、存档与数据分析 |
-| `reporting/` | 计划、样本、源码和执行证据的展示 |
-| `experiments/` | 可复用实验／操作及纯序列数学；DSL 构建与理想算法分别归属，专用实验仍放实验室包 |
-
-`lab.py` 保留使用入口；单位与唯一的计划事件模型继续保持轻量。不会同时建立
-`models`、`domain`、`contracts` 三套重复模型。真正共享的数据格式要写清字段、单位、
-拥有者和序列化规则，业务规则仍属于各自模块。
-
-依赖约束：配置不调用编译/执行/报告；DSL 不加载驱动；编译器通过后端契约完成
-目标展开；runtime 消费产物；reporting 只观察快照。应用和实验室包使用公共 API。
-SDK 只在明确的硬件适配入口加载。
 
 ### 生成、验证与序列数学
 
@@ -198,7 +193,7 @@ Clifford 顺序与 recovery 规则由数学层维护。旧 `templates.clifford_g
 `Section`、`section()`、`add()`、`layer()` 属于 `dsl/sections.py`。
 编译器处理的是 Section 的放置和资源约束，使用 `compiler/section_schedule.py`
 这类明确名字，不再命名为另一份 `compiler/sections.py`，也不复制 Section 类型。
-旧 `sections.py` 和 `section_schedule.py` 分别转发到上述唯一实现。
+兼容入口 `taiyidsl.sections` 和 `taiyidsl.section_schedule` 分别转发到上述实现。
 
 同理，`config/transport.py` 的 `IZ/MoveProfile/TransportConfig` 属于配置，
 `compiler/spatial.py` 的 `SpatialState` 属于编译期间的空间状态。旧 transport 入口
@@ -212,6 +207,18 @@ Clifford 顺序与 recovery 规则由数学层维护。旧 `templates.clifford_g
 - HTML/JS 使用包资源读取。报告源码 catalog 显式记录实际实现，不复制兼容 shim 充当执行源码。
 - 生成 ARTIQ 程序保持独立部署能力，不借分包让 kernel 依赖 DSL 内部实现。
 - 测试保留有效断言，按阶段迁移归属；跨层用例继续检查真实消费者，不只检查文件是否存在。
+
+## 阶段与验收范围
+
+| 阶段 | 实施内容 | 必要验证 | 状态 |
+| --- | --- | --- | --- |
+| 1 | `reporting/`、`native/`；资源及真实源码清单；生成 AST 的命名结构；底层 artifact I/O | 报告样本与触发、分页与 JS、native 生命周期及生成源码等价、导入与安装资源 | 已完成 |
+| 2 | `runtime/`、`results/`；资源所有权、执行阶段、数据提交边界 | 失败清理、已完成 shot 不重做、缺帧区别、存档兼容 | 已完成 |
+| 3 | `dsl/`、`config/`、`compiler/`；配置快照、编译阶段与 point sink、排程资源接口 | 来源定位、扫描与采集、相关时序/相位、内存与磁盘编译等价 | 已完成 |
+| 4 | 后端内部与可复用实验归类；生成与验证分离；保留旧入口 | 受影响后端的执行效果、源码／样本等价与对应实验示例；必要时离线编译 | 已完成 |
+
+阶段之间保留可运行的检查点。结构迁移与异常路径修复分别审阅；不顺带增加真实相机、
+新硬件能力或插件自动发现。每阶段只跑实际影响的检查，沿用仍然有效的证据。
 
 第一阶段本地证据放在忽略目录 `output/refactor/phase1/`。它不是新克隆的前置依赖，
 也不替代未来修改后的定向验证。旧发布准备产物位于 `output/release_prep/`，仅代表其

@@ -327,7 +327,7 @@ get('output-data').textContent = JSON.stringify(payload);
 get('units').value = 'codes'; get('display').value = 'lines';
 global.document = {getElementById: get, createElement: tag => new Element(tag),
   createDocumentFragment: () => new Element('fragment')};
-global.location = {search: '?point=0&t0=0.0000196&t1=0.00001968'};
+global.location = {search: '?point=0&t0=0.0000196&t1=0.00001968&color_by=channel'};
 const pending = [];
 let outstanding = 0, maxOutstanding = 0;
 global.Plotly = {react: (id, traces) => new Promise(resolve => {
@@ -499,7 +499,7 @@ get('output-data').textContent=JSON.stringify(payload);
 get('units').value='codes'; get('display').value='lines';
 global.document={getElementById:get,createElement:tag=>new Element(tag),
   createDocumentFragment:()=>new Element('fragment')};
-global.location={search:''};
+global.location={search:'?color_by=channel'};
 let traces, layout, plots=0;
 global.Plotly={react:async(id,data,next)=>{traces=data; layout=next; plots++;},
   restyle:(id,patch,indices)=>indices.forEach(i=>Object.assign(traces[i],patch))};

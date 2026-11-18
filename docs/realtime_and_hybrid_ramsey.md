@@ -89,7 +89,7 @@ Rabi/Ramsey/echo/spin-locking/allXY 可以在混合目录下各设一个清楚�
 
 ```powershell
 uv run --locked python examples/artiq_spectrum/ramsey_long_delay.py
-uv run --locked python scripts/explain_spectrum_ramsey.py
+uv run --locked python scripts/spectrum/explain_spectrum_ramsey.py
 ```
 
 保留原示例三个 dark time：10 µs、1 ms、100 ms。每点两个 200 µs、30 kHz、
@@ -142,7 +142,7 @@ P2起相=(360°×30kHz×(220µs+delay)−90°) mod360°。
 sample140开始P1的RF样本。后者是规划的物理AWG输出起点，但目前仍是模型值，
 没有测量证明连接器实际严格在该时刻输出；真实零电压偏置和输出响应也需校准。
 
-运行 `uv run --locked python scripts/verify_spectrum_phase_equivalence.py`，
+运行 `uv run --locked python scripts/spectrum/verify_spectrum_phase_equivalence.py`，
 得到 `output/artiq_spectrum/phase_equivalence/comparison.json` 及各变体完整导出。
 比较覆盖原始10µs/1ms/100ms三个扫描点、最终int16样本逐字节、step table、
 原生ARTIQ源码、末尾frame，并额外接第三个pulse检查作用范围。

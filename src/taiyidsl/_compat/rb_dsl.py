@@ -1,0 +1,10 @@
+"""Compatibility alias for :mod:`taiyidsl.experiments.rb_sections`.
+
+Both paths share one module, including private helpers and existing patches.
+"""
+
+import sys as _sys
+
+from taiyidsl.experiments import rb_sections as _implementation
+
+_sys.modules[__name__] = _implementation

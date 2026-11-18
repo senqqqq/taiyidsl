@@ -7,6 +7,8 @@ TaiyiDSL 的公共入口、配置和扩展应让实验代码直接表达时序�
 源码目录、依赖方向和当前迁移阶段见[源码分层](source_layout.md)。`Section` 的定义与
 组合 API 属于 DSL；编译器中的 `section_schedule` 只处理它的排程，不重复定义 Section。
 
+维护教程、复核驱动时序或审阅导出文件时，可按任务查找[仓库工具](../scripts/README.md)。
+
 ## 先保持实验作者的上手路线
 
 入门以 [Plain Ramsey](tutorials/ramsey_clock_plain.ipynb) 为基准，按

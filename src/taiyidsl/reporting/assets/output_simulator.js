@@ -5,6 +5,16 @@
   const decodedCache = new Map();
   let cacheBytes = 0;
 
+  function traceUid(...parts) {
+    // Plotly uses uid in CSS selectors while removing old traces/colorbars.
+    // Encode every UTF-16 code unit: stable, collision-free, CSS-safe, and
+    // independent of zoom/trace order. Keep semantic keys in legendgroup.
+    const value = JSON.stringify(parts);
+    let encoded = "t";
+    for (let i = 0; i < value.length; i++) encoded += value.charCodeAt(i).toString(16).padStart(4, "0");
+    return encoded;
+  }
+
   function fraction(value) {
     if (Array.isArray(value)) return value.map(BigInt);
     if (!Number.isFinite(Number(value))) throw new Error("Time must be finite.");
@@ -255,9 +265,15 @@
       if (full) fullRanges.set(segment.sha256, result);
       return result;
     }
-    for (let bin = 0; bin < count; bin++) {
-      const begin = first + Number(BigInt(bin) * BigInt(last - first) / BigInt(count));
-      const end = first + Number(BigInt(bin + 1) * BigInt(last - first) / BigInt(count));
+    // Refine the regular grid at pulse boundaries, retaining exact extrema.
+    const edges = new Set([first, last]);
+    for (let bin = 1; bin < count; bin++) edges.add(first + Number(BigInt(bin) * BigInt(last - first) / BigInt(count)));
+    for (const boundary of options.boundaries || []) {
+      if (Number.isSafeInteger(boundary) && boundary > first && boundary < last) edges.add(boundary);
+    }
+    const ordered = [...edges].sort((a, b) => a - b);
+    for (let bin = 0; bin + 1 < ordered.length; bin++) {
+      const begin = ordered[bin], end = ordered[bin + 1];
       let low = 32767, high = -32768;
       while (spanIndex < spans.length && spans[spanIndex].end <= begin) spanIndex++;
       for (let index = spanIndex; index < spans.length && spans[index].start < end; index++) {
@@ -282,6 +298,12 @@
       for (const channel of view.active_channels) {
         const key = JSON.stringify([view.group, view.card, channel]);
         found.set(key, {key, group: view.group, card: view.card, channel});
+      }
+    }
+    for (const point of points) for (const event of point.virtual_z || []) {
+      for (const output of event.channels || []) {
+        const key = JSON.stringify([output.group, output.card, output.channel]);
+        if (!found.has(key)) found.set(key, {...output, key});
       }
     }
     const palette = ["#167c79", "#d47724", "#7657b5", "#c13b58", "#337bb1", "#74933e", "#b56b9b", "#805b39"];
@@ -351,7 +373,7 @@
     return inventory.flatMap(item => ["frequency", "amplitude"].map(quantity => ({
       type: "scatter", mode: "lines", x: [], y: [], customdata: [],
       name: `${item.name} · ${quantity === "frequency" ? "MHz" : "amplitude"}`,
-      uid: `${item.key}:${quantity}`, legendgroup: `${item.key}:${quantity}`,
+      uid: traceUid("dds", item.key, quantity), legendgroup: `${item.key}:${quantity}`,
       yaxis: quantity === "frequency" ? "y2" : "y3", showlegend: true, connectgaps: false,
       line: {color: item.color, width: 1.6, simplify: false, shape: "linear"},
       hovertemplate: "Time %{x:.9f} µs<br>Execution %{customdata[0]} · point %{customdata[1]} · shot %{customdata[2]}<br>%{customdata[3]}<extra>%{fullData.name}</extra>"
@@ -360,7 +382,7 @@
 
   function ddsTraces(views, options) {
     const inventory = options.inventory || ddsInventory([{dds: views}]);
-    const traces = emptyDDSTraces(inventory), byKey = new Map(traces.map(trace => [trace.uid, trace]));
+    const traces = emptyDDSTraces(inventory), byKey = new Map(traces.map(trace => [trace.legendgroup, trace]));
     const offset = Number(options.offset_s || 0), entry = options.entry || {ordinal: 0, point: 0, shot: 0};
     let vertices = 0;
     for (const view of views) {
@@ -387,12 +409,147 @@
   function outputAxes(units, hasDDS, hasAWG = true) {
     const common = {gridcolor: "#e2e5dc", zerolinecolor: "#939b92", anchor: "x", automargin: true};
     const title = units === "codes" ? "AWG · DAC code" : units === "voltage" ? "AWG · nominal V" : "AWG · normalized FS";
-    if (!hasDDS) return {yaxis: {...common, title: {text: title}}};
+    const virtualAxis = {overlaying: "y", range: [0, 1], visible: false, fixedrange: true, anchor: "x"};
+    if (!hasDDS) return {yaxis: {...common, title: {text: title}}, yaxis4: virtualAxis};
     return {
       yaxis: {...common, title: {text: title}, domain: hasAWG ? [.72, 1] : [0, 1], visible: hasAWG},
       yaxis2: {...common, title: {text: "DDS frequency (MHz)"}, domain: hasAWG ? [.36, .64] : [.55, 1]},
-      yaxis3: {...common, title: {text: "DDS amplitude (FS)"}, domain: hasAWG ? [0, .28] : [0, .45]}
+      yaxis3: {...common, title: {text: "DDS amplitude (FS)"}, domain: hasAWG ? [0, .28] : [0, .45]},
+      yaxis4: virtualAxis
     };
+  }
+
+  const PULSE_COLORS = ["#337bb1", "#d47724", "#7657b5", "#16867a", "#c13b58", "#798d28", "#b35c98", "#805b39", "#009ac7", "#b38f00", "#9b3a35", "#505fb0"];
+  const IDLE_COLOR = "#929b9f", OVERLAP_COLOR = "#454b52";
+  const channelKey = (view, channel) => JSON.stringify([view.group, view.card, channel]);
+
+  function pulseAnnotations(point) {
+    // Number occurrences over the whole point, not the visible window or shot.
+    // A pulse crossing hardware segments retains one identity.
+    const byView = new Map(point.cards.map(view => [view, new Map()])), channels = new Map();
+    for (const view of point.cards) for (const pulse of view.pulses || []) {
+      if (!(pulse.duration_samples > 0)) continue;
+      const key = channelKey(view, pulse.channel);
+      if (!channels.has(key)) channels.set(key, []);
+      channels.get(key).push({view, pulse, start: view.sample0_time_s + pulse.start_sample / view.sample_rate_hz});
+    }
+    for (const items of channels.values()) {
+      items.sort((a, b) => a.start - b.start);
+      items.forEach(({view, pulse}, index) => {
+        const map = byView.get(view);
+        if (!map.has(pulse.channel)) map.set(pulse.channel, []);
+        map.get(pulse.channel).push({pulse, index});
+      });
+    }
+    return byView;
+  }
+
+  function pulseSpans(items, first, last) {
+    const events = new Map([[first, {add: [], remove: []}], [last, {add: [], remove: []}]]);
+    for (const item of items) {
+      const a = Math.max(first, item.pulse.start_sample), b = Math.min(last, item.pulse.start_sample + item.pulse.duration_samples);
+      if (b <= a) continue;
+      for (const edge of [a, b]) if (!events.has(edge)) events.set(edge, {add: [], remove: []});
+      events.get(a).add.push(item); events.get(b).remove.push(item.index);
+    }
+    const edges = [...events.keys()].sort((a, b) => a - b), active = new Map(), spans = [];
+    for (let i = 0; i + 1 < edges.length; i++) {
+      const event = events.get(edges[i]);
+      for (const index of event.remove) active.delete(index);
+      for (const item of event.add) active.set(item.index, item);
+      const members = [...active.values()].sort((a, b) => a.index - b.index);
+      spans.push({first: edges[i], last: edges[i + 1], items: members,
+        kind: members.length === 1 ? "pulse" : members.length ? "overlap" : "idle",
+        pulse_indices: members.map(item => item.index)});
+    }
+    return spans;
+  }
+
+  function pulseColor(span) {
+    if (span.kind === "idle") return IDLE_COLOR;
+    if (span.kind === "overlap") return OVERLAP_COLOR;
+    const index = span.pulse_indices[0];
+    return PULSE_COLORS[index] || `hsl(${(index * 137.508) % 360}, 62%, 40%)`;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[character]);
+  }
+
+  function gateDescription(annotations = []) {
+    return annotations.map(gate => `Gate ${escapeHtml(gate.native_gate)} · Clifford #${escapeHtml(gate.clifford_index)} · ${gate.recovery ? "RECOVERY" : `random (position ${Number(gate.clifford_position) + 1})`} · step ${Number(gate.implementation_step) + 1}`).join("<br>");
+  }
+
+  function pulseDescription(span, view) {
+    if (span.kind === "idle") return "Outside declared pulse intervals";
+    const details = span.items.map(({pulse, index}) => {
+      const start = view.sample0_time_s + pulse.start_sample / view.sample_rate_hz;
+      const duration = pulse.duration_samples / view.sample_rate_hz;
+      const phase = ((pulse.phase_rad * 180 / Math.PI) % 360 + 360) % 360;
+      const gate = gateDescription(pulse.gate_annotations);
+      return (gate ? gate + "<br>" : "") + `Pulse ${index + 1} · local T0 ${Number((start * 1e6).toPrecision(12))}–${Number(((start + duration) * 1e6).toPrecision(12))} µs · duration ${Number((duration * 1e6).toPrecision(12))} µs · RF phase ${Number(phase.toPrecision(10))}°`;
+    });
+    return (span.kind === "overlap" ? "Overlapping pulse annotations; showing final DAC<br>" : "") + details.join("<br>");
+  }
+
+  function toggleChannel(traces, hidden, selected) {
+    const key = selected.legendgroup || selected.uid;
+    if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
+    const visible = hidden.has(key) ? "legendonly" : true, indices = [];
+    traces.forEach((trace, index) => {
+      if ((trace.legendgroup || trace.uid) === key) {trace.visible = visible; indices.push(index);}
+    });
+    return {visible, indices};
+  }
+
+  function virtualZTraces(points, entries, window, inventory) {
+    const byPoint = new Map(points.map(point => [point.index, point]));
+    const channels = new Map(inventory.map(item => [item.key, item]));
+    const groups = new Map(), traces = new Map();
+    const left = Number(window.start_s), right = left + Number(window.duration_s);
+    let count = 0;
+    for (const entry of entries) {
+      const offset = Number(decimal(fraction(entry.offset_fraction || entry.offset_s || 0)));
+      for (const event of byPoint.get(entry.point)?.virtual_z || []) {
+        const time = event.time_s + offset;
+        // Include endpoints so a terminal recovery VZ remains inspectable.
+        if (time < left || time > right || time < (entry.start_s ?? -Infinity) || time > (entry.end_s ?? Infinity)) continue;
+        if (!(event.channels || []).length) continue;
+        count++;
+        for (const output of event.channels) {
+          const key = channelKey(output, output.channel);
+          const groupKey = JSON.stringify([entry.ordinal, entry.point, entry.shot, key, event.time_s]);
+          if (!groups.has(groupKey)) groups.set(groupKey, {entry, key, time, events: []});
+          groups.get(groupKey).events.push(event);
+        }
+      }
+    }
+    const degrees = angle => Number((angle * 180 / Math.PI).toPrecision(10));
+    for (const {entry, key, time, events} of groups.values()) {
+      if (!traces.has(key)) traces.set(key, {
+        type: "scatter", mode: "lines+markers", x: [], y: [], customdata: [],
+        name: `${channels.get(key).name} · virtual Z`, uid: traceUid("virtual-z", key),
+        legendgroup: key, showlegend: false, connectgaps: false, yaxis: "y4",
+        line: {color: "#5b6570", width: 1.3, dash: "dot", simplify: false},
+        marker: {color: "#5b6570", symbol: "triangle-down", size: []},
+        meta: {kind: "virtual_z"},
+        hovertemplate: "Time %{x:.9f} µs<br>Execution %{customdata[0]} · point %{customdata[1]} · shot %{customdata[2]}<br>%{customdata[3]}<extra>%{fullData.name}</extra>"
+      });
+      const trace = traces.get(key);
+      const detail = events.map((event, index) => {
+        const gate = gateDescription(event.gate_annotations);
+        const frame = Number.isFinite(event.frame_before_rad) && Number.isFinite(event.frame_after_rad) ? ` · frame ${degrees(event.frame_before_rad)}° → ${degrees(event.frame_after_rad)}°` : "";
+        return (gate ? gate + "<br>" : "") + `VZ ${index + 1}/${events.length} · Rz(${degrees(event.angle_rad)}°)${frame} · zero duration`;
+      }).join("<br>");
+      // Coincident VZs share one line with ordered hover text. The auxiliary
+      // axis is presentation-only, so these lines never affect DAC scaling.
+      trace.x.push(time * 1e6, time * 1e6, time * 1e6, null);
+      trace.y.push(.02, .5, .98, null);
+      trace.marker.size.push(0, 0, 7, 0);
+      for (let i = 0; i < 3; i++) trace.customdata.push([entry.ordinal, entry.point, entry.shot, detail]);
+      trace.customdata.push(null);
+    }
+    return {traces: [...traces.values()], count};
   }
 
   async function replayExecutions(payload, entries, window, options = {}) {
@@ -403,8 +560,9 @@
     }
     const inventory = channelInventory(payload.points), jobs = [];
     const toneInventory = ddsInventory(payload.points);
-    const toneTraces = emptyDDSTraces(toneInventory), toneByKey = new Map(toneTraces.map(trace => [trace.uid, trace]));
-    const points = new Map(payload.points.map(point => [point.index, point]));
+    const toneTraces = emptyDDSTraces(toneInventory), toneByKey = new Map(toneTraces.map(trace => [trace.legendgroup, trace]));
+    const points = new Map(payload.points.map(point => [point.index, point])), annotations = new Map();
+    const colorByPulse = options.color_by !== "channel";
     const maxSamples = options.max_samples || payload.max_samples || 100000;
     let requested = 0, ddsVertices = 0;
     for (const entry of entries) {
@@ -422,7 +580,7 @@
           offset_s: Number(decimal(offset)), entry, inventory: toneInventory});
         ddsVertices += dds.vertices;
         for (const trace of dds.traces) {
-          const target = toneByKey.get(trace.uid);
+          const target = toneByKey.get(trace.legendgroup);
           for (const field of ["x", "y", "customdata"]) target[field].push(...trace[field]);
         }
       }
@@ -436,59 +594,97 @@
           start_s: decimal(add(fraction(view.sample0_fraction), [BigInt(first) * rate[1], rate[0]])),
           duration_s: decimal([BigInt(last - first) * rate[1], rate[0]])
         };
-        jobs.push({entry, view, local: clipped, first, last, offset: Number(decimal(offset))});
+        if (!annotations.has(point.index)) annotations.set(point.index, pulseAnnotations(point));
+        jobs.push({entry, view, local: clipped, first, last, offset: Number(decimal(offset)), annotations: annotations.get(point.index).get(view)});
       }
     }
     // Bound the whole plotted window, not each of dozens of repeated shots.
     const overview = jobs.some(job => job.last - job.first > maxSamples) || requested > maxSamples * Math.max(1, inventory.length);
     const traces = inventory.map(item => ({
       type: "scatter", mode: options.display === "markers" && !overview ? "markers" : options.display === "both" && !overview ? "lines+markers" : "lines",
-      x: [], y: [], customdata: [], name: item.name, uid: item.key, legendgroup: item.key,
+      // A null legend anchor remains clickable when zoom excludes all idle
+      // samples. It is not a DAC sample and does not enter any sample count.
+      x: colorByPulse ? [null] : [], y: colorByPulse ? [null] : [], customdata: colorByPulse ? [null] : [],
+      name: item.name, uid: traceUid("awg", item.key), legendgroup: item.key,
       showlegend: true, connectgaps: false,
-      line: {color: item.color, width: overview ? 1 : 1.3, simplify: false, shape: options.display === "hold" && !overview ? "hv" : "linear"},
-      marker: {color: item.color, size: 3},
+      line: {color: colorByPulse ? IDLE_COLOR : item.color, width: overview ? 1 : 1.3, simplify: false, shape: options.display === "hold" && !overview ? "hv" : "linear"},
+      marker: {color: colorByPulse ? IDLE_COLOR : item.color, size: 3},
+      meta: {kind: colorByPulse ? "idle" : "channel", pulse_indices: []},
       hovertemplate: "Time %{x:.9f} µs<br>Execution %{customdata[0]} · point %{customdata[1]} · shot %{customdata[2]}<br>%{customdata[3]}<extra>%{fullData.name}</extra>"
     }));
-    const byKey = new Map(traces.map(trace => [trace.uid, trace]));
+    const byKey = new Map(traces.map(trace => [trace.legendgroup, trace]));
+    function traceFor(key, span) {
+      const base = byKey.get(key);
+      if (!colorByPulse || span.kind === "idle") return base;
+      const spanKey = JSON.stringify([key, span.kind, span.pulse_indices]);
+      if (!byKey.has(spanKey)) {
+        const color = pulseColor(span);
+        const trace = {...base, uid: traceUid("awg-span", spanKey), showlegend: false, x: [], y: [], customdata: [],
+          line: {...base.line, color}, marker: {...base.marker, color},
+          meta: {kind: span.kind, pulse_indices: span.pulse_indices}};
+        byKey.set(spanKey, trace); traces.push(trace);
+      }
+      return byKey.get(spanKey);
+    }
+    function breakLine(trace) {trace.x.push(null); trace.y.push(null); trace.customdata.push(null);}
     let bins = 0, exact = 0, firstTable = null;
     for (const job of jobs) for (const channel of job.view.active_channels) {
       if (options.cancelled?.()) return null;
       const {entry, view, local, offset} = job;
-      const key = JSON.stringify([view.group, view.card, channel]), trace = byKey.get(key);
+      const key = channelKey(view, channel);
+      const spans = pulseSpans(job.annotations.get(channel) || [], job.first, job.last);
       const budget = Math.max(1, Math.min(1600, Math.ceil(1600 * (job.last - job.first) / view.sample_rate_hz / Number(window.duration_s))));
       const result = await (overview ? overviewWindow : decodeWindow)(view, payload.packed, {...local, channel,
-        max_samples: maxSamples, max_bins: budget});
+        max_samples: maxSamples, max_bins: budget, boundaries: spans.map(span => span.first)});
       const scale = options.units === "codes" ? 1 : options.units === "voltage" ? view.output_range_mv / (1000 * 32767) : 1 / 32767;
       if (result.overview) {
         bins += result.starts.length;
+        let spanIndex = 0;
         for (let i = 0; i < result.starts.length; i++) {
+          while (spans[spanIndex].last <= result.starts[i]) spanIndex++;
+          const span = spans[spanIndex], trace = traceFor(key, span);
           const left = (view.sample0_time_s + result.starts[i] / view.sample_rate_hz + offset) * 1e6;
           const right = (view.sample0_time_s + result.stops[i] / view.sample_rate_hz + offset) * 1e6;
           trace.x.push(left, left, right, right, null);
           trace.y.push(result.minimum[i] * scale, result.maximum[i] * scale, result.maximum[i] * scale, result.minimum[i] * scale, null);
-          const detail = `Samples [${result.starts[i]}, ${result.stops[i]}) · exact DAC min ${result.minimum[i]} / max ${result.maximum[i]}<br>Overview bin; zoom for individual samples`;
-          for (let j = 0; j < 5; j++) trace.customdata.push([entry.ordinal, entry.point, entry.shot, detail, result.starts[i], result.minimum[i]]);
+          const detail = `${pulseDescription(span, view)}<br>Samples [${result.starts[i]}, ${result.stops[i]}) · exact DAC min ${result.minimum[i]} / max ${result.maximum[i]}<br>Overview bin; zoom for individual samples`;
+          const owner = {kind: span.kind, pulse_indices: span.pulse_indices, boundary: false};
+          for (let j = 0; j < 4; j++) trace.customdata.push([entry.ordinal, entry.point, entry.shot, detail, result.starts[i], result.minimum[i], owner, result.stops[i]]);
+          trace.customdata.push(null);
         }
       } else {
         exact += result.codes.length;
-        for (let i = 0; i < result.codes.length; i++) {
-          trace.x.push((result.times[i] + offset) * 1e6);
-          trace.y.push(result.codes[i] * scale);
-          trace.customdata.push([entry.ordinal, entry.point, entry.shot,
-            `Card sample ${result.indices[i]} · DAC ${result.codes[i]} · nominal ${(result.codes[i] / 32767 * view.output_range_mv / 1000).toFixed(8)} V<br>Segment ${result.segmentIds[i]} · step ${result.stepIds[i]} · local T0 + ${(result.times[i] * 1e6).toFixed(9)} µs`, result.indices[i], result.codes[i]]);
+        for (const span of spans) {
+          const trace = traceFor(key, span), description = pulseDescription(span, view);
+          const append = (index, boundary = false) => {
+            const i = index - result.first;
+            trace.x.push((result.times[i] + offset) * 1e6);
+            trace.y.push(result.codes[i] * scale);
+            trace.customdata.push([entry.ordinal, entry.point, entry.shot,
+              `${description}<br>${boundary ? "Boundary endpoint · " : ""}Card sample ${result.indices[i]} · DAC ${result.codes[i]} · nominal ${(result.codes[i] / 32767 * view.output_range_mv / 1000).toFixed(8)} V<br>Segment ${result.segmentIds[i]} · step ${result.stepIds[i]} · local T0 + ${(result.times[i] * 1e6).toFixed(9)} µs`, result.indices[i], result.codes[i],
+              {kind: span.kind, pulse_indices: span.pulse_indices, boundary}]);
+          };
+          for (let index = span.first; index < span.last; index++) append(index);
+          // Share the next REAL endpoint to preserve the original connected
+          // samples / hold guide up to the boundary. Never invent a zero.
+          if (colorByPulse) {
+            if (span.last < result.last && options.display !== "markers") append(span.last, true);
+            breakLine(trace);
+          }
         }
         if (!firstTable) firstTable = {result, view, channel, entry};
       }
       // Never draw a line between independent regions or shots.
-      trace.x.push(null); trace.y.push(null); trace.customdata.push(null);
+      if (!colorByPulse) breakLine(byKey.get(key));
     }
-    return {traces: [...traces, ...toneTraces], inventory, overview, bins, exact, requested, firstTable,
+    const virtual = virtualZTraces(payload.points, entries, window, inventory);
+    return {traces: [...traces, ...virtual.traces, ...toneTraces], inventory, overview, bins, exact, requested, firstTable, virtualZCount: virtual.count,
       ddsInventory: toneInventory, ddsVertices, hasDDS: toneInventory.length > 0};
   }
 
   const api = {decodeWindow, overviewWindow, sequenceWindow, walk, sampleCeil, fraction, decimal, inputWindow,
     formatWindow, queryWindow, pulseWindow, previewWindow, windowSummary,
-    channelInventory, replayExecutions, ddsWindow, ddsTraces, ddsInventory, outputAxes,
+    channelInventory, replayExecutions, ddsWindow, ddsTraces, ddsInventory, outputAxes, toggleChannel, traceUid,
     cacheLimitBytes: CACHE_LIMIT};
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.TaiyiOutputSimulator = api;
@@ -496,7 +692,7 @@
 
   const payload = JSON.parse(document.getElementById("output-data").textContent);
   const $ = id => document.getElementById(id);
-  const controls = ["point", "group", "card", "channel", "pulse", "start", "duration", "units", "display", "selection-mode", "projection", "execution-start", "execution-count", "shot-index"];
+  const controls = ["point", "group", "card", "channel", "pulse", "start", "duration", "units", "display", "color-by", "selection-mode", "projection", "execution-start", "execution-count", "shot-index"];
   const elements = Object.fromEntries(controls.map(id => [id, $(id)]));
   const query = new URLSearchParams(root.location.search);
   const hiddenChannels = new Set();
@@ -535,9 +731,11 @@
   }
   function updatePulses(logicalId) {
     const items = pulses();
+    const numbered = view() ? pulseAnnotations(point()).get(view())?.get(Number(elements.channel.value)) || [] : [];
     fill(elements.pulse, [["", view()?.mode === "dds" ? "DDS tones · no AWG pulse" : "Choose a pulse for inspection"], ...items.map((pulse, i) => {
       const start = view().sample0_time_s + pulse.start_sample / view().sample_rate_hz;
-      return [i, `${(pulse.logical_id || []).join(", ") || `pulse ${i}`} · ${(start * 1e6).toPrecision(7)} µs`];
+      const ordinal = numbered.find(item => item.pulse === pulse)?.index ?? i;
+      return [i, `Pulse ${ordinal + 1}${pulse.logical_id?.length ? ` · ${pulse.logical_id.join(", ")}` : ""} · ${(start * 1e6).toPrecision(7)} µs`];
     })], "");
     if (logicalId) {
       const index = items.findIndex(pulse => (pulse.logical_id || []).includes(logicalId));
@@ -640,13 +838,13 @@
       const selected = selection(), window = inputWindow(elements.start.value, elements.duration.value);
       const start = Number(window.start_s), duration = Number(window.duration_s);
       const data = await replayExecutions(payload, selected.entries, window, {
-        units: elements.units.value, display: elements.display.value, cancelled: () => token !== generation
+        units: elements.units.value, display: elements.display.value, color_by: elements["color-by"].value, cancelled: () => token !== generation
       });
       if (!data || token !== generation) return;
       await queuePlot(async () => {
         if (token !== generation) return;
-        const empty = !data.requested && !data.ddsVertices;
-        for (const trace of data.traces) trace.visible = hiddenChannels.has(trace.uid) ? "legendonly" : true;
+        const empty = !data.requested && !data.ddsVertices && !data.virtualZCount;
+        for (const trace of data.traces) trace.visible = hiddenChannels.has(trace.legendgroup || trace.uid) ? "legendonly" : true;
         const visibleEntries = selected.entries.filter(entry => entry.end_s >= start && entry.start_s <= start + duration);
         const annotations = visibleEntries.length <= 16 ? visibleEntries.map(entry => ({
           xref: "x", yref: "paper", x: (Math.max(start, entry.start_s) + Math.min(start + duration, entry.end_s)) * 5e5,
@@ -673,15 +871,15 @@
           $("waveform").on("plotly_legendclick", event => {
             const trace = current?.data.traces[event.curveNumber];
             if (!trace) return false;
-            if (hiddenChannels.has(trace.uid)) hiddenChannels.delete(trace.uid); else hiddenChannels.add(trace.uid);
-            trace.visible = hiddenChannels.has(trace.uid) ? "legendonly" : true;
-            Plotly.restyle("waveform", {visible: trace.visible}, [event.curveNumber]);
+            const {visible, indices} = toggleChannel(current.data.traces, hiddenChannels, trace);
+            Plotly.restyle("waveform", {visible}, indices);
             return false;
           });
           plotEventsBound = true;
         }
         $("trace-title").textContent = (data.hasDDS ? `${data.inventory.length} AWG channels + ${data.ddsInventory.length} DDS tones` : `All ${data.inventory.length} card channels`) + ` · ${selected.entries.length} execution windows`;
         $("stats").textContent = (data.overview ? `${data.requested.toLocaleString()} samples covered · ${data.bins.toLocaleString()} min/max bins` : `${data.exact.toLocaleString()} exact samples · no skipped samples`) +
+          (data.virtualZCount ? ` · ${data.virtualZCount} virtual Z updates` : "") +
           (data.hasDDS ? ` · ${data.ddsVertices.toLocaleString()} DDS command vertices` : "");
         sampleTable(data);
         $("execution-summary").textContent = selected.local ? `Point ${selected.entries[0]?.point} · shot ${selected.entries[0]?.shot} · execution ${selected.entries[0]?.ordinal} · local time` :
@@ -709,7 +907,9 @@
 
   $("experiment").textContent = payload.name;
   fill(elements.point, payload.points.map((item, i) => [i, `${item.index} · ${JSON.stringify(item.coordinates)}`]), query.get("point"));
-  fill(elements["selection-mode"], [["all", "All points and shots"], ["point", "Selected point's shots"], ["detail", "One point / shot · local time"]], query.size ? "detail" : "all");
+  const detailQuery = ["point", "shot", "group", "card", "channel", "logical_id", "t0", "t1"].some(key => query.has(key));
+  fill(elements["selection-mode"], [["all", "All points and shots"], ["point", "Selected point's shots"], ["detail", "One point / shot · local time"]], detailQuery ? "detail" : "all");
+  fill(elements["color-by"], [["pulse", "By physical pulse"], ["channel", "By channel"]], query.get("color_by") === "channel" ? "channel" : "pulse");
   fill(elements.projection, [["awg", "Spectrum gate windows · omit other stages"], ["control", "Full known control windows"]], "awg");
   elements["execution-start"].value = "0"; elements["execution-count"].value = "50";
   elements["shot-index"].value = query.get("shot") || "0";
@@ -733,6 +933,7 @@
   $("focus-pulse").addEventListener("click", () => {if (selectPreview()) render();});
   $("pulse-edge").addEventListener("click", () => {if (selectPreview(true)) render();});
   elements.units.addEventListener("change", render); elements.display.addEventListener("change", render);
+  elements["color-by"].addEventListener("change", render);
   $("render").addEventListener("click", render);
   for (const id of ["start", "duration"]) elements[id].addEventListener("keydown", event => {if (event.key === "Enter") render();});
   $("page-next").addEventListener("click", () => {elements["execution-start"].value = selection().next_start; changeSelection();});

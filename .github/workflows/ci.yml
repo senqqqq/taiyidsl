@@ -81,3 +81,62 @@ jobs:
             output/tuneup_workflow/
             output/state_initialization/
             dist/
+
+  tutorials:
+    name: Offline tutorial / ${{ matrix.notebook }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - notebook: ramsey_plain_and_operations
+            sources: ramsey_clock_plain ramsey_clock_walkthrough
+          - notebook: yb171_global_rf_tuneup
+            sources: yb171_global_rf_tuneup
+          - notebook: ramsey_clock_transport
+            sources: ramsey_clock_transport
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
+      MPLBACKEND: Agg
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.0"
+          enable-cache: true
+      - name: Install pinned Python and notebook dependencies
+        run: uv sync --locked --group notebooks
+      - name: Run in a fresh offline kernel
+        run: |
+          for notebook in ${{ matrix.sources }}; do
+            uv run --locked --group notebooks python scripts/execute_hybrid_tutorial.py \
+              --source "docs/tutorials/${notebook}.ipynb" \
+              --output "output/tutorial_checks/${notebook}" --semantics
+          done
+      - name: Compare Ramsey authoring styles without rerunning notebooks
+        if: matrix.notebook == 'ramsey_plain_and_operations'
+        run: |
+          plain=output/tutorial_checks/ramsey_clock_plain/tutorial_semantics.json
+          operations=output/tutorial_checks/ramsey_clock_walkthrough/tutorial_semantics.json
+          uv run --locked python scripts/tutorial_semantics.py "$plain" "$operations" \
+            --pair compiled=compiled --pair clock_compiled=clock_compiled \
+            --output output/tutorial_checks/ramsey_comparison.json
+          for receipt in "$plain" "$operations"; do
+            uv run --locked python scripts/tutorial_semantics.py "$receipt" "$receipt" \
+              --pair compiled=compiled_decorated \
+              --output "${receipt%/*}/decorator_comparison.json"
+          done
+      - name: Retain executed notebook and verification receipt
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tutorial-${{ matrix.notebook }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: output/tutorial_checks/

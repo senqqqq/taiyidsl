@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "backend": "artiq",
+  "setup": {
+    "name": "rsc-offline-only",
+    "tick_seconds": 1e-09,
+    "timing_verified": false,
+    "devices": {
+      "urukul0_ch0": {
+        "name": "urukul0_ch0",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi0",
+        "update_group": "urukul0",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "urukul0_ch1": {
+        "name": "urukul0_ch1",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi0",
+        "update_group": "urukul0",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "urukul0_ch2": {
+        "name": "urukul0_ch2",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi0",
+        "update_group": "urukul0",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "urukul0_ch3": {
+        "name": "urukul0_ch3",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi0",
+        "update_group": "urukul0",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "urukul1_ch0": {
+        "name": "urukul1_ch0",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi1",
+        "update_group": "urukul1",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "urukul1_ch1": {
+        "name": "urukul1_ch1",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi1",
+        "update_group": "urukul1",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "urukul1_ch2": {
+        "name": "urukul1_ch2",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi1",
+        "update_group": "urukul1",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "urukul1_ch3": {
+        "name": "urukul1_ch3",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi1",
+        "update_group": "urukul1",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "square_latency_mu": 80
+      },
+      "ttl0": {
+        "name": "ttl0",
+        "kind": "ttl",
+        "config_duration_mu": 3000,
+        "grid_mu": 1,
+        "min_duration_mu": 1,
+        "bus": null,
+        "update_group": null,
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8
+      }
+    },
+    "calibration": {},
+    "trigger_sequences": {
+      "image": {
+        "description": "External exposure must match optics config; camera transfer is host-side",
+        "steps": [
+          {
+            "signal": "{qubit}.readout",
+            "duration_s": 1e-05,
+            "offset_s": 0.0
+          }
+        ]
+      }
+    }
+  },
+  "signals": {
+    "optics.pump_556": [
+      {
+        "device": "urukul0_ch0",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "optics.raman_common": [
+      {
+        "device": "urukul0_ch1",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "optics.raman_x": [
+      {
+        "device": "urukul0_ch2",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "optics.raman_y": [
+      {
+        "device": "urukul0_ch3",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "optics.raman_z": [
+      {
+        "device": "urukul1_ch0",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "optics.pushout_556": [
+      {
+        "device": "urukul1_ch1",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "optics.imaging_399": [
+      {
+        "device": "urukul1_ch2",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "optics.imaging_cooling_556": [
+      {
+        "device": "urukul1_ch3",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "{qubit}.readout": [
+      {
+        "device": "ttl0",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ]
+  }
+}

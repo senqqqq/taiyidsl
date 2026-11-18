@@ -5,7 +5,13 @@ from hashlib import sha256
 import numpy as np
 import pytest
 
-from taiyidsl.analysis import AnalysisError, analyze_rabi, analyze_ramsey, analyze_rb
+from taiyidsl.analysis import (
+    AnalysisError,
+    _validate_rabi_program,
+    analyze_rabi,
+    analyze_ramsey,
+    analyze_rb,
+)
 from taiyidsl.dsl import json_value
 from taiyidsl.models import Qubit
 from taiyidsl.results import ResultSet
@@ -76,6 +82,21 @@ def test_rabi_rejects_mismatched_snapshot():
     newer = replace(q, revision=1)
     with pytest.raises(AnalysisError, match="snapshots"):
         analyze_rabi(results, experiment=rabi(newer, x, shots=8))
+
+
+def test_rabi_program_accepts_explicit_phase_reset_for_its_own_qubit():
+    q = Qubit("q0")
+    x = np.array([0, 4e-6, 8e-6])
+    results = exact_results("duration", x, [0.0, 0.3, 0.8], name="rabi", q=q)
+    exp = rabi(q, x, shots=8)
+    body = exp.root.children[0].children[0].children[1]
+    reset = next(node for node in body.children if node.kind == "reset_frame")
+    reset.kind = "reset_phase"
+    attach_ir(results, exp)
+    assert _validate_rabi_program(results, exp, q, "population", "duration")
+    reset.params["frame"] = "another_qubit"
+    with pytest.raises(AnalysisError, match="another qubit"):
+        _validate_rabi_program(results, exp, q, "population", "duration")
 
 
 def test_ramsey_fits_absolute_frequency_and_t2_only():

@@ -24,7 +24,8 @@ def test_offline_html_has_both_views_and_selectors(tmp_path):
         "dds_config",
         "dds_output",
         "ref_time_mu",
-        "Optical arrival times are not calibrated",
+        "Compiled model only. This view does not establish ARTIQ compilation or",
+        "hardware timing acceptance.",
     ):
         assert text in html
     assert '<script src="https://' not in html

@@ -29,14 +29,24 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "state_initializati
 def initialization_scan():
     build = runpy.run_path(str(EXAMPLE))["build_initialization_scan"]
     config = {
-        "pump_dds_hz": 80_000_000,
-        "pump_amplitude": 0.1,
-        "pushout_dds_hz": 90_000_000,
-        "pushout_amplitude": 0.2,
-        "initial_idle_us": 20,
-        "post_pump_wait_us": 20,
-        "pushout_us": 100,
-        "camera_wait_us": 1000,
+        "schema_version": 2,
+        "pump": {
+            "signal": "optics.pump_556",
+            "frequency_hz": 80_000_000,
+            "amplitude": 0.1,
+            "duration_s": 0,
+            "setup_wait_s": 20e-6,
+            "settle_s": 20e-6,
+        },
+        "pushout": {
+            "signal": "optics.pushout_556",
+            "frequency_hz": 90_000_000,
+            "amplitude": 0.2,
+            "duration_s": 100e-6,
+            "setup_wait_s": 0,
+            "settle_s": 0,
+        },
+        "camera": {"transfer_wait_s": 1000e-6},
     }
     setup = DeviceSetup(
         devices={
@@ -104,16 +114,16 @@ def test_initialization_reference_and_pushout_preserve_readout_timing(
 
     report = verify_equivalence(compiled)
     assert report["status"] == "passed"
-    assert report["auto"]["kernel_count"] == 1
+    assert report["auto"]["kernel_count"] == 1  # This fixture uses TTL-only outputs.
     assert report["host_order"]["shots_checked"] == 600
 
 
 def test_initialization_uses_config_copied_at_build_time(initialization_scan):
     exp, config, setup, mapping = initialization_scan
-    config["pump_dds_hz"] = 100_000_000
-    config["pump_amplitude"] = 0.9
+    config["pump"]["frequency_hz"] = 100_000_000
+    config["pump"]["amplitude"] = 0.9
     compiled = compile_experiment(exp, setup, mapping)
-    assert compiled.metadata["optics"]["pump_dds_hz"] == 80_000_000
+    assert compiled.parameters["pump"]["frequency_hz"] == 80_000_000
     pulses = [
         event
         for point in compiled.points
@@ -126,11 +136,12 @@ def test_initialization_uses_config_copied_at_build_time(initialization_scan):
 
 
 def test_initialization_entrypoint_generates_verified_offline_artifacts(tmp_path):
-    # Its default output is relative to __file__; copy only the example so the
+    # Its default output is relative to __file__; copy the example and profiles so the
     # subprocess cannot overwrite a user's existing example output directory.
     script = tmp_path / "examples" / EXAMPLE.name
     script.parent.mkdir()
     shutil.copy2(EXAMPLE, script)
+    shutil.copytree(EXAMPLE.parent / "config", script.parent / "config")
     environment = dict(os.environ, PYTHONIOENCODING="utf-8")
     result = subprocess.run(
         [sys.executable, str(script)],
@@ -143,11 +154,23 @@ def test_initialization_entrypoint_generates_verified_offline_artifacts(tmp_path
     )
     assert result.returncode == 0, result.stdout + result.stderr
     output = tmp_path / "output" / "state_initialization"
+    verifier = script.parent / "verify_optics.py"
+    shutil.copy2(EXAMPLE.parent / verifier.name, verifier)
+    result = subprocess.run(
+        [sys.executable, str(verifier), "--experiment", "initialization"],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
     report = json.loads((output / "verification.json").read_text(encoding="utf-8"))
     compiled = json.loads((output / "compiled.json").read_text(encoding="utf-8"))
     assert len(compiled["points"]) == 12
     assert report["status"] == "passed"
-    assert report["auto"]["kernel_count"] == 1
+    assert report["auto"]["kernel_count"] == len(compiled["points"])
     assert report["host_order"]["shots_checked"] == 1200
     assert report["artiq_compile"] == report["hardware"] == "not_verified"
     assert (output / "timeline.html").stat().st_size > 0

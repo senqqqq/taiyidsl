@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "backend": "artiq_spectrum",
+  "setup": {
+    "spectrum": {
+      "groups": {
+        "qubit_awg": {
+          "cards": {
+            "A": {
+              "serial_number": "SIM_NUCLEAR",
+              "active_channels": [
+                0
+              ],
+              "model": "M4i.6631-x8",
+              "sample_rate_hz": 1250000000,
+              "reference_clock_hz": 125000000,
+              "memory_bytes": 4294967296,
+              "output_range_mv": 500,
+              "trigger_latency_samples": 500,
+              "firmware": null,
+              "cable_id": "unmeasured"
+            },
+            "B": {
+              "serial_number": "SIM_AOM",
+              "active_channels": [
+                0,
+                1
+              ],
+              "model": "M4i.6631-x8",
+              "sample_rate_hz": 1250000000,
+              "reference_clock_hz": 125000000,
+              "memory_bytes": 4294967296,
+              "output_range_mv": 500,
+              "trigger_latency_samples": 500,
+              "firmware": null,
+              "cable_id": "unmeasured"
+            }
+          },
+          "outputs": {
+            "nuclear_rf": {
+              "card": "A",
+              "channel": 0
+            },
+            "clock_rf": {
+              "card": "B",
+              "channel": 0
+            },
+            "rydberg_rf": {
+              "card": "B",
+              "channel": 1
+            }
+          },
+          "trigger_lead_mu": 512,
+          "trigger_width_mu": 64,
+          "epoch_grid_mu": 32,
+          "epoch_offset_mu": 0,
+          "max_tile_samples": 500000,
+          "engine": "awg_sequence",
+          "calibration": {
+            "status": "unmeasured",
+            "revision": "offline-example"
+          },
+          "trigger_devices": {
+            "A": "awg_trigger_a",
+            "B": "awg_trigger_b"
+          }
+        }
+      },
+      "signal_frames": {
+        "clock": null,
+        "rydberg": null
+      },
+      "artiq_tick_seconds": 1e-09
+    },
+    "name": "spectrum-hybrid-offline-unmeasured",
+    "tick_seconds": 1e-09,
+    "timing_verified": false,
+    "rtio_coarse_mu": 8,
+    "rtio_lane_count": 8,
+    "devices": {
+      "cooling_dds": {
+        "name": "cooling_dds",
+        "kind": "dds",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": "spi0",
+        "update_group": "urukul0",
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "ram_latency_mu": null,
+        "ram_rearm_duration_mu": null,
+        "ram_phase_update_duration_mu": null,
+        "ram_phase_latency_mu": null,
+        "square_latency_mu": null,
+        "square_prepare_duration_mu": 1280,
+        "spi_ref_period_mu": 8,
+        "nco_mode": "legacy_tracking",
+        "nco_epoch_latency_mu": null,
+        "ram_pow_latency_mu": null,
+        "ram_destination": "asf",
+        "ram_polar_phase_latency_mu": null,
+        "ram_profile_control": "urukul_rev9",
+        "urukul_proto_rev": 9,
+        "ram_profile_latency_mu": null,
+        "ram_profile_phase_latency_mu": null
+      },
+      "readout_ttl": {
+        "name": "readout_ttl",
+        "kind": "ttl",
+        "config_duration_mu": 3000,
+        "grid_mu": 1,
+        "min_duration_mu": 4,
+        "bus": null,
+        "update_group": null,
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "ram_latency_mu": null,
+        "ram_rearm_duration_mu": null,
+        "ram_phase_update_duration_mu": null,
+        "ram_phase_latency_mu": null,
+        "square_latency_mu": null,
+        "square_prepare_duration_mu": 1280,
+        "spi_ref_period_mu": 8,
+        "nco_mode": "legacy_tracking",
+        "nco_epoch_latency_mu": null,
+        "ram_pow_latency_mu": null,
+        "ram_destination": "asf",
+        "ram_polar_phase_latency_mu": null,
+        "ram_profile_control": "urukul_rev9",
+        "urukul_proto_rev": null,
+        "ram_profile_latency_mu": null,
+        "ram_profile_phase_latency_mu": null
+      },
+      "nuclear_rf": {
+        "name": "nuclear_rf",
+        "kind": "spectrum",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": null,
+        "update_group": null,
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "ram_latency_mu": null,
+        "ram_rearm_duration_mu": null,
+        "ram_phase_update_duration_mu": null,
+        "ram_phase_latency_mu": null,
+        "square_latency_mu": null,
+        "square_prepare_duration_mu": 1280,
+        "spi_ref_period_mu": 8,
+        "nco_mode": "legacy_tracking",
+        "nco_epoch_latency_mu": null,
+        "ram_pow_latency_mu": null,
+        "ram_destination": "asf",
+        "ram_polar_phase_latency_mu": null,
+        "ram_profile_control": "urukul_rev9",
+        "urukul_proto_rev": null,
+        "ram_profile_latency_mu": null,
+        "ram_profile_phase_latency_mu": null
+      },
+      "clock_rf": {
+        "name": "clock_rf",
+        "kind": "spectrum",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": null,
+        "update_group": null,
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "ram_latency_mu": null,
+        "ram_rearm_duration_mu": null,
+        "ram_phase_update_duration_mu": null,
+        "ram_phase_latency_mu": null,
+        "square_latency_mu": null,
+        "square_prepare_duration_mu": 1280,
+        "spi_ref_period_mu": 8,
+        "nco_mode": "legacy_tracking",
+        "nco_epoch_latency_mu": null,
+        "ram_pow_latency_mu": null,
+        "ram_destination": "asf",
+        "ram_polar_phase_latency_mu": null,
+        "ram_profile_control": "urukul_rev9",
+        "urukul_proto_rev": null,
+        "ram_profile_latency_mu": null,
+        "ram_profile_phase_latency_mu": null
+      },
+      "rydberg_rf": {
+        "name": "rydberg_rf",
+        "kind": "spectrum",
+        "config_duration_mu": 3000,
+        "grid_mu": 4,
+        "min_duration_mu": 4,
+        "bus": null,
+        "update_group": null,
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "ram_latency_mu": null,
+        "ram_rearm_duration_mu": null,
+        "ram_phase_update_duration_mu": null,
+        "ram_phase_latency_mu": null,
+        "square_latency_mu": null,
+        "square_prepare_duration_mu": 1280,
+        "spi_ref_period_mu": 8,
+        "nco_mode": "legacy_tracking",
+        "nco_epoch_latency_mu": null,
+        "ram_pow_latency_mu": null,
+        "ram_destination": "asf",
+        "ram_polar_phase_latency_mu": null,
+        "ram_profile_control": "urukul_rev9",
+        "urukul_proto_rev": null,
+        "ram_profile_latency_mu": null,
+        "ram_profile_phase_latency_mu": null
+      },
+      "awg_trigger_a": {
+        "name": "awg_trigger_a",
+        "kind": "ttl",
+        "config_duration_mu": 3000,
+        "grid_mu": 1,
+        "min_duration_mu": 4,
+        "bus": null,
+        "update_group": null,
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "ram_latency_mu": null,
+        "ram_rearm_duration_mu": null,
+        "ram_phase_update_duration_mu": null,
+        "ram_phase_latency_mu": null,
+        "square_latency_mu": null,
+        "square_prepare_duration_mu": 1280,
+        "spi_ref_period_mu": 8,
+        "nco_mode": "legacy_tracking",
+        "nco_epoch_latency_mu": null,
+        "ram_pow_latency_mu": null,
+        "ram_destination": "asf",
+        "ram_polar_phase_latency_mu": null,
+        "ram_profile_control": "urukul_rev9",
+        "urukul_proto_rev": null,
+        "ram_profile_latency_mu": null,
+        "ram_profile_phase_latency_mu": null
+      },
+      "awg_trigger_b": {
+        "name": "awg_trigger_b",
+        "kind": "ttl",
+        "config_duration_mu": 3000,
+        "grid_mu": 1,
+        "min_duration_mu": 4,
+        "bus": null,
+        "update_group": null,
+        "sysclk_hz": 1000000000.0,
+        "latency_mu": 0,
+        "min_frequency": 0,
+        "max_frequency": 400000000.0,
+        "config_grid_mu": 8,
+        "ram_latency_mu": null,
+        "ram_rearm_duration_mu": null,
+        "ram_phase_update_duration_mu": null,
+        "ram_phase_latency_mu": null,
+        "square_latency_mu": null,
+        "square_prepare_duration_mu": 1280,
+        "spi_ref_period_mu": 8,
+        "nco_mode": "legacy_tracking",
+        "nco_epoch_latency_mu": null,
+        "ram_pow_latency_mu": null,
+        "ram_destination": "asf",
+        "ram_polar_phase_latency_mu": null,
+        "ram_profile_control": "urukul_rev9",
+        "urukul_proto_rev": null,
+        "ram_profile_latency_mu": null,
+        "ram_profile_phase_latency_mu": null
+      }
+    },
+    "calibration": {},
+    "trigger_sequences": {}
+  },
+  "signals": {
+    "q.rf": [
+      {
+        "device": "nuclear_rf",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "clock": [
+      {
+        "device": "clock_rf",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "rydberg": [
+      {
+        "device": "rydberg_rf",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "cooling": [
+      {
+        "device": "cooling_dds",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ],
+    "readout": [
+      {
+        "device": "readout_ttl",
+        "frequency_scale": 1,
+        "frequency_offset": 0,
+        "phase_scale": 1,
+        "phase_offset": 0,
+        "amplitude_scale": 1
+      }
+    ]
+  }
+}

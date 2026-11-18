@@ -12,12 +12,11 @@ import ast
 import json
 from pathlib import Path
 
-from taiyidsl.analysis import analyze_rabi, analyze_ramsey, analyze_rb
 from taiyidsl.artiq import verify_equivalence
-from taiyidsl.compiler import compile_experiment
-from taiyidsl.hardware import reference_setup
+from taiyidsl.lab import reference_lab
 from taiyidsl.models import Qubit, QubitStore
 from taiyidsl.results import synthesize
+from taiyidsl.results.analysis import analyze_rabi, analyze_ramsey, analyze_rb
 from taiyidsl.templates import rabi, ramsey, randomized_benchmarking
 
 
@@ -46,7 +45,7 @@ def run(output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
     store = QubitStore([Qubit("q0")], path=output_dir / "qubits.json")
     store.save()
-    setup, mapping = reference_setup([store["q0"]])
+    lab = reference_lab([store["q0"]])
     report = {
         "synthetic_only": True,
         "artiq_compile": "not_verified",
@@ -56,7 +55,7 @@ def run(output_dir):
 
     def produce(exp, seed, model_parameters):
         # Opt in explicitly: fitted durations need quantization to target grids.
-        compiled = compile_experiment(exp, setup, mapping, allow_quantization=True)
+        compiled = lab.compile(exp, allow_quantization=True)
         folder = output_dir / exp.name
         folder.mkdir(parents=True, exist_ok=True)
         compiled.save(folder / "compiled.json")

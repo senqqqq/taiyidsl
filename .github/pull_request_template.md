@@ -4,10 +4,13 @@ Describe the problem and resulting behavior. Link related issues if applicable.
 
 ## Verification
 
-- [ ] `uv run --locked ruff check .`
-- [ ] `uv run --locked ruff format --check .`
-- [ ] `uv run --locked pytest --basetemp=.test-tmp-pytest`
-- [ ] `uv build --no-sources`
+- Lint/format results for the published source set:
+- Focused behavioral checks and why they cover this change:
+- Package installation/build checks, if packaging changed:
+- Tutorial execution, if the authoring examples or their APIs changed:
+
+Keep full offline checks in CI. Do not run the whole local suite merely to fill
+this template; report checks actually run and any relevant omissions.
 
 For compiler or exporter changes, describe event/timing equivalence checks and
 any intentionally changed behavior. For docs-only changes, state which checks

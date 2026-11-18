@@ -101,11 +101,11 @@ def test_zero_pulse_no_switch_and_subminimum_rejected():
 
 
 def test_grid_rejection_and_opt_in_quantization():
-    args = build(lambda e, q: play(q.readout, Square(1.4 * ns, frequency=0)))
+    args = build(lambda e, q: play(q.readout, Square(9.4 * ns, frequency=0)))
     with pytest.raises(CompileError, match="not representable"):
         compile_experiment(*args)
     c = compile_experiment(*args, allow_quantization=True)
-    assert c.points[0].duration_mu == 1
+    assert c.points[0].duration_mu == 9
     assert c.diagnostics[0]["kind"] == "time_quantization"
 
 
@@ -131,7 +131,7 @@ def test_identical_adjacent_pulses_merge_but_logical_boundaries_remain():
     )
 
 
-def test_parameter_change_requires_explicit_preparation_window():
+def test_parameter_change_can_prepare_during_previous_output():
     def sequence(gap):
         def ops(e, q):
             play(q.raman, Square(4 * us))
@@ -140,15 +140,15 @@ def test_parameter_change_requires_explicit_preparation_window():
 
         return ops
 
-    for gap in (0 * ns, 500 * ns):
-        with pytest.raises(CompileError, match="preparation window"):
-            compile_experiment(*build(sequence(gap)))
+    for gap in (0 * ns, 504 * ns):
+        result = compile_experiment(*build(sequence(gap)))
+        assert result.points[0].duration_mu == 8000 + round(float(gap) * 1e9)
     c = compile_experiment(*build(sequence(2 * us)))
     assert [e.start_mu for e in c.points[0].logical_events if e.kind == "play"] == [
         0,
         6000,
     ]
-    assert len([e for e in c.points[0].physical_events if e.kind == "dds_config"]) == 2
+    assert len([e for e in c.points[0].physical_events if e.kind == "dds_prepare"]) == 2
 
 
 def test_frame_accumulates_across_repeat_without_hardware_get_set():
@@ -165,7 +165,7 @@ def test_frame_accumulates_across_repeat_without_hardware_get_set():
     ] == pytest.approx([math.pi / 4, math.pi / 2])
 
 
-def test_parallel_frame_write_is_ambiguous():
+def test_parallel_frame_command_updates_both_playing_channels():
     def ops(exp, q):
         with exp.parallel():
             with exp.serial():
@@ -173,8 +173,10 @@ def test_parallel_frame_write_is_ambiguous():
                 play(q.raman, Square(4 * us))
             play(q.rf, Square(4 * us))
 
-    with pytest.raises(CompileError, match="frame written"):
-        compile_experiment(*build(ops))
+    compiled = compile_experiment(*build(ops))
+    effects = [e for e in compiled.points[0].physical_events if e.kind == "dds_effect"]
+    assert len(effects) == 2
+    assert [e.params["phase"] for e in effects] == [1, 1]
 
 
 def test_shared_output_conflicts_even_for_distinct_logical_signals():
@@ -196,13 +198,15 @@ def test_shared_board_initial_configuration_serialized():
             play(q.rf, Square(4 * us))
 
     c = compile_experiment(*build(ops))
-    configs = [e for e in c.points[0].physical_events if e.kind == "dds_config"]
+    configs = [e for e in c.points[0].physical_events if e.kind == "dds_prepare"]
     assert len(configs) == 2
     assert configs[0].end_mu <= configs[1].start_mu
-    assert c.points[0].origin_mu == 2000
+    assert c.points[0].origin_mu > 2 * 1280 + 80
+    epoch = next(e for e in c.points[0].physical_events if e.kind == "dds_nco_epoch")
+    assert epoch.start_mu + 8 < configs[0].start_mu
 
 
-def test_shared_update_cannot_change_parameters_while_another_output_is_active():
+def test_continuous_shared_update_does_not_restage_unchanged_active_channel():
     def ops(exp, q):
         with exp.parallel():
             with exp.serial():
@@ -211,8 +215,11 @@ def test_shared_update_cannot_change_parameters_while_another_output_is_active()
                 play(q.raman, Square(4 * us, phase=1))
             play(q.rf, Square(12 * us))
 
-    with pytest.raises(CompileError, match="preparation window"):
-        compile_experiment(*build(ops))
+    compiled = compile_experiment(*build(ops))
+    effects = [e for e in compiled.points[0].physical_events if e.kind == "dds_effect"]
+    held = [e for e in effects if e.signal.endswith("ch1")]
+    assert [e.params["phase"] for e in held] == [0]
+    assert [e.start_mu - compiled.points[0].origin_mu for e in held] == [0]
 
 
 def test_composite_recipe_and_calibration_snapshot():
@@ -230,7 +237,7 @@ def test_composite_recipe_and_calibration_snapshot():
     cfg = [
         e
         for e in c.points[0].physical_events
-        if e.kind == "dds_config" and e.signal.endswith("ch1")
+        if e.kind == "dds_prepare" and e.signal.endswith("ch1")
     ][0]
     assert cfg.params["frequency"] == 81e6
     assert cfg.params["amplitude"] == pytest.approx(0.4)
@@ -332,15 +339,20 @@ def test_ttl_protocol_adjacent_play_has_no_duplicate_edge():
 def test_dds_configuration_grid_distinct_from_output_grid():
     def ops(exp, q):
         play(q.raman, Square(8 * ns))
-        delay(q.raman, 1004 * ns)
+        delay(q.raman, 3004 * ns)
         play(q.raman, Square(8 * ns, phase=0.5))
 
     c = compile_experiment(*build(ops))
     assert all(
         e.start_mu % 8 == 0
         for e in c.points[0].physical_events
-        if e.kind == "dds_config"
+        if e.kind == "dds_prepare"
     )
+    assert [
+        e.start_mu - c.points[0].origin_mu
+        for e in c.points[0].physical_events
+        if e.kind == "dds_on"
+    ] == [0, 3012]
 
 
 def test_reference_setup_accepts_hyphenated_qubit_identity():

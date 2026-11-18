@@ -1,0 +1,4 @@
+{
+  "native_prepare": {"type": "local", "module": "artiq.coredevice.ttl", "class": "TTLOut", "arguments": {"channel": 20}},
+  "native_readout": {"type": "local", "module": "artiq.coredevice.ttl", "class": "TTLOut", "arguments": {"channel": 21}}
+}

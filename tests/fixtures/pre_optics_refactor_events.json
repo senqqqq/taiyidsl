@@ -1,0 +1,2458 @@
+{
+  "schema_version": 1,
+  "description": "Frozen before replacing RecipeSet with lightweight OpticsConfig. Complete events include zero-duration delays; only source locations and logical provenance IDs are excluded.",
+  "source_hashes": {
+    "src/taiyidsl/__init__.py": "e4eca6c78235d5dd6687ee285793e4699c7b02b85055f319b8d7e4885f2f7c73",
+    "src/taiyidsl/analysis.py": "b969713d8ee8cf34ae31a2f61bed3c66092af90556b36e8ef72e3e164fcabe26",
+    "src/taiyidsl/artiq.py": "00b05af760e2097849b4aae0f68735baaa6317a2b5bc03142e496e7b38d7cf0e",
+    "src/taiyidsl/backends/__init__.py": "3aa2d87daf109bedd07f3151230fd1fd6c16e7cee22150a2e95aa6e25b9c78e9",
+    "src/taiyidsl/backends/artiq.py": "ee2b545fe7ea72c7a279de546559dc08444b6625ab97917982941b8924b60a5e",
+    "src/taiyidsl/backends/base.py": "654fc3c329f2737ede2d07ca82a881c5ee3beff5d805683879209f721ae4acd1",
+    "src/taiyidsl/compiler.py": "21a71f78a71e510295c69e849f431150ced828132bae00beaaed467a4b06ed2f",
+    "src/taiyidsl/cooling.py": "b387754848b9463a16b1a09235ac0b5d18f96857361d7657a3290dc810082a3f",
+    "src/taiyidsl/dsl.py": "f7fd132923dba0636a6fadb4b7cb287bf0f54e1d65691d430d4e5566023579cc",
+    "src/taiyidsl/execution.py": "96085e7df8e524590b2ab634f90d845c36fe0e6d15453319085569ead5de41e6",
+    "src/taiyidsl/hardware.py": "5ee7fe9a45b4d79d0b25751eaf5abc803789d7f8178e813365e192bbda9dc00a",
+    "src/taiyidsl/ir.py": "605e56fe83e5e0109d44e0325b00ae33e65cfa6076b184b6dba784f1f3b85db7",
+    "src/taiyidsl/lab.py": "4c5d8dadd6bad6ac70d947c6bd1607d12999ca2dd8ca2eeee66cde9886b3dcae",
+    "src/taiyidsl/models.py": "d3aaf0c7f0bbdb9f485a2a8812e2832068dc5894206f55086d3391105517135b",
+    "src/taiyidsl/recipes.py": "e9d0067048a55f9950dfd2a8ee801c1f4a337049bb5ffdfc260f5e3dc4f06ba2",
+    "src/taiyidsl/results.py": "cc8391bf6ef5c3d3e4ec348edcd6f002bf87ef152afe1d268e81b4695f9bbcdb",
+    "src/taiyidsl/scheduling.py": "fcc9dcc1ac1671794b6bef89883943b6a36a4262e1aefd63088bdd92ebfb2771",
+    "src/taiyidsl/serialization.py": "36f0adc913eb65a2c1a93db2b643ec0baa4e61fe580d3555fea28c1e8b92078c",
+    "src/taiyidsl/templates.py": "0cefa432ad0fbbbe7e53fcb2d7337e4fad9b673ceecbda5255e93124808d698f",
+    "src/taiyidsl/units.py": "d7b1a33e3eb3b4dd0fc136458f353e3454b93d477f26b093a576a94e1bab8962",
+    "src/taiyidsl/visualization.py": "6a5ab65a5ad1b0b0ec1d692d42af2931a23b5ec5f4484b021370bbdd04030be2",
+    "examples/state_initialization.py": "39e39ce6272546441960f9103472c986dbe2cd03533e80b36b75eb03a7f3891c",
+    "examples/raman_sideband_cooling.py": "8c2ed1af4742cf2f2967d6c253b9b581d11a39b7a631c57e41d2fdebb8c52196",
+    "examples/config/labs/initialization.json": "f6701f1370d8df523670e398d90045f78f601c16ead2641ed00eca2d4eb0a0a2",
+    "examples/config/labs/rsc.json": "72155095a7ca9ecdf4cbdd13452f2bcf4ff0ddf40b7308a8b6188f826edc8041",
+    "examples/config/recipes/initialization.json": "f0641a37c7aca64160a0ca4286758c7a42e07c481ea5b055742a274f830743d0",
+    "examples/config/recipes/rsc.json": "6a8fa273ebe787419e5b5d13029aaca14386c37215e7e0527f1d0f372f6ad1d3",
+    "examples/config/rsc_optics.json": "e7e554ed3125c0c8f4f725c027392b5d8ba9b5bb835089bc6fa6acfa9bfeee8e"
+  },
+  "experiments": {
+    "initialization/cyclic": {
+      "shots": 100,
+      "averaging_mode": "cyclic",
+      "axes": [
+        {
+          "name": "pump_time",
+          "values": [
+            0.0,
+            1e-05,
+            2e-05,
+            5e-05,
+            0.0001,
+            0.0002
+          ],
+          "unit": "us",
+          "values_unit": "s"
+        },
+        {
+          "name": "readout_mode",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 1200,
+        "averaging_mode": "cyclic"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl0",
+          "urukul0_ch0",
+          "urukul0_ch1"
+        ],
+        "unused_devices": [],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [],
+        "externally_initialized_dds": [],
+        "initialize_dds": [
+          "urukul0_ch0",
+          "urukul0_ch1"
+        ],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "pump_time": 0.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 1150000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 2,
+          "logical_sha256": "35a09e1587cc771bff9205bb97b2359d57a3d1f885975fe87e4f6aadd118d57c",
+          "physical_sha256": "8c00e6192bb487fdf40b68efb40285baf5a8d31e781afc879fe7e70ab4ea01d2",
+          "executed_sha256": "13ce19cf43ddc177d01eae2d27fd6801b8aa347aa6b0f3b7d6dd0b380ecd9ec5",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 140000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "pump_time": 0.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 1150000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "d69e04329a5cc7a15cbb51b00ef9ee282aa3f6118d686a29acf1680baaf8b825",
+          "physical_sha256": "253e9d02e1127f46a041236ca344a514c2c59b068358aea15351685268fc3d57",
+          "executed_sha256": "315b1ae3d6cf4c3705a649a70bdb99f27f57d3a0a4d77196acc8e39340501bc4",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 140000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "pump_time": 1e-05,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 1160000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "f6d50167743019a2c5167466b8f3737354dbfd52df5fa30193c40b8242b201ee",
+          "physical_sha256": "fc3e9f3e593f120cbb3bb96ca8419f0b25ec065ed6f013386820c2cffbce002d",
+          "executed_sha256": "293b570e41b649dad4f485a9c2b6167cb61220442020864f739232ad728144e1",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 150000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "pump_time": 1e-05,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 1160000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "76171d4d65e9850baacecca2c4314e66730d41fdf1afe0ff8c3274f750c9010d",
+          "physical_sha256": "651e58271edabac558296a6c8b768b84eea32e5708f73fc9965d105aafb9e349",
+          "executed_sha256": "ad3bcad29e29da1b4f7006cc39db0c34912ddb7666c58db388d4cda4e2a6c489",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 150000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "pump_time": 2e-05,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 1170000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "edd90e6f92d2fa3434c3cfd5d4f2e46e15245968d956187c9517bce49d744ad8",
+          "physical_sha256": "18ccdccb4a4e9b17bc66415df40d7e2c0d9b60b0e3a54857d4551be366ef4859",
+          "executed_sha256": "50415e2aadce93740c4852bab9db50b3395b54dfa0358feadf81a92d71622c32",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 160000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "pump_time": 2e-05,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 1170000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "096db196ae35dabe9a6bc4f114ed158e4c9aedc4abd1330dfb075052517cdd54",
+          "physical_sha256": "2d1dc5053775b0438f17f779b7692d9b2508ccd06810688b20a44d7977220c75",
+          "executed_sha256": "a2a0512ec2b6c466db1cc149a7fb85071cfd6be8ae2a98d37dd97c93aec91d01",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 160000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "coordinates": {
+            "pump_time": 5e-05,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            3,
+            0
+          ],
+          "duration_mu": 1200000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "c3600cff9f3f78a8f7c2a2cd06334455a8d46e0471b36e0edf028edf48923def",
+          "physical_sha256": "fc0f26c1bb91182d915566f4e3a1869d5a21c8972258d5e5f9241f9f3c953ede",
+          "executed_sha256": "14917b6afe2046ce0eaaea38ef2eeb0d3e7b30164b954f85a5d24b0b6967883f",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 190000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "coordinates": {
+            "pump_time": 5e-05,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            3,
+            1
+          ],
+          "duration_mu": 1200000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "5cd6086f750b565bb2f98913d18b41a0f233a9b70645337dd0f51be703abc777",
+          "physical_sha256": "2c73d14cef2ebdeb5bf40f4f97e7ea022a0a6334559712828a8b5ac831c709d0",
+          "executed_sha256": "2ef134e46926c6fb9c50b137349bc3f5a5dda2d8f86e0f790571cd08cb950148",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 190000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "coordinates": {
+            "pump_time": 0.0001,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            4,
+            0
+          ],
+          "duration_mu": 1250000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "46a2e37d9ac1b995a14be3846e62449e47596b141c60e01ab0a01b39dca92dd8",
+          "physical_sha256": "dd0bbaebcd68524c8544f9acec302ccc0ebe15d70f6ff403cd786e55fd77a0b2",
+          "executed_sha256": "394896b0d11d4d0051274127005f414beb18adb83c37b4a29c73ea8a31056287",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 240000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "coordinates": {
+            "pump_time": 0.0001,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            4,
+            1
+          ],
+          "duration_mu": 1250000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "69b3766c73c1f8f0e308e919e0bfdf8aa346f087971fc33887ce685a3e406394",
+          "physical_sha256": "df8c5c38d31a2637c2ead372f40c198ec4eebeadcb37b8b7ac377127059f7912",
+          "executed_sha256": "8b2064c190eae0783b2e1ee41657036212750a96d2320d454b105c909c295d1c",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 240000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "coordinates": {
+            "pump_time": 0.0002,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            5,
+            0
+          ],
+          "duration_mu": 1350000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "69012db30ea25b03794ca5480042cae01c2b0121a124263582d667eb9fedaa35",
+          "physical_sha256": "4f491f5298a47f9c40dc9bf2b58f7f74f182128a9b36573cc563f589917c4bfe",
+          "executed_sha256": "024c85e80bf1193d97dd220117a6d8896edc6d4a5c006a7eed9128bea635dd69",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 340000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "coordinates": {
+            "pump_time": 0.0002,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            5,
+            1
+          ],
+          "duration_mu": 1350000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "7593e3c1d3c148f466ab0213d409d9d40d87b4b44f751ba2ee4803c372625a6f",
+          "physical_sha256": "10957be7b3f7166d22ac5312bd0188b2377040312ab562414d51a3ef333c55af",
+          "executed_sha256": "ebc0649b7ecafc5ab2779cfa53a4ff04b28da826a2975f925ff120cc82c130df",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 340000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rsc_round_scan/cyclic": {
+      "shots": 20,
+      "averaging_mode": "cyclic",
+      "axes": [
+        {
+          "name": "rounds",
+          "values": [
+            0.0,
+            1.0,
+            3.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        },
+        {
+          "name": "readout_mode",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 120,
+        "averaging_mode": "cyclic"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl0",
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "unused_devices": [],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "bus:spi1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "update_group:urukul1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ]
+        },
+        "prepared_shared_resources_required": [],
+        "externally_initialized_dds": [],
+        "initialize_dds": [
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "rounds": 0.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 1280000,
+          "origin_mu": 0,
+          "logical_event_count": 11,
+          "physical_event_count": 11,
+          "logical_sha256": "8b7d0c5c1312ce97d420a0835c51428a27ee61821375e03479d0a8c7d833a50a",
+          "physical_sha256": "d4a50638c515f0a7707f7e67f1e352f1d9770c9760d3a015bdd9ac0a9264f33c",
+          "executed_sha256": "b41e5fc638f5b013f2b6e73ec4c5f7c239d690ae39b02b60639ce2b242dabf74",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 180000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "rounds": 0.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 1280000,
+          "origin_mu": 0,
+          "logical_event_count": 11,
+          "physical_event_count": 14,
+          "logical_sha256": "3c4fb4e038a6f8a2d977074813616bb605a1a3cde861633046100332e9feda75",
+          "physical_sha256": "737fb450173994c7274433206cfa204c018241d63637dcf406e5a09d8676dbfb",
+          "executed_sha256": "6753fef328700a709652c740940dab534383a1e3dc9a78e8728253a87d8c81af",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 180000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "rounds": 1.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 1848000,
+          "origin_mu": 0,
+          "logical_event_count": 47,
+          "physical_event_count": 51,
+          "logical_sha256": "5bec88f054b65c79248d14c62013f033d190d6e1863e1db8ee4d010d4295cd18",
+          "physical_sha256": "382ee3c6d95e5948943b330be8c9296ae6e4da3437370991abbece3df7843105",
+          "executed_sha256": "22c5578609c41c25fd1771852dc2413c6431fc84fc05e160f14664f6971d2bbe",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 748000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "rounds": 1.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 1848000,
+          "origin_mu": 0,
+          "logical_event_count": 47,
+          "physical_event_count": 54,
+          "logical_sha256": "1691f271ed98f9de6d6d2637c760fca137563faed346c9a41f5f4f9bc49b984d",
+          "physical_sha256": "c63a16ae2faf7a2856fed30c59a6ce389cd0a408de0ab3f768450309c9e8fa98",
+          "executed_sha256": "5a00a9d2452a25dc82cd28ef744a3316d1171af394432db51664a14c3685e217",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 748000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "rounds": 3.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 2984000,
+          "origin_mu": 0,
+          "logical_event_count": 119,
+          "physical_event_count": 123,
+          "logical_sha256": "d44c2a3e7c892bdb9ce769c3737b9804923e46b058bb5b441d8454ac68096e7a",
+          "physical_sha256": "3662e52e6c5ae2e4bd027bb7d5b8e6052b2350371b9fc3faf86440d690d760ce",
+          "executed_sha256": "7a861bb8d3e8fdcdda5182c40d55b9f4ac12b0008b03a2c98d50b6fe1e35592f",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1884000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "rounds": 3.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 2984000,
+          "origin_mu": 0,
+          "logical_event_count": 119,
+          "physical_event_count": 126,
+          "logical_sha256": "f970b3d2d75de8e46a95b84f79797df360d894771f5e9eeb3c2d705fdc567b90",
+          "physical_sha256": "81f88291aec2f78b371b4ac9e36e3f4dd732d94da321b740378a6a885b566511",
+          "executed_sha256": "4bb720e6aad1cb34c4ad26c7594013fe4148a2abf15d81f63df205b15da74dd5",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1884000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rsc_thermometry_x/cyclic": {
+      "shots": 20,
+      "averaging_mode": "cyclic",
+      "axes": [
+        {
+          "name": "probe_rf",
+          "values": [
+            79880000.0,
+            79900000.0,
+            79920000.0,
+            80080000.0,
+            80100000.0,
+            80120000.0
+          ],
+          "unit": "Hz",
+          "values_unit": "Hz"
+        },
+        {
+          "name": "readout_mode",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 240,
+        "averaging_mode": "cyclic"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl0",
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "unused_devices": [],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "bus:spi1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "update_group:urukul1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ]
+        },
+        "prepared_shared_resources_required": [],
+        "externally_initialized_dds": [],
+        "initialize_dds": [
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "probe_rf": 79880000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "8960d46d0ebc48cd92684ea340471d345740b692020f62789a671eb1625df64d",
+          "physical_sha256": "59b80bd0b098a1461a6a339bb10f123f893d6ed2f70a6ddfe576d0f55dd0ce86",
+          "executed_sha256": "752775dc6f7b9dc31e31adda2d985d6ab3617254d1157b3dd48517061faf7e33",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "probe_rf": 79880000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "306d2446d3ea475511f56169681d0237c61a77f5f9fccd595f655e5834205011",
+          "physical_sha256": "967b6908429a76d0118ee97164702d2aaf7e63330bf8c37704b17b1b50a42166",
+          "executed_sha256": "472e6a7e253cd9a715d2584b742a23d0b0e76b7affe4f1a73fe5da2276910d33",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "probe_rf": 79900000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "eb4e9a4b3b001097637ad6f7ac7a34ea583b26d6763be8fe84bfc884049d83f6",
+          "physical_sha256": "262da6bd06c6c41d33e941c5dd214984e98655fd93ec2dd1f24d88a961295364",
+          "executed_sha256": "119f1cf23df9c035d0c7b9102ef6f02fd963418eaa52f56d8fc77ba3e552dd24",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "probe_rf": 79900000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "2f1b153d99e948acc9b18c06b8c3c145b7bcf89ebc5edea2f934818701a23596",
+          "physical_sha256": "55f15f2173fed66cfd1cc05e276188f963d0ebadecb57c5dd77cf80d02450a06",
+          "executed_sha256": "530cd419aa10726448b9d0671f435444554dbb51b0af71600cb4a2722966294d",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "probe_rf": 79920000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "23d3ef4feac19f7af61209282bc2a980b97841727c3430b8d3fec505fa506122",
+          "physical_sha256": "5523fbf24ca801cc113f4cd3486ebed4d75da2fb645b72e9183afb9bbc2c4250",
+          "executed_sha256": "242e08ec7c8de3e8f23b4fe32ff0d2a5790079b5bcae12de02a01cac30666c7a",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "probe_rf": 79920000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "f98e6cf07e82bf65438b68d4589555bf8b143b9291a14b16b3a5d38e0279f0d0",
+          "physical_sha256": "a0e95a245146542b004a6585fed22be653a53e3f9a0ec1b9e8bb65d79d576da8",
+          "executed_sha256": "f7ba07c190994a4f221d7064f1159f43d9ba9f8d73824f72ba4938595b1a2fc0",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "coordinates": {
+            "probe_rf": 80080000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            3,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "e24d3183038404541a5eebe908e269418409cf7a75688a8d1cbc1c66aa1b1bbb",
+          "physical_sha256": "f657732d36f2be9915660956e63bd97e945a1f683de4326079ea26c337803956",
+          "executed_sha256": "ded2d99b5bdebefa2f22b4340688fa2ef83678f6bf74db2f4283ff9f20c3b0e9",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "coordinates": {
+            "probe_rf": 80080000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            3,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "f61fc37fbe1f58110738b6cd67ae778052195843b8b902190c6b033e270bdd6e",
+          "physical_sha256": "dffd3879fec9ac8596a6a6ae47d72623720cc3489e9e0aceaca3b63834aa0475",
+          "executed_sha256": "246d5392b42e0667d2fa7f2cc774677630b13716cf171a1ffb66270bb9ddbaf2",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "coordinates": {
+            "probe_rf": 80100000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            4,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 91,
+          "logical_sha256": "4c46dde388e328b9a922b2f21af6db7472c9b6466fd2fb2572c84e92f44dc50a",
+          "physical_sha256": "aae0b8a5a7c75739c0c51a4c43078c8ed1dc1fda89808bfdb43c313f394f9f2c",
+          "executed_sha256": "b9158863cd2cb99097c014f7dd20c81db5b8065def3f7bdfe076d65849f75c45",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "coordinates": {
+            "probe_rf": 80100000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            4,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 94,
+          "logical_sha256": "0a3f1443d49fd9517415eaa67f50e124079266357c5fb3195894595acd6d6b92",
+          "physical_sha256": "376306f205caaa09800276a34ddf1a5b7860e9f28aae497593909fc9bfe1cc8e",
+          "executed_sha256": "52fda48dc48ed940968ac38c1c37cc3cd2b10ecc966cfeb2a5a8c6a88c369ffd",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "coordinates": {
+            "probe_rf": 80120000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            5,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "b99d1c898c3e89e4471cd593908761820d97157ccce03928834f9287a31dc882",
+          "physical_sha256": "e3fa4b04fa4fb46140842047c38d4b49d250072cf34a2df2b7e1c2229286d4dc",
+          "executed_sha256": "e8d304a8d19916c04f33e2783795a0da4486159712ee28a72ab0a4ebfe70fe44",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "coordinates": {
+            "probe_rf": 80120000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            5,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "ea1fc73e1f690b7df383000cdb98571133c82189cc4d59a65eb809ca1c21ccaa",
+          "physical_sha256": "fedb0dd0977da18756e1d568111866460f206278eec9d7274ccad79bbb6985d9",
+          "executed_sha256": "6e71a63dc7728060b1c42ae672b71b6c14e8dec909461328696e6a57ffcba731",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "initialization/sequential": {
+      "shots": 100,
+      "averaging_mode": "sequential",
+      "axes": [
+        {
+          "name": "pump_time",
+          "values": [
+            0.0,
+            1e-05,
+            2e-05,
+            5e-05,
+            0.0001,
+            0.0002
+          ],
+          "unit": "us",
+          "values_unit": "s"
+        },
+        {
+          "name": "readout_mode",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 1200,
+        "averaging_mode": "sequential"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl0",
+          "urukul0_ch0",
+          "urukul0_ch1"
+        ],
+        "unused_devices": [],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [],
+        "externally_initialized_dds": [],
+        "initialize_dds": [
+          "urukul0_ch0",
+          "urukul0_ch1"
+        ],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "pump_time": 0.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 1150000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 2,
+          "logical_sha256": "35a09e1587cc771bff9205bb97b2359d57a3d1f885975fe87e4f6aadd118d57c",
+          "physical_sha256": "8c00e6192bb487fdf40b68efb40285baf5a8d31e781afc879fe7e70ab4ea01d2",
+          "executed_sha256": "13ce19cf43ddc177d01eae2d27fd6801b8aa347aa6b0f3b7d6dd0b380ecd9ec5",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 140000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "pump_time": 0.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 1150000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "d69e04329a5cc7a15cbb51b00ef9ee282aa3f6118d686a29acf1680baaf8b825",
+          "physical_sha256": "253e9d02e1127f46a041236ca344a514c2c59b068358aea15351685268fc3d57",
+          "executed_sha256": "315b1ae3d6cf4c3705a649a70bdb99f27f57d3a0a4d77196acc8e39340501bc4",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 140000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "pump_time": 1e-05,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 1160000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "f6d50167743019a2c5167466b8f3737354dbfd52df5fa30193c40b8242b201ee",
+          "physical_sha256": "fc3e9f3e593f120cbb3bb96ca8419f0b25ec065ed6f013386820c2cffbce002d",
+          "executed_sha256": "293b570e41b649dad4f485a9c2b6167cb61220442020864f739232ad728144e1",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 150000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "pump_time": 1e-05,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 1160000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "76171d4d65e9850baacecca2c4314e66730d41fdf1afe0ff8c3274f750c9010d",
+          "physical_sha256": "651e58271edabac558296a6c8b768b84eea32e5708f73fc9965d105aafb9e349",
+          "executed_sha256": "ad3bcad29e29da1b4f7006cc39db0c34912ddb7666c58db388d4cda4e2a6c489",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 150000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "pump_time": 2e-05,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 1170000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "edd90e6f92d2fa3434c3cfd5d4f2e46e15245968d956187c9517bce49d744ad8",
+          "physical_sha256": "18ccdccb4a4e9b17bc66415df40d7e2c0d9b60b0e3a54857d4551be366ef4859",
+          "executed_sha256": "50415e2aadce93740c4852bab9db50b3395b54dfa0358feadf81a92d71622c32",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 160000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "pump_time": 2e-05,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 1170000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "096db196ae35dabe9a6bc4f114ed158e4c9aedc4abd1330dfb075052517cdd54",
+          "physical_sha256": "2d1dc5053775b0438f17f779b7692d9b2508ccd06810688b20a44d7977220c75",
+          "executed_sha256": "a2a0512ec2b6c466db1cc149a7fb85071cfd6be8ae2a98d37dd97c93aec91d01",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 160000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "coordinates": {
+            "pump_time": 5e-05,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            3,
+            0
+          ],
+          "duration_mu": 1200000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "c3600cff9f3f78a8f7c2a2cd06334455a8d46e0471b36e0edf028edf48923def",
+          "physical_sha256": "fc0f26c1bb91182d915566f4e3a1869d5a21c8972258d5e5f9241f9f3c953ede",
+          "executed_sha256": "14917b6afe2046ce0eaaea38ef2eeb0d3e7b30164b954f85a5d24b0b6967883f",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 190000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "coordinates": {
+            "pump_time": 5e-05,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            3,
+            1
+          ],
+          "duration_mu": 1200000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "5cd6086f750b565bb2f98913d18b41a0f233a9b70645337dd0f51be703abc777",
+          "physical_sha256": "2c73d14cef2ebdeb5bf40f4f97e7ea022a0a6334559712828a8b5ac831c709d0",
+          "executed_sha256": "2ef134e46926c6fb9c50b137349bc3f5a5dda2d8f86e0f790571cd08cb950148",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 190000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "coordinates": {
+            "pump_time": 0.0001,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            4,
+            0
+          ],
+          "duration_mu": 1250000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "46a2e37d9ac1b995a14be3846e62449e47596b141c60e01ab0a01b39dca92dd8",
+          "physical_sha256": "dd0bbaebcd68524c8544f9acec302ccc0ebe15d70f6ff403cd786e55fd77a0b2",
+          "executed_sha256": "394896b0d11d4d0051274127005f414beb18adb83c37b4a29c73ea8a31056287",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 240000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "coordinates": {
+            "pump_time": 0.0001,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            4,
+            1
+          ],
+          "duration_mu": 1250000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "69b3766c73c1f8f0e308e919e0bfdf8aa346f087971fc33887ce685a3e406394",
+          "physical_sha256": "df8c5c38d31a2637c2ead372f40c198ec4eebeadcb37b8b7ac377127059f7912",
+          "executed_sha256": "8b2064c190eae0783b2e1ee41657036212750a96d2320d454b105c909c295d1c",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 240000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "coordinates": {
+            "pump_time": 0.0002,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            5,
+            0
+          ],
+          "duration_mu": 1350000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 5,
+          "logical_sha256": "69012db30ea25b03794ca5480042cae01c2b0121a124263582d667eb9fedaa35",
+          "physical_sha256": "4f491f5298a47f9c40dc9bf2b58f7f74f182128a9b36573cc563f589917c4bfe",
+          "executed_sha256": "024c85e80bf1193d97dd220117a6d8896edc6d4a5c006a7eed9128bea635dd69",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 340000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "coordinates": {
+            "pump_time": 0.0002,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            5,
+            1
+          ],
+          "duration_mu": 1350000,
+          "origin_mu": 0,
+          "logical_event_count": 7,
+          "physical_event_count": 8,
+          "logical_sha256": "7593e3c1d3c148f466ab0213d409d9d40d87b4b44f751ba2ee4803c372625a6f",
+          "physical_sha256": "10957be7b3f7166d22ac5312bd0188b2377040312ab562414d51a3ef333c55af",
+          "executed_sha256": "ebc0649b7ecafc5ab2779cfa53a4ff04b28da826a2975f925ff120cc82c130df",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 340000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rsc_round_scan/sequential": {
+      "shots": 20,
+      "averaging_mode": "sequential",
+      "axes": [
+        {
+          "name": "rounds",
+          "values": [
+            0.0,
+            1.0,
+            3.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        },
+        {
+          "name": "readout_mode",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 120,
+        "averaging_mode": "sequential"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl0",
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "unused_devices": [],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "bus:spi1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "update_group:urukul1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ]
+        },
+        "prepared_shared_resources_required": [],
+        "externally_initialized_dds": [],
+        "initialize_dds": [
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "rounds": 0.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 1280000,
+          "origin_mu": 0,
+          "logical_event_count": 11,
+          "physical_event_count": 11,
+          "logical_sha256": "8b7d0c5c1312ce97d420a0835c51428a27ee61821375e03479d0a8c7d833a50a",
+          "physical_sha256": "d4a50638c515f0a7707f7e67f1e352f1d9770c9760d3a015bdd9ac0a9264f33c",
+          "executed_sha256": "b41e5fc638f5b013f2b6e73ec4c5f7c239d690ae39b02b60639ce2b242dabf74",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 180000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "rounds": 0.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 1280000,
+          "origin_mu": 0,
+          "logical_event_count": 11,
+          "physical_event_count": 14,
+          "logical_sha256": "3c4fb4e038a6f8a2d977074813616bb605a1a3cde861633046100332e9feda75",
+          "physical_sha256": "737fb450173994c7274433206cfa204c018241d63637dcf406e5a09d8676dbfb",
+          "executed_sha256": "6753fef328700a709652c740940dab534383a1e3dc9a78e8728253a87d8c81af",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 180000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "rounds": 1.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 1848000,
+          "origin_mu": 0,
+          "logical_event_count": 47,
+          "physical_event_count": 51,
+          "logical_sha256": "5bec88f054b65c79248d14c62013f033d190d6e1863e1db8ee4d010d4295cd18",
+          "physical_sha256": "382ee3c6d95e5948943b330be8c9296ae6e4da3437370991abbece3df7843105",
+          "executed_sha256": "22c5578609c41c25fd1771852dc2413c6431fc84fc05e160f14664f6971d2bbe",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 748000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "rounds": 1.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 1848000,
+          "origin_mu": 0,
+          "logical_event_count": 47,
+          "physical_event_count": 54,
+          "logical_sha256": "1691f271ed98f9de6d6d2637c760fca137563faed346c9a41f5f4f9bc49b984d",
+          "physical_sha256": "c63a16ae2faf7a2856fed30c59a6ce389cd0a408de0ab3f768450309c9e8fa98",
+          "executed_sha256": "5a00a9d2452a25dc82cd28ef744a3316d1171af394432db51664a14c3685e217",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 748000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "rounds": 3.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 2984000,
+          "origin_mu": 0,
+          "logical_event_count": 119,
+          "physical_event_count": 123,
+          "logical_sha256": "d44c2a3e7c892bdb9ce769c3737b9804923e46b058bb5b441d8454ac68096e7a",
+          "physical_sha256": "3662e52e6c5ae2e4bd027bb7d5b8e6052b2350371b9fc3faf86440d690d760ce",
+          "executed_sha256": "7a861bb8d3e8fdcdda5182c40d55b9f4ac12b0008b03a2c98d50b6fe1e35592f",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1884000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "rounds": 3.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 2984000,
+          "origin_mu": 0,
+          "logical_event_count": 119,
+          "physical_event_count": 126,
+          "logical_sha256": "f970b3d2d75de8e46a95b84f79797df360d894771f5e9eeb3c2d705fdc567b90",
+          "physical_sha256": "81f88291aec2f78b371b4ac9e36e3f4dd732d94da321b740378a6a885b566511",
+          "executed_sha256": "4bb720e6aad1cb34c4ad26c7594013fe4148a2abf15d81f63df205b15da74dd5",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1884000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rsc_thermometry_x/sequential": {
+      "shots": 20,
+      "averaging_mode": "sequential",
+      "axes": [
+        {
+          "name": "probe_rf",
+          "values": [
+            79880000.0,
+            79900000.0,
+            79920000.0,
+            80080000.0,
+            80100000.0,
+            80120000.0
+          ],
+          "unit": "Hz",
+          "values_unit": "Hz"
+        },
+        {
+          "name": "readout_mode",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 240,
+        "averaging_mode": "sequential"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl0",
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "unused_devices": [],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "bus:spi1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1",
+            "urukul0_ch2",
+            "urukul0_ch3"
+          ],
+          "update_group:urukul1": [
+            "urukul1_ch0",
+            "urukul1_ch1",
+            "urukul1_ch2",
+            "urukul1_ch3"
+          ]
+        },
+        "prepared_shared_resources_required": [],
+        "externally_initialized_dds": [],
+        "initialize_dds": [
+          "urukul0_ch0",
+          "urukul0_ch1",
+          "urukul0_ch2",
+          "urukul0_ch3",
+          "urukul1_ch0",
+          "urukul1_ch1",
+          "urukul1_ch2",
+          "urukul1_ch3"
+        ],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "probe_rf": 79880000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "8960d46d0ebc48cd92684ea340471d345740b692020f62789a671eb1625df64d",
+          "physical_sha256": "59b80bd0b098a1461a6a339bb10f123f893d6ed2f70a6ddfe576d0f55dd0ce86",
+          "executed_sha256": "752775dc6f7b9dc31e31adda2d985d6ab3617254d1157b3dd48517061faf7e33",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "probe_rf": 79880000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "306d2446d3ea475511f56169681d0237c61a77f5f9fccd595f655e5834205011",
+          "physical_sha256": "967b6908429a76d0118ee97164702d2aaf7e63330bf8c37704b17b1b50a42166",
+          "executed_sha256": "472e6a7e253cd9a715d2584b742a23d0b0e76b7affe4f1a73fe5da2276910d33",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "probe_rf": 79900000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "eb4e9a4b3b001097637ad6f7ac7a34ea583b26d6763be8fe84bfc884049d83f6",
+          "physical_sha256": "262da6bd06c6c41d33e941c5dd214984e98655fd93ec2dd1f24d88a961295364",
+          "executed_sha256": "119f1cf23df9c035d0c7b9102ef6f02fd963418eaa52f56d8fc77ba3e552dd24",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "probe_rf": 79900000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "2f1b153d99e948acc9b18c06b8c3c145b7bcf89ebc5edea2f934818701a23596",
+          "physical_sha256": "55f15f2173fed66cfd1cc05e276188f963d0ebadecb57c5dd77cf80d02450a06",
+          "executed_sha256": "530cd419aa10726448b9d0671f435444554dbb51b0af71600cb4a2722966294d",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "probe_rf": 79920000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "23d3ef4feac19f7af61209282bc2a980b97841727c3430b8d3fec505fa506122",
+          "physical_sha256": "5523fbf24ca801cc113f4cd3486ebed4d75da2fb645b72e9183afb9bbc2c4250",
+          "executed_sha256": "242e08ec7c8de3e8f23b4fe32ff0d2a5790079b5bcae12de02a01cac30666c7a",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "probe_rf": 79920000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "f98e6cf07e82bf65438b68d4589555bf8b143b9291a14b16b3a5d38e0279f0d0",
+          "physical_sha256": "a0e95a245146542b004a6585fed22be653a53e3f9a0ec1b9e8bb65d79d576da8",
+          "executed_sha256": "f7ba07c190994a4f221d7064f1159f43d9ba9f8d73824f72ba4938595b1a2fc0",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "coordinates": {
+            "probe_rf": 80080000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            3,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "e24d3183038404541a5eebe908e269418409cf7a75688a8d1cbc1c66aa1b1bbb",
+          "physical_sha256": "f657732d36f2be9915660956e63bd97e945a1f683de4326079ea26c337803956",
+          "executed_sha256": "ded2d99b5bdebefa2f22b4340688fa2ef83678f6bf74db2f4283ff9f20c3b0e9",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "coordinates": {
+            "probe_rf": 80080000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            3,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "f61fc37fbe1f58110738b6cd67ae778052195843b8b902190c6b033e270bdd6e",
+          "physical_sha256": "dffd3879fec9ac8596a6a6ae47d72623720cc3489e9e0aceaca3b63834aa0475",
+          "executed_sha256": "246d5392b42e0667d2fa7f2cc774677630b13716cf171a1ffb66270bb9ddbaf2",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "coordinates": {
+            "probe_rf": 80100000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            4,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 91,
+          "logical_sha256": "4c46dde388e328b9a922b2f21af6db7472c9b6466fd2fb2572c84e92f44dc50a",
+          "physical_sha256": "aae0b8a5a7c75739c0c51a4c43078c8ed1dc1fda89808bfdb43c313f394f9f2c",
+          "executed_sha256": "b9158863cd2cb99097c014f7dd20c81db5b8065def3f7bdfe076d65849f75c45",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "coordinates": {
+            "probe_rf": 80100000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            4,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 94,
+          "logical_sha256": "0a3f1443d49fd9517415eaa67f50e124079266357c5fb3195894595acd6d6b92",
+          "physical_sha256": "376306f205caaa09800276a34ddf1a5b7860e9f28aae497593909fc9bfe1cc8e",
+          "executed_sha256": "52fda48dc48ed940968ac38c1c37cc3cd2b10ecc966cfeb2a5a8c6a88c369ffd",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "coordinates": {
+            "probe_rf": 80120000.0,
+            "readout_mode": 0.0
+          },
+          "axis_indices": [
+            5,
+            0
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 92,
+          "logical_sha256": "b99d1c898c3e89e4471cd593908761820d97157ccce03928834f9287a31dc882",
+          "physical_sha256": "e3fa4b04fa4fb46140842047c38d4b49d250072cf34a2df2b7e1c2229286d4dc",
+          "executed_sha256": "e8d304a8d19916c04f33e2783795a0da4486159712ee28a72ab0a4ebfe70fe44",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "coordinates": {
+            "probe_rf": 80120000.0,
+            "readout_mode": 1.0
+          },
+          "axis_indices": [
+            5,
+            1
+          ],
+          "duration_mu": 2441000,
+          "origin_mu": 0,
+          "logical_event_count": 86,
+          "physical_event_count": 95,
+          "logical_sha256": "ea1fc73e1f690b7df383000cdb98571133c82189cc4d59a65eb809ca1c21ccaa",
+          "physical_sha256": "fedb0dd0977da18756e1d568111866460f206278eec9d7274ccad79bbb6985d9",
+          "executed_sha256": "6e71a63dc7728060b1c42ae672b71b6c14e8dec909461328696e6a57ffcba731",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 1341000,
+              "duration_mu": 10000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "image",
+                "handle": "survivors"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

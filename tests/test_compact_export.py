@@ -3,6 +3,7 @@
 import ast
 import json
 import math
+from dataclasses import replace
 
 import pytest
 
@@ -41,8 +42,16 @@ def _pulse_kernels(source):
     ]
 
 
-def _compile(exp, qubits):
-    return compile_experiment(exp, *reference_setup(qubits))
+def _compile(exp, qubits, *, legacy=False):
+    setup, mapping = reference_setup(qubits)
+    if legacy:
+        # Keep testing the compact legacy exporter, with its corrected real
+        # driver budget. Timed Square currently uses explicit per-point kernels.
+        setup.devices = {
+            name: replace(device, square_latency_mu=None, nco_mode="legacy_tracking")
+            for name, device in setup.devices.items()
+        }
+    return compile_experiment(exp, setup, mapping)
 
 
 def _assert_verified(compiled):
@@ -55,7 +64,7 @@ def _assert_verified(compiled):
 
 @pytest.mark.parametrize("template", [rabi, ramsey])
 @pytest.mark.parametrize("averaging", ["cyclic", "sequential"])
-def test_templates_share_one_kernel_including_zero_point(template, averaging):
+def test_timed_templates_export_each_point_including_zero_point(template, averaging):
     q = Qubit("q0")
     values = [i * 4 * us for i in range(17)]
     compiled = _compile(template(q, values, shots=3, mode=averaging), [q])
@@ -63,10 +72,10 @@ def test_templates_share_one_kernel_including_zero_point(template, averaging):
     compact = generate_source(compiled)
     expanded = generate_source(compiled, mode="unrolled")
 
-    assert len(_pulse_kernels(compact)) == 1
+    assert len(_pulse_kernels(compact)) == 17
     assert len(_pulse_kernels(expanded)) == 17
-    assert "def point_0(" not in compact
-    assert len(compact.splitlines()) < len(expanded.splitlines()) / 2
+    assert "def point_0(" in compact
+    assert compact == expanded
     _assert_verified(compiled)
 
 
@@ -93,11 +102,11 @@ def test_custom_multiaxis_sweep_is_parameterized_without_template_metadata(avera
                             delay(q.raman, 2 * us)
                         measure(q)
 
-    compiled = _compile(exp, [q])
+    compiled = _compile(exp, [q], legacy=True)
     assert exp.metadata == {}
     assert len(compiled.points) == 12
     assert len(_pulse_kernels(generate_source(compiled))) == 1
-    assert {p.origin_mu for p in compiled.points} == {0, 1000}
+    assert {p.origin_mu for p in compiled.points} == {0, 3000}
     configs = [
         e for p in compiled.points for e in p.physical_events if e.kind == "dds_config"
     ]
@@ -136,7 +145,7 @@ def test_empty_physical_program_and_nonempty_program_preserve_completion_times()
                 play(q.raman, Square(duration))
                 delay(q.raman, 2 * us)
 
-    compiled = _compile(exp, [q])
+    compiled = _compile(exp, [q], legacy=True)
     assert compiled.points[0].physical_events == []
     assert compiled.points[0].duration_mu == 2000
     assert len(_pulse_kernels(generate_source(compiled))) == 1
@@ -156,7 +165,7 @@ def test_changing_preroll_and_phase_references_share_a_kernel():
                     play(q.raman, Square(4 * us, phase=phase))
                     measure(q)
 
-    compiled = _compile(exp, [q])
+    compiled = _compile(exp, [q], legacy=True)
     assert len(_pulse_kernels(generate_source(compiled))) == 1
     assert len({p.origin_mu for p in compiled.points}) == 3
     configs = [
@@ -180,7 +189,7 @@ def test_public_compiled_export_accepts_both_modes_and_saves_report(tmp_path):
             verify_export(compiled, exported["source"])["offline_export_check"]
             == "passed"
         )
-    assert len(_pulse_kernels(auto["source"].read_text(encoding="utf-8"))) == 1
+    assert len(_pulse_kernels(auto["source"].read_text(encoding="utf-8"))) == 3
     assert len(_pulse_kernels(debug["source"].read_text(encoding="utf-8"))) == 3
 
 
@@ -203,7 +212,13 @@ def test_compact_codegen_does_not_hide_mutated_output_edge():
 
 def test_compact_parameter_row_mutation_is_detected():
     q = Qubit("q0")
-    compiled = _compile(ramsey(q, [0 * us, 4 * us, 12 * us]), [q])
+    exp = Experiment("legacy_parameter_rows", [q])
+    duration = SweepParameter("duration", [4, 12], "us")
+    with exp.average(2):
+        with exp.sweep(duration):
+            with exp.realtime():
+                play(q.raman, Square(duration))
+    compiled = _compile(exp, [q], legacy=True)
     tree = ast.parse(generate_source(compiled))
     found = False
     for node in ast.walk(tree):
@@ -250,7 +265,7 @@ def test_kernel_completion_time_is_checked_even_when_output_events_match():
     kernel = next(
         n
         for n in ast.walk(tree)
-        if isinstance(n, ast.FunctionDef) and n.name == "kernel_0"
+        if isinstance(n, ast.FunctionDef) and n.name == "point_0"
     )
     times = [
         n

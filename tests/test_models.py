@@ -98,7 +98,7 @@ def test_apply_save_load_and_history(tmp_path):
     assert loaded.history[0]["after"]["params"]["raman"]["pi_duration"] == 12e-6
     with pytest.raises(TypeError):
         loaded.history[0]["kind"] = "wrong"
-    assert json.loads(path.read_text())["schema_version"] == 1
+    assert json.loads(path.read_text())["schema_version"] == 2
 
 
 def test_apply_rejects_stale_and_invalid_without_changing_state():
@@ -204,7 +204,16 @@ def test_external_file_edit_is_not_overwritten(tmp_path):
 
 def test_reject_future_schema(tmp_path):
     path = tmp_path / "qubits.json"
-    path.write_text(json.dumps({"schema_version": 2, "qubits": [], "history": []}))
+    latest_supported_schema = 3  # Role-parameter stores already use version 3.
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": latest_supported_schema + 1,
+                "qubits": [],
+                "history": [],
+            }
+        )
+    )
     with pytest.raises(ValueError, match="schema"):
         QubitStore.load(path)
 

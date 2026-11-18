@@ -1,0 +1,1412 @@
+{
+  "cyclic": {
+    "rabi": {
+      "shots": 3,
+      "averaging_mode": "cyclic",
+      "axes": [
+        {
+          "name": "duration",
+          "values": [
+            0.0,
+            4e-06,
+            1.2e-05
+          ],
+          "unit": "s",
+          "values_unit": "s"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 9,
+        "averaging_mode": "cyclic"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "duration": 0.0
+          },
+          "axis_indices": [
+            0
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 4,
+          "logical_sha256": "ae8f2797b413af131d048316e211cc6396b23505c3c63accb187ce1c7da46870",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "duration": 4e-06
+          },
+          "axis_indices": [
+            1
+          ],
+          "duration_mu": 39000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "78363ec223cd300979ebe9817756a0e052d5f9a08599480ca7b807e2468ee452",
+          "physical_sha256": "793f79c2b04f4cdce253ba67afc6d84c7f5154efc1261c89b4ad82e96a19efaf",
+          "executed_sha256": "46181de674b31b3f8abeed93e5ad3e574a0eb295f32e8683ecae561f1ba8c962",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 24000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "duration": 1.2e-05
+          },
+          "axis_indices": [
+            2
+          ],
+          "duration_mu": 47000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "16a6bcc7f337c0e16f2567ab0d53dfdf86d2fe2611447272ee4d3755021e382b",
+          "physical_sha256": "c7a8262b5b9297a72ee45979c9c627b8531c2111369229dfad9cf8433a006679",
+          "executed_sha256": "f6fd63566473416f5edf5d5cdbf1ff29b68c1de6fd62e3fda0f15060f1c149b8",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 32000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rabi_zero_amplitude": {
+      "shots": 3,
+      "averaging_mode": "cyclic",
+      "axes": [
+        {
+          "name": "duration",
+          "values": [
+            0.0,
+            4e-06,
+            1.2e-05
+          ],
+          "unit": "s",
+          "values_unit": "s"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 9,
+        "averaging_mode": "cyclic"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "duration": 0.0
+          },
+          "axis_indices": [
+            0
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 4,
+          "logical_sha256": "658e1b653894a70843fb6ab303ef00967a5e8db3f6df756977a32507a73b0b8e",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "duration": 4e-06
+          },
+          "axis_indices": [
+            1
+          ],
+          "duration_mu": 39000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "72b02c385b98a1a277e29ccee289512b33676ef0ff90b95ef725905e27f2cef3",
+          "physical_sha256": "1bfc4fa1ac98fa390213834f4fee241f8077eb3c04eeaacb6a59815bcd49017f",
+          "executed_sha256": "d5453d70868790ba132cb2e6d1e1e535b20df548c60e1e90acf52fb6ec834325",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 24000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "duration": 1.2e-05
+          },
+          "axis_indices": [
+            2
+          ],
+          "duration_mu": 47000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "b41c5fd8c1d9242a53c6b6c6923b64885d23464395fdd57c05d54619fd58dabb",
+          "physical_sha256": "f1b1f94a3c164d75859f7f714a0c08400d0c08b513fa12ed72d5ab723523d934",
+          "executed_sha256": "b1482e1e42a80e4fda9f78f4d39f47005c0fdc5d17b31ac3cfa235f6867cec6a",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 32000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "ramsey": {
+      "shots": 3,
+      "averaging_mode": "cyclic",
+      "axes": [
+        {
+          "name": "tau",
+          "values": [
+            0.0,
+            4e-06,
+            1.2e-05
+          ],
+          "unit": "s",
+          "values_unit": "s"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 9,
+        "averaging_mode": "cyclic"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "tau": 0.0
+          },
+          "axis_indices": [
+            0
+          ],
+          "duration_mu": 49000,
+          "origin_mu": 0,
+          "logical_event_count": 8,
+          "physical_event_count": 7,
+          "logical_sha256": "83dadb993e06c8dacebfb950c8b0f9dc5e4d3f9c1cd4d59fae9d16387cb1966d",
+          "physical_sha256": "252071d1c014bb834894c880e450f97d2dd46866931d3e78cd84bdf017cf6cc7",
+          "executed_sha256": "226d2c6ea74bb7801fd52df804069d927aede23b03ad6833d490dbec8f307e09",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 34000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "tau": 4e-06
+          },
+          "axis_indices": [
+            1
+          ],
+          "duration_mu": 53000,
+          "origin_mu": 0,
+          "logical_event_count": 8,
+          "physical_event_count": 9,
+          "logical_sha256": "4bc3fa15cbcb5c347dfba50c9afd0f899ad8fe3aaca8045a61c2b1c077134f8b",
+          "physical_sha256": "2cabed6574703d43e20a1cd5cf02c0762ac38ab70882f9812f687b13efaf3323",
+          "executed_sha256": "81141de018ad75b81084d44f5088f27de55fbbe14e4a915072bee6451f5abf74",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 38000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "tau": 1.2e-05
+          },
+          "axis_indices": [
+            2
+          ],
+          "duration_mu": 61000,
+          "origin_mu": 0,
+          "logical_event_count": 8,
+          "physical_event_count": 9,
+          "logical_sha256": "7c0a7f5b9f5c547395b59aba1a94f3bdbba9a41184140543d533a16329549003",
+          "physical_sha256": "7d59ac7edecc90108992b7593d2abc1bb9049aa3ea0c908478a8aa74a1ea8849",
+          "executed_sha256": "79f89590243f2791a39ace75366df23e19300d92dea095a05d4cf368877dce55",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 46000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rb": {
+      "shots": 3,
+      "averaging_mode": "cyclic",
+      "axes": [
+        {
+          "name": "length",
+          "values": [
+            0.0,
+            1.0,
+            3.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        },
+        {
+          "name": "sequence",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 18,
+        "averaging_mode": "cyclic"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "length": 0.0,
+            "sequence": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 5,
+          "physical_event_count": 4,
+          "logical_sha256": "706ef49f10802c912009f34a56904bdd03155e072f9226c116884edc59f31130",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "length": 0.0,
+            "sequence": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 5,
+          "physical_event_count": 4,
+          "logical_sha256": "706ef49f10802c912009f34a56904bdd03155e072f9226c116884edc59f31130",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "length": 1.0,
+            "sequence": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 87000,
+          "origin_mu": 0,
+          "logical_event_count": 16,
+          "physical_event_count": 21,
+          "logical_sha256": "8a83a77903518a36e2fcfe3631909a94840d86666107d36994e4b692a6564ca5",
+          "physical_sha256": "e20aad4085b2d4e8493e4a3eabf1f0332d094f1dd983e9979fc616788e921891",
+          "executed_sha256": "5d08ef176646c767fcabe1ecd5f22c15582fded29b3804b0a0282dbb8a213009",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 72000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "length": 1.0,
+            "sequence": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 69000,
+          "origin_mu": 0,
+          "logical_event_count": 12,
+          "physical_event_count": 16,
+          "logical_sha256": "f29ed1413e80ce2f81716ae4ac0c50d147413c6a2aa760b0a8590a0d979d549a",
+          "physical_sha256": "032e7b8e18fb851836c0056e02e4f880e4a44a90938e60235b0bc080a2b8446c",
+          "executed_sha256": "be36bad6807c1b3e65020aa21bbe0ab04da0e1dea36033256d6b37f5554a8559",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 54000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "length": 3.0,
+            "sequence": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 115000,
+          "origin_mu": 0,
+          "logical_event_count": 20,
+          "physical_event_count": 27,
+          "logical_sha256": "99a3499262a3598b013f6ff8f3913f272522658dc890bb92d38334033f1c27f8",
+          "physical_sha256": "c6093a5d22c6f107a06ccfb2f7de608b0e88f190e930e9bae1cfa2102cca3d62",
+          "executed_sha256": "bba1a8d036153f70c6500ad16f626f000e6d48dec0c0ade5ae52b3b73d68d6fd",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 100000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "length": 3.0,
+            "sequence": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 69000,
+          "origin_mu": 0,
+          "logical_event_count": 12,
+          "physical_event_count": 14,
+          "logical_sha256": "46327276bc04a8f53ae7ecef3e3b81ad95d5c8d823591c826d218fc24ab04692",
+          "physical_sha256": "7989208a55fdb7a8059b6f09e959d3bfddb1b8bb218935090b1f05a79aa2263e",
+          "executed_sha256": "0545246896135afcf982058f72084b83f8cba6332b2758272681a4f8e4e1c0f4",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 54000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "sequential": {
+    "rabi": {
+      "shots": 3,
+      "averaging_mode": "sequential",
+      "axes": [
+        {
+          "name": "duration",
+          "values": [
+            0.0,
+            4e-06,
+            1.2e-05
+          ],
+          "unit": "s",
+          "values_unit": "s"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 9,
+        "averaging_mode": "sequential"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "duration": 0.0
+          },
+          "axis_indices": [
+            0
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 4,
+          "logical_sha256": "ae8f2797b413af131d048316e211cc6396b23505c3c63accb187ce1c7da46870",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "duration": 4e-06
+          },
+          "axis_indices": [
+            1
+          ],
+          "duration_mu": 39000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "78363ec223cd300979ebe9817756a0e052d5f9a08599480ca7b807e2468ee452",
+          "physical_sha256": "793f79c2b04f4cdce253ba67afc6d84c7f5154efc1261c89b4ad82e96a19efaf",
+          "executed_sha256": "46181de674b31b3f8abeed93e5ad3e574a0eb295f32e8683ecae561f1ba8c962",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 24000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "duration": 1.2e-05
+          },
+          "axis_indices": [
+            2
+          ],
+          "duration_mu": 47000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "16a6bcc7f337c0e16f2567ab0d53dfdf86d2fe2611447272ee4d3755021e382b",
+          "physical_sha256": "c7a8262b5b9297a72ee45979c9c627b8531c2111369229dfad9cf8433a006679",
+          "executed_sha256": "f6fd63566473416f5edf5d5cdbf1ff29b68c1de6fd62e3fda0f15060f1c149b8",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 32000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rabi_zero_amplitude": {
+      "shots": 3,
+      "averaging_mode": "sequential",
+      "axes": [
+        {
+          "name": "duration",
+          "values": [
+            0.0,
+            4e-06,
+            1.2e-05
+          ],
+          "unit": "s",
+          "values_unit": "s"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 9,
+        "averaging_mode": "sequential"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "duration": 0.0
+          },
+          "axis_indices": [
+            0
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 4,
+          "logical_sha256": "658e1b653894a70843fb6ab303ef00967a5e8db3f6df756977a32507a73b0b8e",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "duration": 4e-06
+          },
+          "axis_indices": [
+            1
+          ],
+          "duration_mu": 39000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "72b02c385b98a1a277e29ccee289512b33676ef0ff90b95ef725905e27f2cef3",
+          "physical_sha256": "1bfc4fa1ac98fa390213834f4fee241f8077eb3c04eeaacb6a59815bcd49017f",
+          "executed_sha256": "d5453d70868790ba132cb2e6d1e1e535b20df548c60e1e90acf52fb6ec834325",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 24000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "duration": 1.2e-05
+          },
+          "axis_indices": [
+            2
+          ],
+          "duration_mu": 47000,
+          "origin_mu": 0,
+          "logical_event_count": 6,
+          "physical_event_count": 7,
+          "logical_sha256": "b41c5fd8c1d9242a53c6b6c6923b64885d23464395fdd57c05d54619fd58dabb",
+          "physical_sha256": "f1b1f94a3c164d75859f7f714a0c08400d0c08b513fa12ed72d5ab723523d934",
+          "executed_sha256": "b1482e1e42a80e4fda9f78f4d39f47005c0fdc5d17b31ac3cfa235f6867cec6a",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 32000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "ramsey": {
+      "shots": 3,
+      "averaging_mode": "sequential",
+      "axes": [
+        {
+          "name": "tau",
+          "values": [
+            0.0,
+            4e-06,
+            1.2e-05
+          ],
+          "unit": "s",
+          "values_unit": "s"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 9,
+        "averaging_mode": "sequential"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "tau": 0.0
+          },
+          "axis_indices": [
+            0
+          ],
+          "duration_mu": 49000,
+          "origin_mu": 0,
+          "logical_event_count": 8,
+          "physical_event_count": 7,
+          "logical_sha256": "83dadb993e06c8dacebfb950c8b0f9dc5e4d3f9c1cd4d59fae9d16387cb1966d",
+          "physical_sha256": "252071d1c014bb834894c880e450f97d2dd46866931d3e78cd84bdf017cf6cc7",
+          "executed_sha256": "226d2c6ea74bb7801fd52df804069d927aede23b03ad6833d490dbec8f307e09",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 34000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "tau": 4e-06
+          },
+          "axis_indices": [
+            1
+          ],
+          "duration_mu": 53000,
+          "origin_mu": 0,
+          "logical_event_count": 8,
+          "physical_event_count": 9,
+          "logical_sha256": "4bc3fa15cbcb5c347dfba50c9afd0f899ad8fe3aaca8045a61c2b1c077134f8b",
+          "physical_sha256": "2cabed6574703d43e20a1cd5cf02c0762ac38ab70882f9812f687b13efaf3323",
+          "executed_sha256": "81141de018ad75b81084d44f5088f27de55fbbe14e4a915072bee6451f5abf74",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 38000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "tau": 1.2e-05
+          },
+          "axis_indices": [
+            2
+          ],
+          "duration_mu": 61000,
+          "origin_mu": 0,
+          "logical_event_count": 8,
+          "physical_event_count": 9,
+          "logical_sha256": "7c0a7f5b9f5c547395b59aba1a94f3bdbba9a41184140543d533a16329549003",
+          "physical_sha256": "7d59ac7edecc90108992b7593d2abc1bb9049aa3ea0c908478a8aa74a1ea8849",
+          "executed_sha256": "79f89590243f2791a39ace75366df23e19300d92dea095a05d4cf368877dce55",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 46000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    },
+    "rb": {
+      "shots": 3,
+      "averaging_mode": "sequential",
+      "axes": [
+        {
+          "name": "length",
+          "values": [
+            0.0,
+            1.0,
+            3.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        },
+        {
+          "name": "sequence",
+          "values": [
+            0.0,
+            1.0
+          ],
+          "unit": "dimensionless",
+          "values_unit": "dimensionless"
+        }
+      ],
+      "host_order": {
+        "status": "passed",
+        "shots_checked": 18,
+        "averaging_mode": "sequential"
+      },
+      "initialization": {
+        "status": "passed",
+        "used_devices": [
+          "ttl_0_prepare",
+          "ttl_0_readout",
+          "urukul0_ch0"
+        ],
+        "unused_devices": [
+          "urukul0_ch1"
+        ],
+        "shared_resources": {
+          "bus:spi0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ],
+          "update_group:urukul0": [
+            "urukul0_ch0",
+            "urukul0_ch1"
+          ]
+        },
+        "prepared_shared_resources_required": [
+          "bus:spi0",
+          "update_group:urukul0"
+        ],
+        "externally_initialized_dds": [
+          "urukul0_ch0"
+        ],
+        "initialize_dds": [],
+        "limitations": [
+          "Inventory must include all channels on the declared shared resources; automatic initialization assumes ownership of those resources",
+          "core.reset requires exclusive ownership of the RTIO execution domain",
+          "DDS init and IO_UPDATE can affect shared resources; no electrical isolation is proven",
+          "Prepared-resource acknowledgement is a host contract, not a hardware measurement"
+        ]
+      },
+      "points": [
+        {
+          "index": 0,
+          "coordinates": {
+            "length": 0.0,
+            "sequence": 0.0
+          },
+          "axis_indices": [
+            0,
+            0
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 5,
+          "physical_event_count": 4,
+          "logical_sha256": "706ef49f10802c912009f34a56904bdd03155e072f9226c116884edc59f31130",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "coordinates": {
+            "length": 0.0,
+            "sequence": 1.0
+          },
+          "axis_indices": [
+            0,
+            1
+          ],
+          "duration_mu": 35000,
+          "origin_mu": 0,
+          "logical_event_count": 5,
+          "physical_event_count": 4,
+          "logical_sha256": "706ef49f10802c912009f34a56904bdd03155e072f9226c116884edc59f31130",
+          "physical_sha256": "06ecd9037ba8d759a48dcdbbf0ec9b071892e432dfcfa1938c17eda4cbceba54",
+          "executed_sha256": "ef390710f9fa4ec0ddb906a8dcba88e7a4b801b483359d5aff224e8caf4a8243",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 20000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "coordinates": {
+            "length": 1.0,
+            "sequence": 0.0
+          },
+          "axis_indices": [
+            1,
+            0
+          ],
+          "duration_mu": 87000,
+          "origin_mu": 0,
+          "logical_event_count": 16,
+          "physical_event_count": 21,
+          "logical_sha256": "8a83a77903518a36e2fcfe3631909a94840d86666107d36994e4b692a6564ca5",
+          "physical_sha256": "e20aad4085b2d4e8493e4a3eabf1f0332d094f1dd983e9979fc616788e921891",
+          "executed_sha256": "5d08ef176646c767fcabe1ecd5f22c15582fded29b3804b0a0282dbb8a213009",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 72000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "coordinates": {
+            "length": 1.0,
+            "sequence": 1.0
+          },
+          "axis_indices": [
+            1,
+            1
+          ],
+          "duration_mu": 69000,
+          "origin_mu": 0,
+          "logical_event_count": 12,
+          "physical_event_count": 16,
+          "logical_sha256": "f29ed1413e80ce2f81716ae4ac0c50d147413c6a2aa760b0a8590a0d979d549a",
+          "physical_sha256": "032e7b8e18fb851836c0056e02e4f880e4a44a90938e60235b0bc080a2b8446c",
+          "executed_sha256": "be36bad6807c1b3e65020aa21bbe0ab04da0e1dea36033256d6b37f5554a8559",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 54000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "coordinates": {
+            "length": 3.0,
+            "sequence": 0.0
+          },
+          "axis_indices": [
+            2,
+            0
+          ],
+          "duration_mu": 115000,
+          "origin_mu": 0,
+          "logical_event_count": 20,
+          "physical_event_count": 27,
+          "logical_sha256": "99a3499262a3598b013f6ff8f3913f272522658dc890bb92d38334033f1c27f8",
+          "physical_sha256": "c6093a5d22c6f107a06ccfb2f7de608b0e88f190e930e9bae1cfa2102cca3d62",
+          "executed_sha256": "bba1a8d036153f70c6500ad16f626f000e6d48dec0c0ade5ae52b3b73d68d6fd",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 100000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "coordinates": {
+            "length": 3.0,
+            "sequence": 1.0
+          },
+          "axis_indices": [
+            2,
+            1
+          ],
+          "duration_mu": 69000,
+          "origin_mu": 0,
+          "logical_event_count": 12,
+          "physical_event_count": 14,
+          "logical_sha256": "46327276bc04a8f53ae7ecef3e3b81ad95d5c8d823591c826d218fc24ab04692",
+          "physical_sha256": "7989208a55fdb7a8059b6f09e959d3bfddb1b8bb218935090b1f05a79aa2263e",
+          "executed_sha256": "0545246896135afcf982058f72084b83f8cba6332b2758272681a4f8e4e1c0f4",
+          "acquisitions": [
+            {
+              "kind": "measure",
+              "signal": "q0.readout",
+              "start_mu": 54000,
+              "duration_mu": 15000,
+              "params": {
+                "qubit": "q0",
+                "protocol": "state_readout",
+                "handle": "population"
+              },
+              "resources": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

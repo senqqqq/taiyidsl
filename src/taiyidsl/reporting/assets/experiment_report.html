@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__ · compiled experiment</title>
+<style>
+:root{color-scheme:light;--ink:#213337;--muted:#617174;--line:#d6dedb;--teal:#087f78}
+*{box-sizing:border-box}body{margin:0;background:#f6f7f3;color:var(--ink);font:15px/1.65 "Segoe UI",Arial,sans-serif}
+main{max-width:1440px;margin:auto;padding:42px 36px 80px}header{border-bottom:2px solid var(--ink);padding-bottom:28px}
+.eyebrow{letter-spacing:.16em;text-transform:uppercase;font-size:11px;font-weight:700;color:var(--teal)}
+h1{font-size:34px;line-height:1.2;font-weight:600;letter-spacing:-.03em;margin:12px 0 20px;overflow-wrap:anywhere}
+h2{margin-top:32px;font-size:23px;font-weight:600}h3{margin-top:28px}h4{font-size:18px;margin-bottom:8px}
+.muted{color:var(--muted)}.stats{display:flex;gap:34px;flex-wrap:wrap}.stats b{font-size:24px;margin-right:5px}
+nav{display:flex;gap:16px;flex-wrap:wrap;margin:26px 0}nav a{padding:16px 22px;background:var(--teal);color:white;text-decoration:none;font-weight:600;border-radius:5px}nav a.secondary{background:#344e68}
+a{color:#066f69;text-underline-offset:3px}a:hover{color:#033e3b}a:focus-visible,summary:focus-visible{outline:3px solid #bb7c1b;outline-offset:3px}
+.note{border-left:4px solid #b88430;background:#fff6e5;padding:14px 20px}.point{background:white;border:1px solid var(--line);border-radius:6px;margin:14px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:600;overflow-wrap:anywhere}summary span{float:right;font-weight:400;color:var(--muted)}.point-body{padding:0 22px 22px}
+.point-body details{border-top:1px solid var(--line);margin-top:12px}.point-body summary{padding-left:0}
+.scroll{overflow:auto}table{width:100%;border-collapse:collapse;font:12px/1.55 Consolas,monospace;margin:12px 0 18px}
+th{background:#edf2ef;color:#445b5d;text-align:left;font-weight:600}td,th{padding:9px 12px;border-bottom:1px solid #e0e7e3;vertical-align:top;max-width:420px;overflow-wrap:anywhere}td{min-width:78px}
+pre{overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 Consolas,monospace;background:#eef2ee;padding:16px;border-radius:4px}.source{white-space:pre;background:#1d3035;color:#dce9e6;padding:24px;font-size:13px;max-height:720px}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:4px 12px;margin:2px 4px 8px 0;font-size:12px;text-decoration:none}footer{margin-top:36px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.execution-flow{padding-left:28px;max-width:1050px}.execution-flow li{padding:12px 18px;margin:8px 0;background:white;border:1px solid var(--line);border-radius:5px}.execution-flow b{display:block;color:var(--teal)}.execution-flow .kernel-step{border-left:4px solid var(--teal);background:#edf6f3}#execution details{border:1px solid var(--line);border-radius:5px;margin:10px 0;background:white}#execution details>p{padding:0 16px;overflow-wrap:anywhere}#execution pre{margin:0}section{scroll-margin-top:20px}
+@media(max-width:700px){main{padding:24px 16px}h1{font-size:25px}summary span{float:none;display:block}.point-body{padding:0 12px 14px}nav a{width:100%}}
+</style></head><body><main>
+<header><div class="eyebrow">TaiyiDSL / compiled experiment / offline</div>
+<h1>__TITLE__</h1><div class="stats"><span><b>__POINT_COUNT__</b> scan points</span>
+<span><b>__SHOTS__</b> shots / point</span><span><b>__MODE__</b> averaging</span></div></header>
+<nav><a href="pulse_sheet.html">01 · Pulse sheet ↗</a><a class="secondary" href="waveform.html">02 · Waveform simulator ↗</a></nav>
+<p><a class="pill" href="#execution">ARTIQ + Spectrum 执行流程</a><a class="pill" href="#spectrum-code">Spectrum 源码</a><a class="pill" href="#artiq-code">Host / ARTIQ 源码</a><a class="pill" href="#compiled-points">各点实际配置与 step 参数</a></p>
+<p>宏观时序与短窗口 DAC 波形分开查看。Pulse sheet 支持缩放、矩形脉冲详情和 waveform 跳转；
+waveform 读取最终 segment / step table，长零段循环不展开为整个实验长度的数组。</p>
+<p class="note">Offline compiler model only. 未连接仪器，未验证物理输出、双卡同步或校准。
+波形是理想 DAC 样本，不是 AOM / 模拟链路或 qubit 状态模拟。示例脉冲面积未标定。</p>
+__NATIVE_LIFECYCLE__<h2>Phase and carrier reference</h2><p>__PHASE_REFERENCE__
+shift_phase(θ) 使 F 加 θ，Rz(θ) 使 F 减 θ；reset_frame 清整个 F，保留载波演化和已继承调制。
+reset_phase 也清整个 F，并清已继承调制、从该时刻重新建立载波原点。Rz 累计值仅作来源诊断，不能从 F 再扣一次。</p>
+<p><code>θ(t) = Φ_osc(t) + s[F(t) + φ_pulse(t)]</code>。
+Φ_osc 包括载波演化、已继承调制、映射偏移及校准；φ_pulse 包括本门基础相位和局部调制。
+epoch 模式按当前频率相对已选载波原点计算；continuous 模式沿实际频率历史积分；carry 继承调制解析终值。
+Section、chunk、segment 和 tile 不重新建立载波参考；各组及各门的实际参考位置列在表内。
+表内 start_phase_deg 是门首样本的最终相位，包含已推进的载波参考。
+所有表格时刻相对逻辑 T0；Pulse sheet 可另外显示物理准备时间。</p>
+<h2>Complete DSL source</h2><details><summary>Open complete authoring source</summary>__SOURCE__</details>
+__EXECUTION__
+<h2 id="compiled-points">Compiled points · 两卡程序与触发时序</h2>__POINTS__
+<footer><a href="report.json">Decoded report JSON</a> · <a href="export/compiled.json">Compiled IR</a> ·
+<a href="export/manifest.json">Hybrid manifest</a> · <a href="export/artiq/experiment.py">Native ARTIQ program</a>
+<br>Compiled SHA-256: __HASH__</footer></main></body></html>

@@ -1,0 +1,87 @@
+{
+  "schema_version": 2,
+  "revision": "illustrative-v1",
+  "conditions": "OFFLINE ONLY. Every shot requires loaded/precooled atoms; hold trap and bias field externally. Optical carriers, Raman geometry, polarization, field, trap depth and camera timing must be calibrated. DDS values do not establish red-sideband resonance. No ramps or cooling performance are verified.",
+  "pump": {
+    "signal": "optics.pump_556",
+    "frequency_hz": 80000000.0,
+    "amplitude": 0.1,
+    "phase_rad": 0,
+    "duration_s": 2e-05,
+    "setup_wait_s": 1e-05,
+    "settle_s": 1e-05
+  },
+  "pushout": {
+    "signal": "optics.pushout_556",
+    "frequency_hz": 90000000.0,
+    "amplitude": 0.2,
+    "phase_rad": 0,
+    "duration_s": 0.0001,
+    "setup_wait_s": 2e-05,
+    "settle_s": 2e-05
+  },
+  "beams": {
+    "common": {
+      "signal": "optics.raman_common",
+      "frequency_hz": 80000000.0,
+      "amplitude": 0.15,
+      "phase_rad": 0
+    },
+    "x": {
+      "signal": "optics.raman_x",
+      "frequency_hz": 80100000.0,
+      "amplitude": 0.15,
+      "phase_rad": 0
+    },
+    "y": {
+      "signal": "optics.raman_y",
+      "frequency_hz": 80120000.0,
+      "amplitude": 0.15,
+      "phase_rad": 0
+    },
+    "z": {
+      "signal": "optics.raman_z",
+      "frequency_hz": 80030000.0,
+      "amplitude": 0.15,
+      "phase_rad": 0
+    },
+    "image": {
+      "signal": "optics.imaging_399",
+      "frequency_hz": 80000000.0,
+      "amplitude": 0.1,
+      "phase_rad": 0
+    },
+    "image_cooling": {
+      "signal": "optics.imaging_cooling_556",
+      "frequency_hz": 85000000.0,
+      "amplitude": 0.1,
+      "phase_rad": 0
+    }
+  },
+  "raman": {
+    "x": {
+      "a": "common",
+      "b": "x",
+      "duration_s": 2e-05,
+      "setup_wait_s": 2e-05
+    },
+    "y": {
+      "a": "common",
+      "b": "y",
+      "duration_s": 2.4e-05,
+      "setup_wait_s": 2e-05
+    },
+    "z": {
+      "a": "common",
+      "b": "z",
+      "duration_s": 6e-05,
+      "setup_wait_s": 2e-05
+    }
+  },
+  "imaging": {
+    "exposure_s": 0.001
+  },
+  "camera": {
+    "transfer_wait_s": 0.0001
+  }
+}

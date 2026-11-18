@@ -61,7 +61,11 @@ Hz = Quantity(Fraction(1), "frequency")
 kHz = Hz * 1000
 MHz = Hz * 1_000_000
 rad = Quantity(Fraction(1), "phase")
+deg = rad * (math.pi / 180)
 turn = rad * (2 * math.pi)
+m = Quantity(Fraction(1), "length")
+mm = m / 1000
+um = m / 1_000_000
 UNIT_TABLE = {
     "s": s,
     "ms": ms,
@@ -71,7 +75,11 @@ UNIT_TABLE = {
     "kHz": kHz,
     "MHz": MHz,
     "rad": rad,
+    "deg": deg,
     "turn": turn,
+    "m": m,
+    "mm": mm,
+    "um": um,
     "dimensionless": Quantity(Fraction(1), "dimensionless"),
     "": Quantity(Fraction(1), "dimensionless"),
 }

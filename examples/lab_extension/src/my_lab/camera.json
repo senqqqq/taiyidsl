@@ -1,0 +1,6 @@
+{
+  "rois": {"q0": [0, 2, 0, 2]},
+  "thresholds": {"q0": 10},
+  "background": 1,
+  "classifier_version": "illustrative-threshold-v1"
+}

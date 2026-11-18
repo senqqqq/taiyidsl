@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "revision": "illustrative-initialization-v1",
+  "conditions": "OFFLINE ONLY. Fresh cooled atoms, stable trap and bias field on EVERY shot. Sigma+ relative to bias field. Optical frequency mapping and camera integration require laboratory calibration. Trigger-only readout; illumination is external.",
+  "pump": {
+    "signal": "optics.pump_556",
+    "frequency_hz": 80000000,
+    "amplitude": 0.1,
+    "phase_rad": 0,
+    "duration_s": 0,
+    "setup_wait_s": 2e-05,
+    "settle_s": 2e-05
+  },
+  "pushout": {
+    "signal": "optics.pushout_556",
+    "frequency_hz": 90000000,
+    "amplitude": 0.2,
+    "phase_rad": 0,
+    "duration_s": 0.0001,
+    "setup_wait_s": 0,
+    "settle_s": 0
+  },
+  "camera": {
+    "transfer_wait_s": 0.001
+  }
+}

@@ -1,4 +1,5 @@
 .venv/
+.toolchains/
 .uv-cache/
 __pycache__/
 .pytest_cache/
@@ -9,3 +10,21 @@ __pycache__/
 output/
 dist/
 artiq_demo/
+
+# Local history and supplied reference material, not package inputs.
+/MEMORY.md
+/section_phase_chunk_qop_plan.md
+/taiyidsl混合控制方案.md
+/randomized_benchmarking_helper.py
+/dataset_db.mdb
+
+# Developer-only artifacts and real laboratory configuration.
+.ipynb_checkpoints/
+/build/
+.coverage
+.coverage.*
+/htmlcov/
+.env
+.env.local
+.env.*.local
+/local_config/

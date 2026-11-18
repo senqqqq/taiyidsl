@@ -5,7 +5,7 @@ import pytest
 
 from taiyidsl import artiq as artiq_backend
 from taiyidsl.artiq import ExportError, export_artiq, generate_source, verify_export
-from taiyidsl.compiler import CompileError, compile_experiment
+from taiyidsl.compiler import compile_experiment
 from taiyidsl.dsl import Experiment, Square, delay, play, shift_phase
 from taiyidsl.hardware import reference_setup
 from taiyidsl.models import Qubit
@@ -17,14 +17,20 @@ from taiyidsl.units import us
 class DeviceFixture:
     name: str
     kind: str
-    config_duration_mu: int = 1000
+    config_duration_mu: int = 3000
     sysclk_hz: float = 1e9
+    spi_ref_period_mu: int = 8
+    update_group: str | None = None
+    bus: str | None = None
+    nco_mode: str = "legacy_tracking"
 
 
 @dataclass
 class SetupFixture:
     devices: dict
     tick_seconds: float = 1e-9
+    rtio_coarse_mu: int = 8
+    rtio_lane_count: int = 8
 
 
 @dataclass
@@ -38,6 +44,10 @@ class EventFixture:
     resources: tuple = ()
     logical_ids: tuple = ()
 
+    @property
+    def end_mu(self):
+        return self.start_mu + self.duration_mu
+
 
 @dataclass
 class PointFixture:
@@ -47,7 +57,7 @@ class PointFixture:
     coordinates: dict = field(default_factory=lambda: {"duration": 1e-5})
     axis_indices: tuple = (0,)
     duration_mu: int = 11000
-    origin_mu: int = 1000
+    origin_mu: int = 3000
 
 
 @dataclass
@@ -70,13 +80,13 @@ def make_compiled():
             "dds_config",
             "urukul0_ch0",
             0,
-            1000,
-            {"frequency": 80e6, "amplitude": 0.5, "phase": 0, "ref_time_mu": 1000},
+            3000,
+            {"frequency": 80e6, "amplitude": 0.5, "phase": 0, "ref_time_mu": 3000},
         ),
-        EventFixture("dds_on", "urukul0_ch0", 1000),
-        EventFixture("dds_off", "urukul0_ch0", 11000),
-        EventFixture("ttl_on", "ttl0", 11000),
-        EventFixture("ttl_off", "ttl0", 12000),
+        EventFixture("dds_on", "urukul0_ch0", 3000),
+        EventFixture("dds_off", "urukul0_ch0", 13000),
+        EventFixture("ttl_on", "ttl0", 13000),
+        EventFixture("ttl_off", "ttl0", 14000),
     ]
     point = PointFixture(
         0,
@@ -139,7 +149,7 @@ def test_overlapping_blocking_driver_call_is_rejected(compiled_fixture):
     compiled_fixture.points[0].physical_events.insert(
         1, EventFixture("ttl_on", "ttl0", 500)
     )
-    with pytest.raises(ExportError, match="driver cursor"):
+    with pytest.raises(ExportError, match="opaque driver submission"):
         generate_source(compiled_fixture)
 
 
@@ -199,24 +209,43 @@ def test_real_phase_update_in_declared_gap_exports_correct_words(tmp_path):
     compiled = compile_experiment(exp, setup, mapping)
     artifact = export_artiq(compiled, tmp_path)
     manifest = json.loads(artifact["manifest"].read_text())
-    assert [item["words"]["pow"] for item in manifest["dds_register_quantization"]] == [
-        0,
-        16384,
-    ]
+    quantization = manifest["dds_register_quantization"]
+    assert [
+        item["words"]["pow"]
+        for item in quantization
+        if item["device"] == mapping[qubit.raman]
+    ] == [0, 16384]
+    # A frame command also updates the mapped, RF-off drive that has no play.
+    assert [
+        item["words"]["pow"]
+        for item in quantization
+        if item["device"] == mapping[qubit.rf]
+    ] == [16384]
     assert (
         verify_export(compiled, artifact["source"])["offline_export_check"] == "passed"
     )
 
 
-def test_phase_change_without_gap_is_not_exported():
+def test_phase_change_without_gap_keeps_continuous_gate():
     qubit = Qubit("q0")
     setup, mapping = reference_setup([qubit])
-    exp = Experiment("impossible", [qubit])
+    exp = Experiment("continuous", [qubit])
     with exp.average(shots=1), exp.realtime():
         play(qubit.raman, Square(8 * us, phase=0))
         play(qubit.raman, Square(8 * us, phase=1))
-    with pytest.raises(CompileError, match="preparation window"):
-        compile_experiment(exp, setup, mapping)
+    compiled = compile_experiment(exp, setup, mapping)
+    point = compiled.points[0]
+    assert [
+        (e.kind, e.start_mu - point.origin_mu)
+        for e in point.physical_events
+        if e.kind in {"dds_on", "dds_off"}
+    ] == [("dds_on", 0), ("dds_off", 16000)]
+    assert [
+        e.start_mu - point.origin_mu
+        for e in point.physical_events
+        if e.kind == "dds_effect"
+    ] == [0, 8000]
+    assert verify_export(compiled)["offline_export_check"] == "passed"
 
 
 def test_shared_board_initial_configuration_and_explicit_origin_alignment():
@@ -236,14 +265,14 @@ def test_shared_board_initial_configuration_and_explicit_origin_alignment():
         play(q1.raman, Square(8 * us))
     compiled = compile_experiment(exp, setup, mapping)
     events = compiled.points[0].physical_events
-    configs = [e for e in events if e.kind == "dds_config"]
+    configs = [e for e in events if e.kind == "dds_prepare"]
     assert configs[0].start_mu + configs[0].duration_mu <= configs[1].start_mu
     assert len({e.start_mu for e in events if e.kind == "dds_on"}) == 1
     source = generate_source(compiled)
     assert "t0 = ((now_mu() + 7) // 8) * 8" in source
     assert verify_export(compiled, source=source)["offline_export_check"] == "passed"
     unaligned = source.replace("t0 = ((now_mu() + 7) // 8) * 8", "t0 = now_mu()")
-    with pytest.raises(ExportError, match="timing grid"):
+    with pytest.raises(ExportError, match="grid"):
         verify_export(compiled, source=unaligned)
 
 
@@ -255,7 +284,7 @@ def test_emitted_budget_guard_detects_driver_that_exceeds_contract(
 
     def slower_driver(self, *args, **kwargs):
         original(self, *args, **kwargs)
-        self.clock.cursor += 8
+        self.clock.cursor += self.device.config_duration_mu - (332 * 8 + 8) + 8
 
     monkeypatch.setattr(artiq_backend._MockDDS, "set_mu", slower_driver)
     with pytest.raises(ValueError, match="exceeded declared configuration budget"):

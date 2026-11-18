@@ -2,6 +2,7 @@
 
 import copy
 import json
+import sys
 from fractions import Fraction
 from pathlib import Path
 
@@ -35,9 +36,13 @@ def rb():
     ]
     assert definitions, "The notebook must expose stable RB definition-cell tags"
     namespace = {"__name__": "yb171_rb_definitions"}
-    for cell in definitions:
-        source = "".join(cell["source"])
-        exec(compile(source, f"{NOTEBOOK}:{cell['id']}", "exec"), namespace)
+    # Core + dev installs must exercise the math/DSL without notebook UI extras.
+    with pytest.MonkeyPatch.context() as isolated:
+        isolated.setitem(sys.modules, "IPython", None)
+        isolated.setitem(sys.modules, "IPython.display", None)
+        for cell in definitions:
+            source = "".join(cell["source"])
+            exec(compile(source, f"{NOTEBOOK}:{cell['id']}", "exec"), namespace)
     return namespace
 
 

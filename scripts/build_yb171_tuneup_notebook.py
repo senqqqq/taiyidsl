@@ -71,7 +71,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
-from IPython.display import Image, Markdown, display
 from taiyidsl import (
     DeviceSetup, Experiment, Hz, LabConfig, NativeKernelPackage, Qubit,
     Square, SweepParameter, deg, delay, kHz, ms, ns, play, rad, reset_phase, us,
@@ -80,6 +79,7 @@ from taiyidsl import (
     tags=("rb-imports",),
 )
 code("""
+from IPython.display import Image, Markdown, display
 
 ROOT = next(p for p in [Path.cwd(), *Path.cwd().parents] if (p / "src/taiyidsl").is_dir())
 OUTPUT = ROOT / "output/yb171_tuneup"

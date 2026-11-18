@@ -54,6 +54,10 @@ extend-exclude = [
 select = ["E", "F", "W", "I", "UP"]
 ignore = []
 
+[tool.ruff.lint.isort]
+# Legacy taiyidsl.* imports also resolve from the package's _compat directory.
+known-first-party = ["taiyidsl"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

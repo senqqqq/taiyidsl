@@ -72,7 +72,11 @@ def recover_shot(self, point, shot, *, context, run_store):
 An unknown hardware outcome or an unrecoverable observation raises `RecoveryRequired` by default. After investigating, record a deliberate decision:
 
 ```python
-journal.resolve(execution_index, "retry", reason="Detector confirmed that the previous frame is unusable")
+journal.resolve(
+    execution_index,
+    "retry",
+    reason="Detector confirmed that the previous frame is unusable",
+)
 # Use "skip" to record a missing observation explicitly.
 ```
 

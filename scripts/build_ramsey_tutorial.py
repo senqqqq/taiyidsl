@@ -289,7 +289,7 @@ Both versions keep `prepare_MOT` and `readout` as native DSL proxies. `measure(q
 Give each pulse a name before building the experiment. Both RF gates reuse the same π/2 pulse carrying its calibrated duration and amplitude. The function sets the drive frequency and applies an extra phase to the second RF call.
 """)
 code("""
-# After changing qubit amplitude or duration, rerun this cell and rebuild the experiment.
+# After editing amplitude or duration, rebuild the pulse and experiment.
 pi2_pulse = Square(
     duration=q0.parameters.rf.pi2_duration,
     amplitude=q0.parameters.rf.pi2_amplitude,
@@ -326,7 +326,7 @@ def global_rf_pi2(q0, pulse, *, frequency, phase=0 * deg):
 
 gate = global_rf_pi2(q0, pi2_pulse, frequency=q0.parameters.rf.frequency * Hz)
 print("Gate operation returns:", type(gate).__name__)
-# Outside an active context use exp.add(gate). The experiment invokes global_rf_pi2 directly.
+# Outside a context use exp.add(gate). This experiment calls global_rf_pi2 directly.
 """)
 md(r"""
 Instructions run in sequence by default. For independent outputs use `section(..., schedule="parallel", align="start"/"end", qubits=(...))`. Each direct child is a branch and a compound branch retains its internal ordering. A shared output remains a shared resource. `layer()` wraps the parallel form. `barrier()` sets a synchronization point in ASAP schedules. Sections and hardware segments retain the current frame. This experiment explicitly calls `reset_phase` at the gate sequence entrance.

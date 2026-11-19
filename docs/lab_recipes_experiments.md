@@ -44,7 +44,9 @@ optics = OpticsConfig.from_dict(
         },
     }
 )
-data = optics.to_dict()  # independent plain dictionary, serializable with json.dumps(data)
+data = (
+    optics.to_dict()
+)  # independent plain dictionary, serializable with json.dumps(data)
 ```
 
 Schema 2 uses shallow groups named `pump`, `pushout`, `beams`, `raman`, `imaging` and `camera`. Supply the groups your experiment needs. The top level also holds the version and optional `conditions`. Frequencies, durations and phases use Hz, s and rad. `amplitude` is a fraction of RF output from 0 to 1.

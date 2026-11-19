@@ -161,7 +161,7 @@ def optical_frequency_axis(q, role, detunings_hz):
     scale = optical_mapping[role]["frequency_scale"]
     return SweepParameter(role + "_drive_hz", [base + float(d)/scale for d in detunings_hz], "Hz")
 
-# Named pulses store amplitude and duration. An omitted frequency uses the current experiment snapshot.
+# Pulses store amplitude and duration. Frequency defaults to the experiment snapshot.
 rf_pi = Square(duration=q0.parameters.rf.pi_duration, amplitude=q0.parameters.rf.pi_amplitude)
 rf_pi2 = Square(duration=q0.parameters.rf.pi2_duration, amplitude=q0.parameters.rf.pi2_amplitude)
 clock_pi = Square(duration=q0.parameters.clock.pi_duration, amplitude=q0.parameters.clock.pi_amplitude)
@@ -519,7 +519,7 @@ ALLXY uses 21 pairs. Lowercase x/y denote half π, uppercase X/Y denote π and I
 Scan repetition n and amplitude offset for $(X_\pi)^{2n}$, $(X_{\pi/2})^{4n}$ and alternating positive/negative axes. Check drift and leakage before picking an extremum in long sequences.
 """)
 code("""
-# Load the numerical helpers. The experiment cells below express the control sequence directly.
+# Load numerical helpers. The experiment cells below show the full control sequence.
 import importlib.util
 
 spec = importlib.util.spec_from_file_location("yb_analysis", ROOT / "examples/yb171_tuneup_analysis.py")
@@ -659,7 +659,7 @@ def rb_rf_unitary(angle, phase):
 
 
 def chronological_unitary(unitaries):
-    """Compose in execution order, multiplying on the left. An empty sequence gives I."""
+    """Multiply on the left in execution order. An empty sequence gives I."""
     total = np.eye(2, dtype=complex)
     for unitary in unitaries:
         total = unitary @ total
@@ -724,7 +724,7 @@ RF_REFERENCE_UNITARIES = {
 
 
 def build_clifford_catalog():
-    """Enumerate stable rotations and reference words by BFS over the fixed XY generators.
+    """Enumerate rotations and stable reference words by BFS over the XY generators.
 
     The queue visits short words first. Deduplicate on matrices.
     Optical RB retains this reference word. RF gates are optimized separately.
@@ -825,7 +825,7 @@ def rb_pulse_duration(pulse):
 
 
 def prepare_gate_basis(definitions, pulses):
-    """Validate declared ideal and physical gates and derive costs and integer rotations.
+    """Check the ideal and physical gates and derive costs and integer rotations.
 
     Map names to calibrated pulses. Each RF angle is a calibration target
     and phase explicitly overrides play. Only the complete basis gate must
@@ -1019,7 +1019,7 @@ def rb_integer_values(values, label):
 
 
 def sample_rb_circuits(lengths, *, sequence_count, seed, catalog):
-    """Freeze logical random circuits independently of the native basis, shot and scan order."""
+    """Freeze logical circuits independently of basis, shot and scan order."""
     lengths = rb_integer_values(lengths, "lengths")
     if type(sequence_count) is not int or sequence_count <= 0:
         raise ValueError("sequence_count must be a positive integer")
@@ -1074,7 +1074,7 @@ def decompose_rb_circuits(circuits, catalog, decompositions, basis):
 
 
 def rb_basis_snapshot(basis, pulses):
-    """Save gate identity, implementation order, exact cost and named pulse calibrations."""
+    """Save gate identity, step order, exact cost and named pulse calibrations."""
     used = {s["pulse"] for gate in basis.values() for s in gate["implementation"] if s["kind"] == "rf"}
     return {
         "fingerprint": rb_basis_fingerprint(basis),
@@ -1126,7 +1126,7 @@ def global_rf_rb(q, circuits, basis, pulses, *, lengths, sequence_ids, prepare, 
 
     Read native_word from each circuit and use the supplied basis for its RF/VZ steps.
     The circuits must cover lengths × sequence_ids. Depth counts Cliffords.
-    An empty word at depth zero still prepares and reads out with no added identity slot.
+    At depth zero, prepare and read out without adding an identity slot.
     """
     lengths = rb_integer_values(lengths, "lengths")
     sequence_ids = rb_integer_values(sequence_ids, "sequence_ids")

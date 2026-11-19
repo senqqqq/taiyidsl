@@ -111,7 +111,7 @@ spec_db["C"] = {
     "reference_clock_hz": 125_000_000,
     "output_range_mv": 500,
     "dds_routing": "16/5",
-    "dds_trigger_latency_ns": 560.0,  # Illustrative latency. Measure this card independently.
+    "dds_trigger_latency_ns": 560.0,  # Example only. Measure the delay for this card.
 }
 """
     )
@@ -206,7 +206,7 @@ display(setup.trigger_connections())
     """)
     code(
         original(
-            "# After changing qubit amplitude or duration, rerun this cell and rebuild the experiment."
+            "# After editing amplitude or duration, rebuild the pulse and experiment."
         )
         + """
 
@@ -391,7 +391,7 @@ t_settle = 10.24 * us
         program = next(e for e in point.physical_events if e.kind == "spectrum_program").params["cards"]["C"]["program"]
         assert program["initial_tones"] == program["final_tones"]
     assert q0.position == initial_position
-    print("All five phase points passed timing, 31 kHz RF, round-trip closure and q0.position checks.")
+    print("Five phase points passed timing, 31 kHz RF, round-trip and position checks.")
     """)
     md(r"""
     ## 10. Hold the tweezer tones through readout and between shots

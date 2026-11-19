@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 
 from taiyidsl import Experiment, OpticsConfig, Qubit, measure, reference_lab
+from taiyidsl.experiments.templates import rabi
 from taiyidsl.results import ResultSet, synthesize
-from taiyidsl.templates import rabi
 
 
 def compiled_rabi():

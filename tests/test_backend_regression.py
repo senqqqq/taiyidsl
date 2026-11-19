@@ -1,7 +1,6 @@
 """Output semantics across the prepare/commit/effect backend migration.
 
-Historical physical/source hashes remain archived in artiq_reference.json;
-frozen logical template traces are checked in test_template_equivalence.py.
+Frozen logical template traces are checked in test_template_equivalence.py.
 """
 
 import math
@@ -17,7 +16,7 @@ from taiyidsl import (
     reference_setup,
     us,
 )
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 
 @pytest.mark.parametrize("mode", ["cyclic", "sequential"])

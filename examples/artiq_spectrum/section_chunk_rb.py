@@ -25,12 +25,12 @@ from taiyidsl import (
     SweepParameter,
     acquire,
     ns,
+    rb_body,
     section,
     trig,
     us,
 )
-from taiyidsl.operations import rb_body
-from taiyidsl.templates import rb_sequences
+from taiyidsl.experiments._single_qubit_clifford import rb_sequences
 
 
 def build_lab():

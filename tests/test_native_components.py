@@ -20,10 +20,15 @@ from taiyidsl import (
     play,
     shift_phase,
 )
-from taiyidsl.artiq import _fake_artiq, generate_source
-from taiyidsl.native_components import NativeModule, NativeProgram, NativeStage
-from taiyidsl.native_export import compose_native_source
-from taiyidsl.spectrum_export import _epochs, align_source_epochs, artiq_subplan
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.mock_drivers import _fake_artiq
+from taiyidsl.backends.artiq_spectrum.export import (
+    _epochs,
+    align_source_epochs,
+    artiq_subplan,
+)
+from taiyidsl.native.components import NativeModule, NativeProgram, NativeStage
+from taiyidsl.native.export import compose_native_source
 
 SOURCE = """from artiq.experiment import HasEnvironment, kernel, delay_mu
 
@@ -367,7 +372,7 @@ def test_native_context_rejects_other_program_and_device_alias(tmp_path, monkeyp
 
 
 def test_frame_attribute_encoding_preserves_valid_names_without_collisions():
-    from taiyidsl.native_export import _frame_suffix
+    from taiyidsl.native.export import _frame_suffix
 
     assert _frame_suffix("q") == "q"
     assert _frame_suffix("q__phase__clock") == "q__phase__clock"

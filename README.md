@@ -11,7 +11,6 @@ separate evidence. Selected historical exports have real compile-only evidence;
 RTIO capacity, device synchronization, optical timing and camera acquisition
 still require laboratory validation. Example parameters are not calibrations.
 
-[Chinese guide](docs/README.zh-CN.md) ·
 [Tutorial setup](docs/tutorials/README.md) ·
 [Developer guide](docs/development.md) ·
 [Contributing](CONTRIBUTING.md) ·
@@ -45,6 +44,8 @@ Use the public `from taiyidsl import ...` entry points. The internal
 maintenance; experiment authors do not need to import their private helpers.
 Define pulses before the experiment body, pass physical quantities explicitly,
 and keep compilation and connection outside the experiment function.
+When calibration changes a value captured in a named pulse, rebuild that pulse,
+construct the experiment again, then recompile and refresh its report.
 
 After Ramsey, choose the extension relevant to your work:
 
@@ -120,7 +121,7 @@ Read these when the experiment needs the corresponding capability:
 | Large experiments | [Chunked execution](docs/chunked_execution.md), [Disk compilation and recovery](docs/streamed_execution.md), [Randomized benchmarking](docs/randomized_benchmarking.md) |
 | Inspection and data | [Compiled viewers](docs/compiled_viewers.md), [Results and imaging](docs/results_and_imaging.md), [Capture comparison](docs/capture_comparison.md) |
 | Optical preparation | [Laboratory profiles](docs/lab_recipes_experiments.md), [Yb preparation reference](docs/yb171_full_preparation.md) |
-| Maintenance | [Source layout](docs/source_layout.md), [Architecture](docs/architecture.md), [Backend contracts](docs/backends.md), [Design decisions](docs/design_decisions.md), [Validation scope](docs/validation.md) |
+| Maintenance | [Source layout](docs/source_layout.md), [Architecture](docs/architecture.md), [Backend contracts](docs/backends.md), [Design decisions](docs/design_decisions.md), [Verification](CONTRIBUTING.md#required-checks) |
 
 The HTML reports include their viewing dependencies locally. Waveform displays
 use compiled samples; DDS transport curves are command predictions. Neither

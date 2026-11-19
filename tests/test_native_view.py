@@ -20,9 +20,9 @@ from taiyidsl import (
     trigplay,
     us,
 )
-from taiyidsl.native_view import native_lifecycle, native_lifecycle_html
-from taiyidsl.output_simulator import _payload as output_payload
-from taiyidsl.visualization import _payload as sheet_payload
+from taiyidsl.reporting.native_view import native_lifecycle, native_lifecycle_html
+from taiyidsl.reporting.output_simulator import _payload as output_payload
+from taiyidsl.reporting.visualization import _payload as sheet_payload
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples/artiq_spectrum"
@@ -142,8 +142,8 @@ def test_native_report_links_composed_program_and_records_source_audit(
     page = result["index"].read_text(encoding="utf-8")
     assert "Top-level ARTIQ kernel source" in page
     assert "Source boundary audit: passed" in page
-    assert "原生 MOT/cooling prefix 的运行时间不计入载波参考" in page
-    assert "包括 cooling 和 dark delay" not in page
+    assert "The carrier reference excludes the native prefix" in page
+    assert "the carrier evolves from control T0" in page
     assert 'href="export/artiq/experiment.py"' in page
 
 
@@ -162,7 +162,7 @@ def test_non_native_report_retains_ordinary_time_reference(tmp_path):
     assert "native_contract" not in report
     assert "native_composition" not in report
     page = result["index"].read_text(encoding="utf-8")
-    assert "默认以 triggered_sequence 入口为载波参考" in page
+    assert "the AWG carrier starts at triggered_sequence entry" in page
     assert "Native kernel lifecycle" not in page
 
 

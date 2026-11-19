@@ -29,9 +29,9 @@ from taiyidsl import (
     us,
 )
 from taiyidsl.backends import get_backend
+from taiyidsl.compiler.shared_fields import validate_shared_fields
+from taiyidsl.config.transport import IZ, MoveProfile, TransportConfig
 from taiyidsl.dsl import json_value, move
-from taiyidsl.shared_fields import validate_shared_fields
-from taiyidsl.transport import IZ, MoveProfile, TransportConfig
 
 
 def transport_lab(*, shared_y=True):

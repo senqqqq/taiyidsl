@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 
 from taiyidsl import ControlBinding, ControlRecipe, Qubit
-from taiyidsl.hardware import Protocol, ProtocolStep, TriggerSequence, TriggerStep
+from taiyidsl.config.hardware import (
+    Protocol,
+    ProtocolStep,
+    TriggerSequence,
+    TriggerStep,
+)
 from taiyidsl.lab import LabConfig, initialization_lab, reference_lab
 
 PROFILES = Path(__file__).resolve().parents[1] / "examples/config/labs"

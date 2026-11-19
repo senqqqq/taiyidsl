@@ -28,10 +28,11 @@ from taiyidsl import (
     trigplay,
     us,
 )
-from taiyidsl.artiq import _DriverClock, _fake_artiq, verify_export
-from taiyidsl.spectrum_export import artiq_subplan, spectrum_manifest
-from taiyidsl.spectrum_runtime import SpectrumRunner, SpectrumRuntimeError
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq.mock_drivers import _DriverClock, _fake_artiq
+from taiyidsl.backends.artiq.verification import verify_export
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.export import artiq_subplan, spectrum_manifest
+from taiyidsl.runtime.spectrum.awg import SpectrumRunner, SpectrumRuntimeError
 
 
 def _set_group(profile, **changes):

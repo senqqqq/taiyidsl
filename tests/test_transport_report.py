@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from taiyidsl.output_simulator import simulate_output
+from taiyidsl.reporting.output_simulator import simulate_output
 
 ROOT = Path(__file__).resolve().parents[1]
 

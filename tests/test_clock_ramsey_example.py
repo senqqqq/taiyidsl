@@ -9,8 +9,8 @@ import pytest
 from examples.artiq_spectrum.clock_ramsey import build as build_clock_ramsey
 from examples.artiq_spectrum.ramsey_lab.qubits import q0
 from examples.artiq_spectrum.simple_ramsey import build as build_ramsey
-from taiyidsl.output_simulator import _card_views
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.reporting.output_simulator import _card_views
 
 
 def test_ramsey_dark_times_and_clock_phase_scan_use_one_cross_card_timeline():

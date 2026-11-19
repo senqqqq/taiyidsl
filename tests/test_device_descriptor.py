@@ -8,9 +8,9 @@ from types import SimpleNamespace
 import pytest
 
 from taiyidsl import DeviceSetup, Experiment, LabConfig, Qubit, Square, ns, play
-from taiyidsl.descriptor import _artiq_device, read_database
-from taiyidsl.session import HardwareSession
-from taiyidsl.session_worker import Worker
+from taiyidsl.config.descriptor import _artiq_device, read_database
+from taiyidsl.runtime.session import HardwareSession
+from taiyidsl.runtime.worker import Worker
 
 
 def databases():
@@ -382,7 +382,7 @@ def test_worker_runs_existing_host_loop_and_keeps_receipts(tmp_path, monkeypatch
 def test_connect_only_probes_hardware_and_accepts_equal_numeric_clocks(
     tmp_path, monkeypatch
 ):
-    from taiyidsl import spectrum_runtime
+    from taiyidsl.runtime.spectrum import awg as spectrum_runtime
 
     descriptor, device_db, spec_db = databases()
     device_db["actual_core"] = device_db["core"]

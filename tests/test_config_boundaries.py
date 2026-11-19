@@ -3,14 +3,14 @@
 import json
 from fractions import Fraction
 
-from taiyidsl.hardware import (
+from taiyidsl.config.hardware import (
     Device,
     DeviceCalibration,
     DeviceSetup,
     TriggerSequence,
     TriggerStep,
 )
-from taiyidsl.spectrum_config import (
+from taiyidsl.config.spectrum import (
     SpectrumCard,
     SpectrumConfig,
     SpectrumGroup,

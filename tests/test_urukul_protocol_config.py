@@ -15,7 +15,8 @@ from taiyidsl import (
     ns,
     play,
 )
-from taiyidsl.artiq import generate_source, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_export
 
 
 @pytest.mark.parametrize("revision", [None, 8, 9])

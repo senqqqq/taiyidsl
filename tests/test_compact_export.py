@@ -21,12 +21,9 @@ from taiyidsl import (
     reference_setup,
     us,
 )
-from taiyidsl.artiq import (
-    ExportError,
-    generate_source,
-    verify_equivalence,
-    verify_export,
-)
+from taiyidsl.backends.artiq._contracts import ExportError
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 
 
 def _pulse_kernels(source):

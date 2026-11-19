@@ -14,9 +14,9 @@ from taiyidsl import (
     reference_lab,
     us,
 )
-from taiyidsl.chunking import point_execution_layout
+from taiyidsl.host_plan import point_execution_layout
+from taiyidsl.reporting.visualization import _payload
 from taiyidsl.results import ResultSet
-from taiyidsl.visualization import _payload
 
 
 def scan(*, axis=1, chunks=2, chunk_size=None, scope="global", mode="cyclic"):

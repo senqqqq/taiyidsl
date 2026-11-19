@@ -3,7 +3,7 @@
 import pytest
 
 from taiyidsl import CompileError, Experiment, Qubit, delay, measure, reference_lab, us
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 from taiyidsl.dsl import acquire
 
 

@@ -24,6 +24,7 @@ from taiyidsl import (
     rz,
     shift_phase,
 )
+from taiyidsl.backends.artiq_spectrum.scheduling import schedule_spectrum
 from taiyidsl.config.spectrum import (
     SpectrumCard,
     SpectrumConfig,
@@ -31,7 +32,6 @@ from taiyidsl.config.spectrum import (
     SpectrumOutput,
 )
 from taiyidsl.dsl import HalfSinePhase, PolynomialPhase, json_value, trigplay
-from taiyidsl.spectrum_schedule import schedule_spectrum
 
 
 def setup_for(*, extra_mapping=None, signal_frames=None):

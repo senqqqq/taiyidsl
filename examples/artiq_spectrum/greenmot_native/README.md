@@ -1,24 +1,13 @@
-# GreenMOT + Ramsey 原生函数示例
+# GreenMOT and Ramsey with native ARTIQ methods
 
-`../greenmot_ramsey.py` 使用 prepare_MOT → delay → triggered_sequence → execute_readout。
-prepare_MOT 是一个简短 DSL helper，记录原生准备前段和严格准备尾段两个调用；其余
-名字是原生函数声明代理。构建时不会启动 ARTIQ。导出后由一个顶层 shot kernel 在
-设备端串接，不在阶段之间返回 host，不需要额外 stage。
+`../greenmot_ramsey.py` builds prepare_MOT → delay → triggered_sequence → execute_readout. The `prepare_MOT` helper records two native calls for the variable prefix and the strict preparation tail. A single exported shot kernel joins the native methods and generated control on the core.
 
-一次性声明现已集中在本目录的 `adapter.py`。`GreenMOTAdapter(source)` 复用一个
-`NativeKernelPackage`，对外提供 `prepare_MOT()` 和 `execute_readout()`；实验正文
-不再重复声明资源、源码校验和 prefix/timed/suffix 时长。`greenmot_stages.py`、
-`greenmot_fixture.py` 中的真实 kernel 调用图保持不变。准备 helper 不加 Section，
-因此原生调用仍是 realtime 的直接子节点。
-
-实验室把此目录组织为自己的 Python 包后，可以直接导入 `GreenMOTAdapter`。
-当前独立示例用显式本地路径加载这个 host 声明模块，以同时兼容直接运行和
-`runpy.run_path` 离线检查；没有修改 `sys.path`，也没有因此导入或执行 ARTIQ 源码。
+`GreenMOTAdapter(source)` in `adapter.py` shares one `NativeKernelPackage` between `prepare_MOT()` and `execute_readout()`. It owns the resources, source validation and prefix/timed/suffix declarations. The helper adds no Section, so the native calls remain direct children of realtime. The underlying kernel code is in `greenmot_stages.py` and `greenmot_fixture.py`.
 
 ```python
 with exp.realtime():
     prepare_MOT()
-    delay(10 * us)  # 从实际准备尾段的结束边沿到第一个 RF gate
+    delay(10 * us)  # From the end of the strict preparation tail to the first RF gate
     with exp.triggered_sequence(group="qubit_awg"):
         trigplay(q.rf, pulse)
         delay(dark_time)
@@ -27,17 +16,17 @@ with exp.realtime():
     execute_readout()
 ```
 
-已删除旧示例中独立的假想 cooling/settling 函数；严格边界来自实际 GreenMOT 最后的
-关光和磁场更新，紧随其后的 delay 有明确起点。
+After the real preparation tail shuts off light and updates the magnetic field, the explicit delay begins at the final digital edge. Cooling is already part of the original preparation.
 
-默认 `greenmot_fixture.py` 是明确标记的原生 TTL 内核夹具，用于离线接口演示。
-它不是用 play/delay 模拟的 DSL builder，也没有实现物理 MOT。默认运行示例只导出：
+## Export and compile offline
+
+The default `greenmot_fixture.py` provides native TTL kernels for teaching. The following example exports the experiment offline.
 
 ```powershell
 uv run --locked python examples/artiq_spectrum/greenmot_ramsey.py
 ```
 
-实际实验源码通过参数提供，不自动下载或导入，也不静默换成夹具：
+Supply the external experiment source explicitly to audit a laboratory version. The example reads the source locally.
 
 ```powershell
 uv run --locked python examples/artiq_spectrum/greenmot_ramsey.py `
@@ -45,12 +34,9 @@ uv run --locked python examples/artiq_spectrum/greenmot_ramsey.py `
   --output output/artiq_spectrum/greenmot_ramsey_external
 ```
 
-`device_db_offline.json` 仅供真实 ARTIQ 编译器的离线检查：使用正式 AD9910、CPLD、
-Zotino、TTL 驱动和原程序设备名，但 RTIO 地址从 0x200 起人工分配、EEPROM 校准
-替换成静态占位值，没有网络控制器或真实 core 地址。它不是实验室接线配置，不能
-拿来运行硬件。离线编译会检查设备端调用链及类型，不能验证参数的物理适用性。
+`device_db_offline.json` uses the original device names and real AD9910, CPLD, Zotino and TTL driver classes for disconnected compilation. RTIO addresses are assigned from 0x200, EEPROM calibration is replaced with static values and the core has no network address. Keep this file separate from laboratory wiring. Compilation checks the device call chain and types.
 
-使用项目独立的官方 ARTIQ 工具链编译默认夹具（不运行 kernel）：
+Compile the default fixture using the separate ARTIQ toolchain:
 
 ```powershell
 .\scripts\artiq-python.ps1 scripts/compile_native_artiq.py `
@@ -60,97 +46,49 @@ Zotino、TTL 驱动和原程序设备名，但 RTIO 地址从 0x200 起人工分
   --target rv32g --output output/artiq_spectrum/greenmot_ramsey/native_compile
 ```
 
-外部源码模式将导出路径换成 `greenmot_ramsey_external/export/artiq`，并额外提供
-`--module-root C:/path/to/atom-control/artiq-master`。本次验证因官方工具链没有原文件
-导入的 tifffile，使用 uv 将真正的 `tifffile==2025.6.11` 独立安装到
-`output/native_compile_dependencies`，再以 `--module-root` 提供该目录；没有修改
-原源码、项目环境或官方 ARTIQ 环境。编译报告记录实际依赖版本和路径。
-报告中的 `kernels_executed=false` 是有意的：编译通过不授权操作仪器。
+For external mode use `greenmot_ramsey_external/export/artiq` and an additional `--module-root C:/path/to/atom-control/artiq-master`. The previously reviewed upstream file also imported `tifffile`. That check supplied `tifffile==2025.6.11` from an isolated `output/native_compile_dependencies` using another `--module-root`. Inspect the actual version and paths in each compile report. `kernels_executed=false` identifies disconnected compilation.
 
-本次审阅版本为 TaiyiQ/atom-control commit
-`150c7fe724e8af078d97eeb8718f3e10d210d69c`，包括基础类和实际入口
-`artiq-master/repository/20261109/GreenMOT.py`。本示例固定 399-horizontal 成像模式。
-source hash 固定的是传入的本地文件，不代表自动证明它与某个远端 commit 字节相同。
-执行导出程序的 ARTIQ Python 环境还需能导入本目录和外部 `lib` 包（将本目录与
-`artiq-master` 配置到 Python 模块搜索路径），以及原文件依赖的 tifffile 等模块。
-导出程序会在导入前核对路径和源码 hash；源码改变后必须重新编译导出。
+The upstream source reviewed for this integration was TaiyiQ/atom-control commit `150c7fe724e8af078d97eeb8718f3e10d210d69c`, including the base class and `artiq-master/repository/20261109/GreenMOT.py`. The example fixes 399-horizontal imaging. A local source hash pins the file supplied to the adapter. Confirm remote byte identity independently when establishing provenance. The ARTIQ interpreter must resolve this package, the external `lib` and dependencies such as `tifffile`. The loader checks resolution and hashes before import. Re-export after changing source.
 
-原始入口的 `run()` 已经包含初始化、scan 循环、MOT、成像和收尾，因此不能整段
-嵌入 Ramsey 前面。本示例保留它调用的基础函数，重新串接生命周期：
+## Map the original run into the combined shot
 
-| 原程序部分 | 组合后的所在位置 |
-| --- | --- |
-| init_hardware，含 core.reset | initialize_native，一次性初始化 |
-| scan 循环 | 由 DSL average/sweep 管理，不重复嵌套 |
-| break_realtime、5 ms 等待、prepare_GreenMOT 的前段 | prepare_MOT 原生方法，控制 epoch 前的准备 |
-| DRG compression/cooling | 原有 helper 原样调用；前段结束于打开 probe shutter |
-| 最后的 15 ms hold → MOT 光关闭 → Zotino 磁场更新 | finish_preparation，进入严格控制窗口，保留原三个语句 |
-| Zotino 最终 LDAC 上升沿 | 显式推进 16 ns 后成为“准备结束”锚点 |
-| 准备结束后的 delay | 默认 10 µs，固定到第一个 gate，不能插入 break/reset |
-| 新 Ramsey | 明确控制 T0 后的完整 AWG 程序，一次启动触发 |
-| imaging_399_hor | execute_readout，原函数 100.48 ms，固定时序 |
-| initialization | finalize_native，原有末尾清理，允许等待硬件追上 |
+The original `run()` already owns initialization, scanning, MOT, imaging and cleanup. The adapter preserves its constituent operations while the DSL owns the scan.
 
-原 `scan_index` 只是被 print，没有赋给 f_SF 或其他频率；本示例不假称原文件已经
-实现频率扫描。原生参数沿用基础类 build 的参数；Ramsey dark_time 由 DSL 扫描。
-原 `print` 是可能的 RPC，留在严格 shot 内核之外；不复制原顶层 run。
+| Original operation | Position in the combined experiment |
+|---|---|
+| Hardware initialization including core reset | `initialize_native`, once |
+| Scan loop | DSL average/sweep |
+| `break_realtime`, 5 ms and first part of `prepare_GreenMOT` | Native preparation prefix before the control epoch |
+| DRG compression/cooling | Original helper, ending the prefix at probe-shutter opening |
+| 15 ms hold → MOT light off → Zotino update | Three original statements in strict `finish_preparation` |
+| Last rising Zotino LDAC edge | End-of-preparation anchor after the explicit 16 ns advance |
+| Post-preparation delay | Default 10 µs to the first gate |
+| Ramsey | Generated AWG sequence with one common start trigger |
+| `imaging_399_hor` | Fixed 100.48 ms `execute_readout` |
+| Original final `initialization` | `finalize_native` cleanup, allowed to wait after readout |
 
-原 `_GreenMOTbase.py` 不做修改。适配器只在它的最后 `delay(15 * ms)` 前切分，
-没有增加或省略原有准备动作。构建时 `validate_greenmot_split()` 将适配器前段
-（扣除原 run 的 break+5 ms lead）和原三个尾段语句拼回 AST，与传入的完整
-`prepare_GreenMOT()` 逐语句比较；忽略注释/格式，操作、数值或顺序改变则拒绝。
-这个检查证明切分结构保持，不能替代原算法或驱动的硬件验证。
+The upstream program only prints `scan_index`. It does not use it to set `f_SF` or another frequency. Native parameters still come from the original build, while the DSL scans Ramsey dark time. Keep host-like prints outside the strict shot kernel.
 
-官方 AD53xx/Zotino `set_dac()` 会在游标之前安排 SPI 写入，再排 LDAC 脉冲，最后
-将游标恢复到调用时刻。LDAC 上升沿仍在该时刻之后两倍 SPI ref period，因此尾段
-额外 `delay_mu(2 * self.zotino0.bus.ref_period_mu)`，避免把排队的最后边沿漏在范围外。
-本适配器明确要求 1 ns RTIO mu、8 mu SPI ref period，声明尾段为 **15 ms + 16 ns**；
-设备参数不符会报错。负向 SPI 写入位于原 15 ms hold 内。
+`validate_greenmot_split()` removes the run's break/5 ms lead from the reviewed prefix and rejoins it to the final three statements. It compares the resulting AST with the full supplied `prepare_GreenMOT()`. Changes in operation, value or order fail the comparison. This verifies the split independently of comments and formatting.
 
-“准备结束”指最终 LDAC 数字边沿完成；DAC 模拟建立时间、线圈电流建立时间、原子态
-准备质量尚未测量。默认 10 µs 是显式实验间隔，不宣称满足这些模拟稳定指标。若还需
-模拟稳定等待，应由实验指标明确给出并计入时间线，不能用未经测量的占位等待冒充。
+AD53xx/Zotino `set_dac()` schedules SPI writes before the cursor, schedules LDAC and restores the incoming cursor. The last rising LDAC edge follows by two SPI reference periods. `delay_mu(2 * self.zotino0.bus.ref_period_mu)` extends the tail to include that edge. The adapter requires a 1 ns RTIO mu and an 8 mu SPI reference period, giving a declared **15 ms + 16 ns** tail. Negative-offset SPI writes remain inside the initial hold.
 
-`initialize_native` 额外明确将 ttl_Camera_Trig 置高，因为 imaging_399_hor 用下降沿
-触发相机。原函数与 camera 数据获取仍不同：后者需要 host result adapter。当前
-示例只保留定时触发，不编造图像结果或 qubit 测量结果。399 成像是相位不敏感读出，
-末尾 virtual-Z 保存在编译产物；不把它误认为原子态已被重置。
+The preparation boundary marks the digital LDAC edge. Measure analog DAC settling, coil current and atomic readiness separately. The explicit 10 µs gap carries no measured settling guarantee. `initialize_native` drives `ttl_Camera_Trig` high because 399-horizontal imaging triggers on the falling edge. Frame retrieval requires a host adapter. Imaging here is insensitive to the final drive phase. The terminal virtual Z remains recorded in the artifact.
 
-native prefix 的墙钟时长可以随 slack 改变，图中标为原生区块。**控制相位 T0 在
-严格 finish_preparation 的开始建立**，原 15 ms hold、最终边沿、准备后 delay 和
-Ramsey 都计入同一控制参考。MOT 最早开始到 T0 的间隔不承诺恒定；准备结束到首门
-则固定。所有 break_realtime 位于 T0 之前；严格尾段、delay、gate、readout 中禁止
-break/reset/wait_until_mu。原 cleanup 的等待留在读出之后。
+## Timing and phase
 
-当前示例触发提前量为 512 ns。若准备后 delay 短到需要把启动触发倒排进原生尾段，
-导出会明确拒绝，不偷偷移动 gate、增加 delay 或事后补发触发。
+The wall time of the native prefix varies with slack. Establish control T0 at the start of strict `finish_preparation`. All breaks precede T0. Preserve a fixed interval from the final preparation edge through the first gate. The strict tail, gap, gate and readout exclude breaks, resets and blocking waits. Cleanup can wait after readout. The 512 ns pretrigger must fit the gap. The compiler rejects a trigger that would overlap the opaque native tail.
 
-在默认示例中，第一个 30 kHz / 200 µs 方波从 T0 + 15.010016 ms 开始，首样本
-默认 sequence 载波参考相位为 0°；显式 phase_reference="shot" 才保留108.1728°。
-`rz(q, pi/2)` 使后续驱动相位减去 90°；第二个门仍包含前面的真实等待时间：
+The default first 30 kHz, 200 µs pulse starts at T0 + 15.010016 ms. Its first sample has phase 0° for the sequence reference and 108.1728° for explicit `phase_reference="shot"`. With `rz(q, pi/2)` the next drive frame decreases by 90°. The intervening time still contributes to carrier evolution.
 
-| dark_time | 第二个门开始（相对 T0） | 第二个门首相位（mod 360°） |
-| --- | --- | --- |
+| Dark time | Second gate start from T0 | First sample phase modulo 360° |
+|---|---:|---:|
 | 10 µs | 15.220016 ms | 18° |
 | 1 ms | 16.210016 ms | 270° |
 | 100 ms | 115.210016 ms | 270° |
 
-这是输出样本的编译参考，不表示每个门都重新清零载波相位。每 shot 从同一控制
-参考重放，前级准备长度不进入默认 sequence 参考；序列内部等待仍累积相位。
-两次 200 µs 脉冲只是结构示范，旋转角仍需实验标定。每个点只有一个公共启动触发，
-最终 F=-π/2，Rz 来源诊断为 +π/2。
+Both 200 µs pulses illustrate structure. Measure their physical angles before using them as calibrated gates. Per point the sequence has one common trigger, F=−π/2 and an Rz contribution reported as +π/2. Hardware operation requires a real device database, exclusive trigger wiring, calibrated SDK/clock settings and verified GreenMOT parameters. `SIM_*` and simulated latencies are for offline export. Supply laboratory methods for tweezer loading, state preparation and image analysis.
 
-运行真实仪器还需要实际 device_db、SDK/参考时钟与校准、符合接线的独占 AWG
-触发端口及确认过的 GreenMOT 参数。默认 lab_simulated.json 的 SIM_* 卡和延迟只
-用于离线导出。这个集成示例不额外实现光镊装载、态制备或成像分析；相关物理过程
-应来自实验室自己的原生函数。
-# 多组件与导入
+## Import the adapter or use multiple components
 
-`adapter.py` 是普通可导入的 host 声明模块；从项目根可使用
-`from examples.artiq_spectrum.greenmot_native.adapter import GreenMOTAdapter`。
-它不导入 ARTIQ 或原始 GreenMOT 类。示例运行建议使用
-`uv run python -m examples.artiq_spectrum.greenmot_ramsey`。
-
-本适配器继续保留真实 GreenMOT 的单包调用链、初始化 reset 和逐 shot 收尾。
-需要多个独立原生类时参见相邻 `native_stages/` 与
-`docs/native_components.md`，无需把新模块继续塞进 GreenMOTStages。
+From the project root, import `GreenMOTAdapter` from `examples.artiq_spectrum.greenmot_native.adapter` or run `uv run python -m examples.artiq_spectrum.greenmot_ramsey`. Host declarations do not import the raw GreenMOT class or ARTIQ. The standalone example also supports direct invocation and `runpy.run_path` through an explicit local declaration path. To use several independent native classes, see the adjacent `native_stages/` example and the [component guide](../../../docs/native_components.md). The legacy single-package adapter preserves its initialization reset and per-shot cleanup.

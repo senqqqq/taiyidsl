@@ -5,7 +5,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from taiyidsl.spectrum_runtime import (
+from taiyidsl.backends.artiq_spectrum.awg import build_card_program
+from taiyidsl.runtime.spectrum.awg import (
     SegmentCache,
     SpcmAdapter,
     SpectrumRunner,
@@ -13,7 +14,6 @@ from taiyidsl.spectrum_runtime import (
     calibration_fingerprint,
     hardware_fingerprint,
 )
-from taiyidsl.spectrum_waveforms import build_card_program
 
 
 def contract(serial="101"):

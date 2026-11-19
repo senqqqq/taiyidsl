@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 
 from taiyidsl import CompileError, ControlBinding, Experiment, play, rz
-from taiyidsl.hardware import DeviceCalibration
-from taiyidsl.polar_validation import verify_polar_output
+from taiyidsl.backends.artiq.validation_polar_output import verify_polar_output
+from taiyidsl.config.hardware import DeviceCalibration
 
 _path = Path(__file__).resolve().parents[1] / "examples/powasf_sequence.py"
 _spec = importlib.util.spec_from_file_location("powasf_acceptance", _path)

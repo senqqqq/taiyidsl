@@ -1,30 +1,20 @@
-# 项目上下文入口
+# Working in TaiyiDSL
 
-开始本项目的后续工作前，请阅读 [当前设计约定](docs/design_decisions.md) 和 [开发指南](docs/development.md)，并遵守 [CONTRIBUTING.md](CONTRIBUTING.md)。
+Start with the [design decisions](docs/design_decisions.md), [developer guide](docs/development.md) and [contribution guide](CONTRIBUTING.md). The [source map](docs/source_layout.md) identifies the owning module. Import from that module inside the library. The DSL defines Section and its composition API. The compiler places sections through `section_schedule`.
 
-源码归属和重构阶段见 [源码分层](docs/source_layout.md)。新内部导入使用规范包路径，
-不依赖旧兼容转发。Section 定义与组合 API 属于 DSL；`section_schedule` 是编译算法。
+Use the supported [public API](docs/public_api.md) in experiments. Local notes in an ignored `MEMORY.md` can provide context. Check the current code and evidence before relying on a historical conclusion.
 
-本地若存在 `MEMORY.md`，可补充读取其中相关历史；它不随仓库分发，不是新克隆的前置依赖。历史上下文不取代当前用户指令，也不代表旧验证结果仍适用于新修改。修改前核对当前实现，完成后运行相关检查。
+## Reports and tutorials
 
-## 实验报告维护入口
+Follow the generated experiment report rules in CONTRIBUTING. Distinguish exported source, parameter previews, execution receipts and evidence from physical devices. Preserve samples, timing and phase when changing presentation. Relevant guides cover [authoring and triggers](docs/authoring_and_triggers.md), [native ARTIQ](docs/native_artiq_integration.md) and [compiled viewers](docs/compiled_viewers.md).
 
-- 混合架构的当前约定和文档索引位于 docs/design_decisions.md 和 docs/public_api.md；完整使用说明分别在 docs/authoring_and_triggers.md、docs/native_artiq_integration.md 和 docs/compiled_viewers.md。
-- 修改报告时遵守 CONTRIBUTING.md 的 Generated experiment reports 约定：真实源码、参数预览、执行记录和验证层级必须区分；报告层变更需保持底层样本、时序与相位语义不变。
+## Verification
 
-## 日常验证范围
+- Choose tests by changed behavior, affected callers and the assertions that distinguish a regression. Cover the normal path, relevant boundaries and existing consumers. Reuse passing evidence until a change affects its conclusion.
+- Inspect prose and links for documentation edits. Exercise executable examples and documentation generators when their behavior changes. Run Ruff on changed Python files.
+- For shared scheduling, time units, phase, IR or backends, check the affected semantics and targets. Expand coverage when failures or uncertain dependencies warrant it or when preparing a release. Use real ARTIQ compilation for affected generated programs and native call chains. Report checks actually performed.
+- Use `.test-tmp-pytest` for focused checks. Remove temporary directories created for parallel jobs when those checks finish.
 
-- 用户重视迭代速度：普通对话和局部修改不默认运行全量 pytest、全项目示例导出、wheel/sdist 或真实 ARTIQ 全量编译。
-- 仅解释、文档或注释修改，不运行测试和构建；只检查实际改动内容。可执行示例或文档生成代码的修改按其行为选择检查。
-- 功能修改默认运行受影响模块的定向测试及必要的兼容性用例；Python lint/format 默认只检查本次修改文件。不以固定测试数量代替覆盖判断。
-- 测试前先按“本次改变的行为 → 可能受影响的调用链 → 必要断言”选择最小充分集合，优先精确到测试函数或参数场景，不因模块名称相关就整批运行。正常路径、必要边界及有风险的兼容路径各保留有效覆盖；同一契约已被覆盖时不叠加等价测试、示例导出和编译。
-- 共享调度、时间单位、相位、IR 或跨后端修改也不自动触发全量回归；先覆盖受影响的语义与后端。只有影响范围无法可靠界定、定向检查暴露广泛问题，或明确要求发布级验证时才扩大范围，并说明新增检查解决什么疑点。提交/推送的本地检查也按影响选择，CI 的既有完整检查另行保留。
-- 真实 ARTIQ 离线编译只检查受影响的生成程序/原生调用链；构建、全部示例导出及物理产物审计按实际影响和交付需要执行，不把它们绑定到每次回复。
-- 已通过的检查只有在后续改动影响其结论、出现失败或仍有明确疑点时才重跑。只修改报告文案，不重跑底层编译和全部实验。
-- 保留有价值的既有测试，不为减少数量而删除；避免给低风险可逆修改新增重复测试。报告本次实际验证范围，不把历史全量结果称为本轮通过。
+## Files and evidence
 
-## 临时产物与目录清理
-
-- 普通定向测试复用 `.test-tmp-pytest`；并行任务需要独立临时目录时，结束后清理自己的目录，不为每次检查长期保留新的 `.test-tmp-*`。
-- `output/` 保存交付报告、必要数据与最终验证记录，不作为 pytest 临时工作区。迭代产物在最终版本确认后清理；保留最终报告依赖的 bank、源码快照、数据和编译证据。
-- 清理前核对路径、引用和用途；不能凭旧文件名、日期或 Git 未跟踪状态判定文件无用。实测数据、校准、数据库和原始参考资料不按缓存处理。清理不触发测试重跑，只检查删除范围和保留文件完整性。
+Keep final reports, dependent banks, data, source snapshots and verification receipts together under ignored `output/`. Verify paths, references and intended use before removing intermediate artifacts. Retain measurements, calibration records, databases and supplied reference material according to their purpose. A clean-up needs a file-integrity check. Hardware operations require explicit authorization.

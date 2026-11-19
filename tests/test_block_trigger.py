@@ -25,15 +25,15 @@ from taiyidsl import (
     rz,
     trigplay,
 )
-from taiyidsl.artiq import generate_source
-from taiyidsl.dsl import trig
-from taiyidsl.spectrum_export import (
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.export import (
     _epochs,
     add_trigger_resource_checks,
     align_source_epochs,
     artiq_subplan,
 )
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.dsl import trig
 
 
 def profile(*, default=None):

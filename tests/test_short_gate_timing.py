@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from taiyidsl import CompileError
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 SCRIPT = Path(__file__).parents[1] / "examples" / "short_gate_timing.py"
 EXAMPLE = runpy.run_path(str(SCRIPT))

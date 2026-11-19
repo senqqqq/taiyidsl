@@ -7,8 +7,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from taiyidsl.spectrum_dds import build_dds_program
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.dds import build_dds_program
 
 ROOT = Path(__file__).parents[1]
 VIEW = runpy.run_path(str(ROOT / "examples/artiq_spectrum/clock_transport_view.py"))

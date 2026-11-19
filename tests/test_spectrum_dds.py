@@ -2,13 +2,13 @@ import copy
 
 import pytest
 
-from taiyidsl.ir import CompileError
-from taiyidsl.spectrum_dds import (
+from taiyidsl.backends.artiq_spectrum.dds import (
     FREQUENCY_STEP_HZ,
     build_dds_program,
     dds_channel_cores,
     validate_dds_program,
 )
+from taiyidsl.ir import CompileError
 
 
 def card_spec(**changes):

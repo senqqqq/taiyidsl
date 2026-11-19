@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from taiyidsl.artiq import generate_source, verify_equivalence, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 
 ROOT = Path(__file__).resolve().parents[1]
 build = runpy.run_path(str(ROOT / "examples" / "short_gate_timing.py"))[

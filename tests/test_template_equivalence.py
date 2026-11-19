@@ -7,8 +7,8 @@ import pytest
 from optics_fingerprint import assert_logical_baseline
 
 from taiyidsl import Qubit, compile_experiment, reference_setup, us
-from taiyidsl.models import DriveParameters, QubitParameters, ReadoutParameters
-from taiyidsl.templates import rabi, ramsey, randomized_benchmarking
+from taiyidsl.config.models import DriveParameters, QubitParameters, ReadoutParameters
+from taiyidsl.experiments.templates import rabi, ramsey, randomized_benchmarking
 
 BASELINE = Path(__file__).parent / "fixtures/pre_template_refactor_events.json"
 

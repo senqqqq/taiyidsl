@@ -5,17 +5,17 @@ from hashlib import sha256
 import numpy as np
 import pytest
 
-from taiyidsl.analysis import (
+from taiyidsl.config.models import Qubit
+from taiyidsl.dsl import json_value
+from taiyidsl.experiments.templates import rabi
+from taiyidsl.results import ResultSet
+from taiyidsl.results.analysis import (
     AnalysisError,
     _validate_rabi_program,
     analyze_rabi,
     analyze_ramsey,
     analyze_rb,
 )
-from taiyidsl.dsl import json_value
-from taiyidsl.models import Qubit
-from taiyidsl.results import ResultSet
-from taiyidsl.templates import rabi
 
 
 def attach_ir(result, exp):

@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from taiyidsl import CompileError
-from taiyidsl.artiq import generate_source, verify_equivalence, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 
 _path = Path(__file__).resolve().parents[1] / "examples/mixed_pulse_paths.py"
 _spec = importlib.util.spec_from_file_location("mixed_path_examples", _path)

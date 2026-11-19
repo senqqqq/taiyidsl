@@ -20,7 +20,7 @@ from taiyidsl import (
     compile_experiment,
     us,
 )
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "state_initialization.py"
 

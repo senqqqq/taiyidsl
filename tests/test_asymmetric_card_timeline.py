@@ -7,7 +7,7 @@ import numpy as np
 from test_spectrum_trigger_routes import dual_lab
 
 from taiyidsl import Experiment, Qubit, Square, delay, ns, play
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
 
 
 def test_asymmetric_cards_reconstruct_on_one_timeline():

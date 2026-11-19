@@ -24,7 +24,7 @@ from taiyidsl import (
     section,
     shift_phase,
 )
-from taiyidsl.spectrum_export import artiq_subplan
+from taiyidsl.backends.artiq_spectrum.export import artiq_subplan
 
 
 @pytest.mark.parametrize("reference", ["sequence", "shot"])

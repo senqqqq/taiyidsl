@@ -4,8 +4,10 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from taiyidsl.artiq import generate_source, verify_equivalence, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 from taiyidsl.compiler import CompileError, compile_experiment
+from taiyidsl.config.models import Qubit
 from taiyidsl.dsl import (
     Experiment,
     FlatTopGaussian,
@@ -16,8 +18,7 @@ from taiyidsl.dsl import (
     reserve,
     shift_phase,
 )
-from taiyidsl.hardware import reference_setup as original_reference_setup
-from taiyidsl.models import Qubit
+from taiyidsl.lab import reference_setup as original_reference_setup
 from taiyidsl.units import ns, us
 
 
@@ -212,7 +213,7 @@ def test_ram_launch_respects_explicit_submission_reservation():
 
 
 def test_ram_target_checks_reject_unmodelled_update_timing():
-    from taiyidsl import artiq
+    from taiyidsl.backends.artiq._contracts import ExportError
 
     compiled = compile_pulse(FlatTopGaussian(8 * us, 0.5 * us))
     source = generate_source(compiled)
@@ -231,7 +232,7 @@ def test_ram_target_checks_reject_unmodelled_update_timing():
             "self.result_adapter = None\n        self.device_0.chip_select = 3",
         ),
     ):
-        with pytest.raises((ValueError, artiq.ExportError)):
+        with pytest.raises((ValueError, ExportError)):
             verify_export(compiled, source=broken)
 
 

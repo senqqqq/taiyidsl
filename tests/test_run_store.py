@@ -8,8 +8,9 @@ import pytest
 from test_spectrum_backend import lab
 from test_streaming import scan
 
-from taiyidsl.run_store import RecoveryRequired, RunStore
-from taiyidsl.stream_runtime import StreamingRunner
+from taiyidsl.runtime.contracts import RecoveryRequired
+from taiyidsl.runtime.run_store import RunStore
+from taiyidsl.runtime.streaming import StreamingRunner
 
 
 def test_observation_commit_recovers_after_journal_gap(tmp_path):
@@ -275,7 +276,7 @@ def test_default_loader_reuses_root_environment_without_retaining_children(
     import sys
     import weakref
 
-    from taiyidsl.stream_runtime import StreamSessionRoot
+    from taiyidsl.runtime.streaming import StreamSessionRoot
 
     class Environment:
         def __init__(self, parent):
@@ -325,7 +326,7 @@ def test_actual_generated_components_keep_one_session_across_chunks(
     from test_spectrum_contracts import _LifecycleCard
 
     from taiyidsl import Experiment, Qubit, Square, SweepParameter, delay, ns, play
-    from taiyidsl.spectrum_runtime import SpectrumRunner
+    from taiyidsl.runtime.spectrum.awg import SpectrumRunner
 
     program = program_fixture(tmp_path)
     q = Qubit("q")

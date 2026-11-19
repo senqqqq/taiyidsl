@@ -21,7 +21,7 @@ from taiyidsl import (
     rz,
     shift_phase,
 )
-from taiyidsl.waveforms import ad9910_amplitude_ram
+from taiyidsl.backends.artiq.waveforms import ad9910_amplitude_ram
 
 
 def polar_lab(count=1, *, shared=False, **overrides):

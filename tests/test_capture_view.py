@@ -8,8 +8,8 @@ import pytest
 from test_spectrum_phase_modes import phase_lab, sequence
 
 from taiyidsl import Experiment, Qubit, Square, SweepParameter, ns, play
-from taiyidsl.capture_view import compare_capture, write_capture_comparison
-from taiyidsl.output_simulator import simulate_output
+from taiyidsl.reporting.capture_view import compare_capture, write_capture_comparison
+from taiyidsl.reporting.output_simulator import simulate_output
 
 
 def capture(tmp_path):

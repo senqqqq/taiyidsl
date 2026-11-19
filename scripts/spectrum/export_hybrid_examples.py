@@ -40,13 +40,13 @@ def main():
         print(result["index"].resolve(), flush=True)
         rows.append(
             f"<tr><th>{html.escape(name)}</th><td>{len(compiled.points)}</td>"
-            f'<td><a href="{name}/index.html">完整报告</a></td>'
+            f'<td><a href="{name}/index.html">Full report</a></td>'
             f'<td><a href="{name}/dsl_source.py">DSL</a></td>'
             f'<td><a href="{name}/pulse_sheet.html">Pulse sheet</a></td>'
             f'<td><a href="{name}/waveform.html">Waveform</a></td></tr>'
         )
     document = (
-        """<!doctype html><html lang="zh-CN"><meta charset="utf-8">
+        """<!doctype html><html lang="en"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TaiyiDSL · Hybrid experiment viewers</title><style>
 body{font:16px/1.7 "Segoe UI",sans-serif;background:#f6f7f3;color:#213337;
@@ -58,19 +58,22 @@ th{font-family:Consolas,monospace;font-weight:500}a{color:#087f78}
 .scroll{overflow:auto}.note{border-left:4px solid #b88430;padding:14px 20px;
 background:#fff6e5}.muted{color:#617174;font-size:14px}
 </style><div class="tag">TAIYIDSL / ARTIQ + SPECTRUM / OFFLINE</div>
-<h1>混合控制实验查看器</h1>
-<p>从完整 DSL 到矩形时序，再到短窗口的最终 DAC 样本。每份报告含两卡
-segment / step table、ARTIQ 触发和逐 shot 相位参考。原有纯 ARTIQ 示例保留。</p>
-<div class="scroll"><table><thead><tr><th>实验</th><th>扫描点</th>
-<th>入口</th><th>源码</th><th>宏观时序</th><th>样本波形</th></tr></thead><tbody>
+<h1>Hybrid experiment viewers</h1>
+<p>Follow the DSL source through the schedule to the final DAC samples. Each report
+includes the segment and step tables for both cards, the ARTIQ trigger and each
+shot's phase reference.</p>
+<div class="scroll"><table><thead><tr><th>Experiment</th><th>Points</th>
+<th>Report</th><th>Source</th><th>Timing</th><th>Samples</th></tr></thead><tbody>
 """
         + "\n".join(rows)
         + """</tbody></table></div>
-<p class="note">所有默认输出均为离线模型，脉冲面积与硬件延迟未经标定。
-波形查看器不模拟模拟链路、AOM 或量子态；生成报告不会启动任何仪器。</p>
-<p class="muted">Pulse sheet：悬停查看参数，单击查看详情，滚轮缩放/拖动平移；
-点击 Spectrum 门的 waveform 链接进入对应采样窗口。
-Waveform：窗口默认最多 100000 样本，不下采样 RF。使用现代 Edge/Chrome 打开。</p>
+<p class="note">These offline examples use uncalibrated pulse areas and device
+latencies. The viewer models digital outputs. The analog chain, AOM response and
+quantum state require separate measurements.</p>
+<p class="muted">Hover over a pulse for its parameters, click for details, scroll
+to zoom and drag to pan. Select a Spectrum gate's waveform link to inspect its
+samples. The default exact window is limited to 100,000 samples. Open in Edge or
+Chrome.</p>
 </html>"""
     )
     index = args.output / "index.html"

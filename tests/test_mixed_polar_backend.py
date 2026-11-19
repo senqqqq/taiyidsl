@@ -20,7 +20,7 @@ from taiyidsl import (
     play,
     rz,
 )
-from taiyidsl.polar_validation import verify_polar_output
+from taiyidsl.backends.artiq.validation_polar_output import verify_polar_output
 
 
 def mixed_lab(*, revision=8, asf=True):

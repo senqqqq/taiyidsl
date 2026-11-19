@@ -21,7 +21,9 @@ from taiyidsl import (
     trigplay,
     us,
 )
-from taiyidsl.authoring import (
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.dsl import _active, json_value
+from taiyidsl.dsl.authoring import (
     average,
     case,
     experiment,
@@ -31,8 +33,6 @@ from taiyidsl.authoring import (
     sweep,
     triggered_sequence,
 )
-from taiyidsl.dsl import _active, json_value
-from taiyidsl.spectrum_waveforms import reconstruct_window
 
 
 def _structure(node):

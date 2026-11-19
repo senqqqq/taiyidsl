@@ -30,7 +30,7 @@ from taiyidsl import (
     shift_phase,
     um,
 )
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 
 def clock_qubit(frame=None):

@@ -5,7 +5,8 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from taiyidsl.rb import (
+from taiyidsl.experiments._single_qubit_clifford import rb_sequences
+from taiyidsl.experiments.rb_sequences import (
     RBGate,
     _apply,
     _compose,
@@ -17,7 +18,6 @@ from taiyidsl.rb import (
     generate_rb_sequences,
     sequence_tableau,
 )
-from taiyidsl.templates import rb_sequences
 
 X = np.array([[0, 1], [1, 0]], dtype=complex)
 Y = np.array([[0, -1j], [1j, 0]], dtype=complex)

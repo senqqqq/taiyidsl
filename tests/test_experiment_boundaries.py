@@ -27,21 +27,10 @@ def test_ideal_rb_math_depends_only_on_other_ideal_math():
                 assert not module.startswith("taiyidsl") or module in allowed
 
 
-def test_legacy_experiment_imports_and_shared_math_keep_one_owner():
-    for old, new in (
-        ("ramsey", "ramsey"),
-        ("cooling", "cooling"),
-        ("templates", "templates"),
-        ("rb", "rb_sequences"),
-        ("rb_dsl", "rb_sections"),
-    ):
-        assert import_module(f"taiyidsl.{old}") is import_module(
-            f"taiyidsl.experiments.{new}"
-        )
-
+def test_experiment_templates_share_the_clifford_math():
     math = import_module("taiyidsl.experiments._single_qubit_clifford")
-    templates = import_module("taiyidsl.templates")
-    sequences = import_module("taiyidsl.rb")
+    templates = import_module("taiyidsl.experiments.templates")
+    sequences = import_module("taiyidsl.experiments.rb_sequences")
     for name in (
         "_RX",
         "_RY",

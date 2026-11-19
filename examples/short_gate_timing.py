@@ -26,8 +26,8 @@ from taiyidsl import (
     rz,
     shift_phase,
 )
-from taiyidsl.artiq import verify_equivalence
-from taiyidsl.waveforms import ad9910_amplitude_ram
+from taiyidsl.backends.artiq.verification import verify_equivalence
+from taiyidsl.backends.artiq.waveforms import ad9910_amplitude_ram
 
 DURATIONS_NS = (800, 200)
 XY_FREQUENCY_HZ = 83.123456e6

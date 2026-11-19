@@ -16,7 +16,7 @@ from taiyidsl import (
     shift_phase,
     us,
 )
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 
 def compile_scan(alias=True, mode="cyclic"):

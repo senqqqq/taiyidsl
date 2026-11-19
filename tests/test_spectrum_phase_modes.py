@@ -26,9 +26,12 @@ from taiyidsl import (
     shift_phase,
     trigplay,
 )
-from taiyidsl.spectrum_export import artiq_subplan
-from taiyidsl.spectrum_phase import OutputPhaseState, modulation_characteristics
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.export import artiq_subplan
+from taiyidsl.backends.artiq_spectrum.phase import (
+    OutputPhaseState,
+    modulation_characteristics,
+)
 
 
 def phase_lab(mode="epoch", *, initial=7e6, scale=1):

@@ -115,7 +115,7 @@ def test_generated_square_runs_real_driver_bodies(tmp_path, mode, timed):
         play,
         us,
     )
-    from taiyidsl.artiq import export_artiq
+    from taiyidsl.backends.artiq.export import export_artiq
 
     qubits = [Qubit("q0"), Qubit("q1")]
     setup = DeviceSetup(

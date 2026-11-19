@@ -24,8 +24,8 @@ from taiyidsl import (
     rz,
     shift_phase,
 )
-from taiyidsl.artiq import verify_equivalence
-from taiyidsl.polar_validation import verify_polar_output
+from taiyidsl.backends.artiq.validation_polar_output import verify_polar_output
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 
 def laboratory(channels=1, *, selector="urukul_rev8", shared_bus=False):

@@ -5,7 +5,7 @@ from html import unescape
 import pytest
 
 from taiyidsl import Experiment, Qubit, Square, play, reference_lab, us
-from taiyidsl.visualization import _payload
+from taiyidsl.reporting.visualization import _payload
 
 
 def test_continuous_square_is_segmented_at_effect_not_preparation():

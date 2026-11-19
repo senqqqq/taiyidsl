@@ -7,20 +7,20 @@ import numpy as np
 import pytest
 from test_spectrum_runtime import FakeAdapter, FakeSdk, contract, program
 
-from taiyidsl.ir import CompileError
-from taiyidsl.spectrum_banks import (
+from taiyidsl.backends.artiq_spectrum.awg import build_card_program, reconstruct_window
+from taiyidsl.backends.artiq_spectrum.banks import (
     build_bank,
     build_manifest_banks,
     entry_program,
     validate_bank,
 )
-from taiyidsl.spectrum_runtime import (
+from taiyidsl.ir import CompileError
+from taiyidsl.runtime.spectrum.awg import (
     SegmentCache,
     SpcmAdapter,
     SpectrumRunner,
     SpectrumRuntimeError,
 )
-from taiyidsl.spectrum_waveforms import build_card_program, reconstruct_window
 
 
 @pytest.mark.parametrize("shared,count", [(False, 2), (True, 1)])
@@ -148,7 +148,7 @@ def test_compile_preflights_joint_chunk_capacity_without_replaying_samples(monke
     from test_spectrum_backend import lab
 
     from taiyidsl import Experiment, Qubit, Square, SweepParameter, ns, trigplay
-    from taiyidsl.spectrum_banks import validate_chunk_capacity
+    from taiyidsl.backends.artiq_spectrum.banks import validate_chunk_capacity
 
     profile = lab(memory_bytes=8192)
     config = profile.setup.spectrum
@@ -171,7 +171,7 @@ def test_compile_preflights_joint_chunk_capacity_without_replaying_samples(monke
     with pytest.raises(CompileError, match="Chunk 0, card A.*slot capacity"):
         profile.compile(experiment(1))
     monkeypatch.setattr(
-        "taiyidsl.spectrum_banks.materialize_segment",
+        "taiyidsl.backends.artiq_spectrum.banks.materialize_segment",
         lambda *args: pytest.fail("Budget check rendered samples"),
     )
     validate_chunk_capacity(independent.points, independent.host_execution_plan)

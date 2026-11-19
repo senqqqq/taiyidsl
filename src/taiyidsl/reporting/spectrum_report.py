@@ -223,102 +223,110 @@ def execution_html(execution, output):
 
     return "\n".join(
         [
-            '<section id="execution"><h2>ARTIQ + Spectrum · 完整执行流程</h2>',
-            "<p>以下是导出时的真实运行适配器源码快照，"
-            "以及本实验生成的 host / kernel 源码。"
-            "本页没有调用仪器；具体卡号、配置与逐点 SDK 参数见下面的编译结果。</p>",
-            "<h3>运行前：时钟初始化与重新校准</h3>",
-            "<p><code>configure_for_calibration()</code> 显式设置外部参考时钟、采样率，"
-            "并更新 clock session，使旧相位校准失效。它不在正常 shot 调用链里。"
-            "完成新的实测校准后才能进入硬件运行；"
-            "示例 SIM 序列号和未测校准不能直接运行实机。</p>",
+            '<section id="execution"><h2>ARTIQ + Spectrum execution</h2>',
+            "<p>The export includes a snapshot of the runtime adapters and the host "
+            "and kernel source generated for this experiment. The compiled point "
+            "tables show each card, setting and resolved SDK argument.</p>",
+            "<h3>Clock initialization and recalibration</h3>",
+            "<p><code>configure_for_calibration()</code> explicitly selects the "
+            "external reference and sample rate, starts a new clock session and "
+            "invalidates earlier phase calibration. Hardware operation requires "
+            "the real card serial numbers and a new measured calibration.</p>",
             method_block(
-                "时钟设置源码 · 显式初始化，不是每 shot 自动执行",
+                "Explicit clock initialization source",
                 "SpcmAdapter.configure_for_calibration",
             ),
-            "<p>正式运行由导出的 <code>GeneratedExperiment.run()</code> 进入："
-            "先检查 ARTIQ 目标、调用一次 <code>initialize_devices()</code> "
-            "初始化 kernel，"
-            "再按 host_execution_plan 中的 averaging / chunk 顺序进入 shot 循环。"
-            "这次设备初始化与每 shot 的点 kernel 分开；完整代码见下方。</p>",
-            "<h3>每个有 Spectrum 工作的 shot</h3>",
+            "<p>The exported <code>GeneratedExperiment.run()</code> checks the ARTIQ "
+            "target and calls the <code>initialize_devices()</code> kernel once. "
+            "It then enters the shot loop in host_execution_plan averaging and chunk "
+            "order. The initialization kernel and each point kernel appear below.</p>",
+            "<h3>Shots with Spectrum output</h3>",
             '<ol class="execution-flow">'
-            "<li><b>Host 准备</b>"
+            "<li><b>Prepare the host.</b> "
             "<code>result_adapter.before_shot(point, shot)</code></li>"
-            "<li><b>全部卡预检</b>先 probe 全部卡，"
-            "检查身份、容量、时钟与有效校准。</li>"
-            "<li><b>首次进入或更换 bank 时配置及上传</b>"
-            "A.configure → A.upload → B.configure → B.upload。"
-            "常规 configure 核对时钟，设置输出和 EXT0；"
-            "upload 写共享样本及完整 step table。bank 仍驻留时跳过 DMA，"
-            "每个 shot 只选择对应点的有限入口。</li>"
-            "<li><b>全部卡 arm</b>A.arm → B.arm → 等待全部 ready。"
-            "此时尚未启动 AWG 序列，DDS 囚禁输出已保持。</li>"
-            '<li class="kernel-step"><b>一个 ARTIQ 点 kernel</b>'
-            "Host 回调 <code>_execute_point(point)</code> 分派到对应的 "
-            "<code>point_N()</code> kernel：执行块外准备 → "
-            "按时间表同步发各卡启动 TTL → "
-            "Spectrum 自主走完静态序列；ARTIQ 按编译时间线执行读出。"
-            "块内 gate / delay / virtual Z 没有 host 或逐门 TTL 介入。</li>"
-            "<li><b>完成检查</b>kernel 返回后等待所有卡完成，再 "
-            "<code>result_adapter.after_shot(point, shot)</code>，归档 receipt。</li>"
-            "</ol>",
-            "<p>上图 A/B 是双卡示意；每点实际参与卡以 manifest 为准。"
-            "schema 2 复用驻留 AWG bank，schema 3 还包含逐 shot DDS 命令；"
-            "scope=global 保持原采样顺序，循环平均时可能重新换入此前的 bank；"
-            "scope=chunk 完成本块平均后再换块。schema 1 兼容路径仍逐点上传。"
-            "不含活动 Spectrum 程序的点直接走 ARTIQ，不 configure / upload / arm，"
-            "也不产生自动启动 TTL。"
-            "失败时 runner 停止已接触的卡；未全部 ready 就不能进入点 kernel。</p>",
+            "<li><b>Check every card.</b> Probe identity, capacity, clock and current "
+            "calibration before configuring any card.</li>"
+            "<li><b>Configure and upload on bank changes.</b> "
+            "A.configure → A.upload → B.configure → B.upload. Configuration checks "
+            "clocks and sets the outputs and EXT0. Upload writes shared samples "
+            "and the full step table. With a resident bank, select the finite "
+            "entry for this shot directly.</li>"
+            "<li><b>Arm all cards.</b> A.arm → B.arm → wait until all are armed. "
+            "AWG playback awaits the trigger while DDS trap output holds.</li>"
+            '<li class="kernel-step"><b>Run one ARTIQ point kernel.</b> '
+            "The host callback <code>_execute_point(point)</code> dispatches to "
+            "<code>point_N()</code>. Following preparation, the scheduled start "
+            "TTLs launch the cards together. Spectrum plays the static sequence "
+            "autonomously through gates, delays and virtual Z. ARTIQ performs "
+            "readout on the compiled timeline.</li>"
+            "<li><b>Check completion.</b> After the kernel returns, the runner "
+            "waits for every card, calls "
+            "<code>result_adapter.after_shot(point, shot)</code> and records the "
+            "receipt.</li></ol>",
+            "<p>A and B illustrate a two-card setup. The manifest lists the cards "
+            "at each point. Schema 2 reuses resident AWG banks. Schema 3 also "
+            "contains per-shot DDS commands. Global averaging preserves the sampling "
+            "order and can reload a prior bank. Chunk averaging finishes a chunk "
+            "before switching. Schema 1 uploads each point. Points without Spectrum "
+            "work go straight to ARTIQ and omit the automatic start TTL. The runner "
+            "enters the kernel only after every card is armed and stops any cards "
+            "it touched on failure.</p>",
             method_block(
-                "Host 协调源码 · 全部 ready 后才调用 ARTIQ",
+                "Host orchestration and readiness checks",
                 "SpectrumRunner.run_point",
                 "SpectrumRunner.run_resident_point",
                 "SpectrumRunner._load_bank",
             ),
-            '<h3 id="spectrum-code">Spectrum 配置、上传与启动源码</h3>',
-            "<details><summary>DDS20 持续囚禁：实际命令编译和适配器源码</summary>"
-            "<p>DDS 卡只在会话初始化时启动；shot 间和 AWG bank 更换时保持输出。"
-            "逐 shot 追加已预装命令、外触发启动、定时执行后回到保持状态。"
-            "以下 AWG 的 segment、零尾段和重新 arm 说明不适用于 DDS。"
-            "DDS 轨迹图是命令预测，没有软件绝对相位或最终 DAC 样本。</p>",
+            '<h3 id="spectrum-code">Spectrum configuration and playback source</h3>',
+            "<details><summary>DDS20 trap hold, command compiler and adapter</summary>"
+            "<p>DDS cards start during session initialization and hold trap output "
+            "between shots and across AWG bank changes. Each shot appends a prepared "
+            "command packet, starts on an external trigger, executes timed commands "
+            "and returns to hold. The AWG segment, zero-tail and re-arm steps below "
+            "apply to AWG cards. The DDS plot predicts commands. It carries neither "
+            "a software absolute phase nor a final DAC trace.</p>",
             _source_html(execution, output, "spectrum_dds_runtime"),
             _source_html(execution, output, "spectrum_dds"),
             "</details>",
             method_block(
-                "1 · 输出和 EXT0 触发配置（含每项读回核对）",
+                "1 · Output and EXT0 configuration with per-setting readback",
                 "SpcmAdapter.configure",
             ),
-            "<p>启动输入为 EXT0 上升沿；默认阈值 1000 mV、50 Ω、DC coupling。"
-            "实际值及来源逐卡列出。SDK <code>trigger.delay(0)</code> 是附加可编程延迟；"
-            "编译契约的 <code>trigger_latency_samples</code> "
-            "是触发到 sample 0 的延迟模型，二者不同。</p>",
+            "<p>EXT0 starts on a rising edge. Defaults are 1000 mV, 50 Ω and DC "
+            "coupling. Each card lists the values and their sources. The SDK call "
+            "<code>trigger.delay(0)</code> sets the additional programmable delay. "
+            "The compiled <code>trigger_latency_samples</code> models the physical "
+            "trigger-to-sample-0 delay.</p>",
             method_block(
-                "2 · 波形 DMA 上传 → 3 · step table 写入", "SpcmAdapter.upload"
+                "2 · Waveform DMA upload and 3 · step table write", "SpcmAdapter.upload"
             ),
-            "<p>样本来自 manifest recipe，经 SegmentCache 生成/校验后 DMA；"
-            "<code>data.T</code> 匹配 SDK buffer 的通道维度。下方 .bin 是核查副本。"
-            "硬件 segment slot 按 segments 列表次序编号，不直接使用逻辑 segment ID。"
-            "<code>SPCSEQ_ENDLOOPALWAYS</code> 表示完成有限循环后继续，末步 "
-            "<code>SPCSEQ_END</code> 结束；门间不等待外触发。"
-            "<code>start_step</code> 只选择入口。bank 中的每个点独立结束，"
-            "不会自动跳入下一个扫描点。</p>",
-            method_block("逐 shot 入口选择 · 无重复 DMA", "SpcmAdapter.select_entry"),
+            "<p>SegmentCache renders and verifies manifest recipes before DMA. "
+            "<code>data.T</code> matches the SDK buffer's channel dimension. "
+            "The .bin files are inspection copies. Upload order in the segments "
+            "list assigns hardware slots independently of logical segment IDs. "
+            "<code>SPCSEQ_ENDLOOPALWAYS</code> advances after the finite loop. "
+            "The last step uses <code>SPCSEQ_END</code>. Playback through gates "
+            "proceeds without additional triggers. <code>start_step</code> selects "
+            "the entry. Each point in a bank ends independently.</p>",
             method_block(
-                "4 · arm → ready → 完成检查",
+                "Per-shot entry selection for a resident bank",
+                "SpcmAdapter.select_entry",
+            ),
+            method_block(
+                "4 · Arm, check readiness and verify completion",
                 "SpcmAdapter.arm",
                 "SpcmAdapter.ready",
                 "SpcmAdapter.wait_complete",
             ),
-            "<p><code>arm()</code> 使用 <code>M2CMD_CARD_ENABLETRIGGER</code>，"
-            "等待外部 TTL，没有 FORCE TRIGGER。"
-            "这里 SDK 的 <code>M2STAT_CARD_READY</code> 表示已停止/完成；"
-            "不能把该状态位当成“已 arm 等触发”。请以 ready() 源码判据为准。</p>",
-            '<h3 id="artiq-code">本实验的 host bridge 与 ARTIQ kernel</h3>',
-            "<details><summary>完整 host bridge · 接入 SpectrumRunner</summary>",
+            "<p><code>arm()</code> uses <code>M2CMD_CARD_ENABLETRIGGER</code> and "
+            "waits for the external TTL. The SDK <code>M2STAT_CARD_READY</code> "
+            "indicates stopped/completed status. The adapter's <code>ready()</code> "
+            "source shows how it determines that a card awaits a trigger.</p>",
+            '<h3 id="artiq-code">Generated host bridge and ARTIQ kernel</h3>',
+            "<details><summary>Complete host bridge using SpectrumRunner</summary>",
             _source_html(execution, output, "host_bridge"),
-            "</details><details><summary>完整 ARTIQ 导出代码 · "
-            "含各扫描点的触发时序</summary>",
+            "</details><details><summary>Complete exported ARTIQ program and "
+            "per-point trigger timing</summary>",
             _source_html(execution, output, "artiq_kernel"),
             "</details></section>",
         ]

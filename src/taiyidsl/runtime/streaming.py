@@ -13,16 +13,6 @@ from ._cleanup import run_cleanup
 from .contracts import ObservationCommit, RecoveryPolicy, ShotContext
 
 
-def __getattr__(name):
-    if name == "write_union_initializer":
-        # The former stream_runtime entry remains available without making
-        # offline compilation import the execution layer.
-        from ..compiler._stream_initializer import write_union_initializer
-
-        return write_union_initializer
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 @dataclass
 class _RunState:
     session_id: str

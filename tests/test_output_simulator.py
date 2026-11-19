@@ -28,13 +28,13 @@ from taiyidsl import (
     rz,
     trigplay,
 )
+from taiyidsl.backends.artiq_spectrum.awg import build_card_program, reconstruct_window
 from taiyidsl.ir import CompileError
-from taiyidsl.output_simulator import (
+from taiyidsl.reporting.output_simulator import (
     _payload,
     simulate_output,
     write_output_simulator,
 )
-from taiyidsl.spectrum_waveforms import build_card_program, reconstruct_window
 
 JS_PATH = (
     Path(__file__).parents[1] / "src/taiyidsl/reporting/assets/output_simulator.js"
@@ -231,7 +231,9 @@ def test_payload_budget_fails_before_materialization_and_deduplicates(monkeypatc
     def unexpected(*args):
         raise AssertionError("Must reject before materializing segments")
 
-    monkeypatch.setattr("taiyidsl.output_simulator.materialize_segment", unexpected)
+    monkeypatch.setattr(
+        "taiyidsl.reporting.output_simulator.materialize_segment", unexpected
+    )
     with pytest.raises(CompileError, match="fewer scan points"):
         write_output_simulator(compiled, max_embedded_bytes=budget - 1)
 

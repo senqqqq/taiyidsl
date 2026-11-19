@@ -23,9 +23,9 @@ from taiyidsl import (
     play,
     trig,
 )
-from taiyidsl.spectrum_export import artiq_subplan
-from taiyidsl.spectrum_runtime import hardware_fingerprint
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.export import artiq_subplan
+from taiyidsl.runtime.spectrum.awg import hardware_fingerprint
 
 
 def dual_lab(*, shared=False):

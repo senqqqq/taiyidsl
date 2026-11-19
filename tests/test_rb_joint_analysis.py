@@ -1,10 +1,14 @@
 import numpy as np
 import pytest
 
-from taiyidsl.analysis import AnalysisError
-from taiyidsl.rb_analysis import analyze_rb, fit_rb_decay, interleaved_error_bound
-from taiyidsl.rb_results import RBCounts, joint_rb_counts
 from taiyidsl.results import ResultSet
+from taiyidsl.results.analysis import AnalysisError
+from taiyidsl.results.rb_analysis import (
+    analyze_rb,
+    fit_rb_decay,
+    interleaved_error_bound,
+)
+from taiyidsl.results.rb_results import RBCounts, joint_rb_counts
 
 
 def fixture_results(shots=4):

@@ -19,8 +19,8 @@ from taiyidsl import (
     play,
     rz,
 )
-from taiyidsl.artiq import verify_equivalence
-from taiyidsl.artiq_ram import ram_bank_summary
+from taiyidsl.backends.artiq.codegen_ram import ram_bank_summary
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 
 def laboratory(channels=1, *, equal_latency=False, shared_bus=False):

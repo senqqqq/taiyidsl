@@ -18,7 +18,8 @@ from taiyidsl import (
     play,
     rz,
 )
-from taiyidsl.artiq import generate_source, verify_equivalence, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 
 
 def build_polar(

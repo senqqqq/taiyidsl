@@ -2,8 +2,6 @@
 
 __version__ = "0.1.0"
 
-from pathlib import Path as _Path
-
 from taiyidsl.experiments.ramsey import ramsey_experiment, ramsey_gates
 from taiyidsl.experiments.rb_sections import rb_sequence_section
 from taiyidsl.experiments.rb_sequences import (
@@ -104,9 +102,6 @@ from .runtime.contracts import ObservationCommit, RecoveryRequired, ShotContext
 from .runtime.run_store import RunStore
 from .runtime.streaming import StreamingRunner
 from .units import Hz, MHz, Quantity, deg, kHz, m, mm, ms, ns, rad, s, turn, um, us
-
-# Resolve historical flat imports on demand, after the normal package directory.
-__path__.append(str(_Path(__file__).with_name("_compat")))
 
 __all__ = [
     "s",

@@ -23,6 +23,7 @@ from taiyidsl.backends.artiq_spectrum.backend import (
     native_setup,
 )
 from taiyidsl.ir import CompiledPoint, CompileError, ScheduledEvent
+from taiyidsl.sample_assets import pack_sample_manifest
 
 
 def artiq_subplan(compiled):
@@ -366,6 +367,7 @@ def export_spectrum(compiled, output_dir, *, mode="auto"):
         manifest["native_artiq"] = composition
         manifest["artiq_verification"] = native_manifest["verification"]
     manifest["requested_export_mode"] = mode
+    pack_sample_manifest(manifest)
     _write_json(output / "manifest.json", manifest)
     compiled.save(output / "compiled.json")
     bridge = '''"""Host bridge; configure spectrum_runner and result_adapter first.

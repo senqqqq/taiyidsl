@@ -769,8 +769,13 @@
     $("intervals").textContent = `Inspection only · point ${point().index} · ${selected.card} / CH ${elements.channel.value}: ${intervals.join("; ") || "no scheduled pulse"}. These selectors do not hide other channels.`;
     const lines = [`Calibration: ${selected.calibration_status}; declared latency: ${selected.trigger_latency_samples} samples.`];
     if (selectedPulse) {
-      lines.push(`Carrier ${selectedPulse.frequency_hz} Hz; resolved start phase ${selectedPulse.phase_rad.toPrecision(8)} rad.`);
-      lines.push(`Envelope: ${selectedPulse.envelope.kind}; amplitude ${selectedPulse.amplitude}.`);
+      const shape = selectedPulse.envelope;
+      if (shape.interpretation === "waveform") {
+        lines.push(`Direct DAC waveform with gain ${selectedPulse.amplitude}.`);
+      } else {
+        lines.push(`Carrier ${selectedPulse.frequency_hz} Hz with resolved start phase ${selectedPulse.phase_rad.toPrecision(8)} rad.`);
+        lines.push(`Envelope ${shape.interpretation || shape.kind} with amplitude ${selectedPulse.amplitude}.`);
+      }
       if (selectedPulse.phase_modulation) lines.push(`Local phase: ${JSON.stringify(selectedPulse.phase_modulation)}.`);
     }
     $("metadata").textContent = lines.join("\n");

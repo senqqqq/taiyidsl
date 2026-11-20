@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 from taiyidsl.backends.artiq_spectrum.awg import build_card_program
-from taiyidsl.backends.artiq_spectrum.backend import resolve_card_pulses
+from taiyidsl.backends.artiq_spectrum.backend import (
+    card_sample_assets,
+    resolve_card_pulses,
+)
 from taiyidsl.backends.artiq_spectrum.dds import DDS_TICK_MU
-from taiyidsl.backends.artiq_spectrum.scheduling import SpectrumPlaybackScheduler
+from taiyidsl.backends.artiq_spectrum.scheduling import (
+    SpectrumPlaybackScheduler,
+    validate_sampled_route,
+)
 from taiyidsl.backends.base import Backend, BackendCapabilities
 from taiyidsl.compiler.scheduling import resolve_frames
 from taiyidsl.config.spectrum import HYBRID_TICK_SECONDS
-from taiyidsl.dsl.pulses import Square
+from taiyidsl.dsl.pulses import SampledPulse, Square
 from taiyidsl.ir import CompileError, PhysicalPlan, ScheduledEvent
 
 _FRAME_OPERATIONS = {"rz", "shift_phase", "reset_frame", "reset_phase"}
@@ -50,6 +56,11 @@ class _ShotScheduler(SpectrumPlaybackScheduler):
                         f"Unknown frame {frame} for {signal} at {node.source}"
                     )
                 pulse = node.params["pulse"]
+                if isinstance(pulse, SampledPulse):
+                    card = self.config.card
+                    validate_sampled_route(
+                        node, card.sample_rate_hz if card.mode == "awg" else None
+                    )
                 if self.config.card.mode == "dds" and (
                     not isinstance(pulse, Square)
                     or pulse.phase_modulation is not None
@@ -102,12 +113,12 @@ class _ShotScheduler(SpectrumPlaybackScheduler):
 
 class SpectrumBackend(Backend):
     name = "spectrum"
-    version = "1"
+    version = "2"
     target = "Single software-started M4i.6631-x8, AWG sequence or DDS20"
     phase_policy = "shot_relative_to_card_playback_start"
     capabilities = _Capabilities(
         device_kinds=frozenset({"spectrum"}),
-        pulse_shapes=frozenset({"square", "flat_top_gaussian"}),
+        pulse_shapes=frozenset({"square", "flat_top_gaussian", "sampled"}),
         operations=frozenset(
             {"play", "delay", "scope_delay", "reserve", *_FRAME_OPERATIONS}
         ),
@@ -234,6 +245,7 @@ class SpectrumBackend(Backend):
                 pulses,
                 duration_samples,
                 max_tile_samples=config.max_tile_samples,
+                sample_assets=card_sample_assets(pulses, setup),
             )
             duration_mu = program["physical_duration_samples"] * _SAMPLE_TICKS
         shot = ScheduledEvent(

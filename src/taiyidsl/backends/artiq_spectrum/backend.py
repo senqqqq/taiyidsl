@@ -63,14 +63,14 @@ def native_event(event, factor):
 
 class ArtiqSpectrumBackend(Backend):
     name = "artiq_spectrum"
-    version = "4"
+    version = "5"
     target = "ARTIQ 9 master / M4i.6631-x8 AWG sequence and DDS20 transport"
     phase_policy = (
         "unified_frame_with_sequence_or_shot_carrier_reference_and_explicit_reset"
     )
     capabilities = BackendCapabilities(
         device_kinds=frozenset({"dds", "ttl", "spectrum"}),
-        pulse_shapes=frozenset({"square", "flat_top_gaussian"}),
+        pulse_shapes=frozenset({"square", "flat_top_gaussian", "sampled"}),
         operations=ArtiqBackend.capabilities.operations
         | {
             "trigplay",
@@ -276,6 +276,88 @@ def _carrier_phase(frequency, start_mu):
     return 2 * math.pi * float(cycles)
 
 
+def card_sample_assets(pulses, setup):
+    """Select each source used by this point and card exactly once."""
+    assets = getattr(setup, "_sample_assets", {})
+    return {
+        digest: assets[digest]
+        for digest in {
+            p["envelope"]["sample_digest"]
+            for p in pulses
+            if p["envelope"]["kind"] == "sampled"
+        }
+    }
+
+
+def _validate_raw_controls(event, binding, phase_correction, state, members):
+    if (
+        event.params["frequency"] != 0
+        or binding.frequency_offset != 0
+        or binding.frequency_scale != 1
+        or event.params["phase"] != 0
+        or binding.phase_offset != 0
+        or binding.phase_scale != 1
+        or phase_correction != 0
+        or state.modulation_phase_rad != 0
+    ):
+        raise CompileError(
+            f"Raw waveform cannot apply frequency or phase transforms, calibration "
+            f"phase offsets or an active frame offset at {event.source}"
+        )
+    for update in members:
+        if (
+            update.kind in {"rz", "shift_phase", "reset_frame", "reset_phase"}
+            and event.start_mu < update.start_mu < event.end_mu
+            and binding.device in update.params.get("target_devices", ())
+        ):
+            raise CompileError(
+                f"Raw waveform cannot apply an in-pulse frame update at {update.source}"
+            )
+
+
+def _pulse_phase(
+    event, binding, state, frequency, correction, device, card, diagnostics
+):
+    params = event.params
+    phase_evolution = state.pulse(
+        start_ticks=event.start_mu,
+        duration_ticks=event.duration_mu,
+        frequency_hz=frequency,
+        phase_scale=binding.phase_scale,
+        modulation=params.get("phase_modulation"),
+        modulation_mode=params.get("phase_modulation_mode", "local"),
+    )
+    if "sampled" in params:
+        phase_evolution["frequency_check_scope"] = (
+            "carrier_and_explicit_phase_modulation_excludes_sampled_envelope"
+        )
+    low = phase_evolution["instantaneous_frequency_min_hz"]
+    high = phase_evolution["instantaneous_frequency_max_hz"]
+    phase_evolution["frequency_range_exceeds_contract"] = (
+        low < device.min_frequency
+        or high > min(device.max_frequency, card.sample_rate_hz / 2, 400e6)
+    )
+    if phase_evolution["frequency_range_exceeds_contract"]:
+        diagnostics.append(
+            {
+                "kind": "spectrum_modulation_frequency_range",
+                "device": binding.device,
+                "source": event.source,
+                "minimum_hz": low,
+                "maximum_hz": high,
+                "status": "outside_nominal_range_requires_waveform_acceptance",
+            }
+        )
+    phase = (
+        phase_evolution["carrier_phase_rad"]
+        + binding.phase_scale * params["phase"]
+        + binding.phase_offset
+        + correction
+        + phase_evolution["inherited_modulation_phase_rad"]
+    ) % (2 * math.pi)
+    return phase, phase_evolution
+
+
 def resolve_card_pulses(
     members,
     card_name,
@@ -359,7 +441,8 @@ def resolve_card_pulses(
                 raise CompileError("Channel delay correction exceeds trigger pre-roll")
             duration = _exact_integer(Fraction(event.duration_mu, 4), event.source)
             device = setup.devices[binding.device]
-            if (
+            raw = params.get("sampled", {}).get("interpretation") == "waveform"
+            if not raw and (
                 not device.min_frequency
                 <= frequency
                 <= min(device.max_frequency, card.sample_rate_hz / 2)
@@ -368,39 +451,23 @@ def resolve_card_pulses(
                     "Spectrum carrier frequency exceeds the output contract"
                 )
             amplitude = params["amplitude"] * binding.amplitude_scale / gain
-            phase_evolution = phase_states[binding.device].pulse(
-                start_ticks=event.start_mu,
-                duration_ticks=event.duration_mu,
-                frequency_hz=frequency,
-                phase_scale=binding.phase_scale,
-                modulation=params.get("phase_modulation"),
-                modulation_mode=params.get("phase_modulation_mode", "local"),
-            )
-            low = phase_evolution["instantaneous_frequency_min_hz"]
-            high = phase_evolution["instantaneous_frequency_max_hz"]
-            phase_evolution["frequency_range_exceeds_contract"] = (
-                low < device.min_frequency
-                or high > min(device.max_frequency, card.sample_rate_hz / 2, 400e6)
-            )
-            if phase_evolution["frequency_range_exceeds_contract"]:
-                diagnostics.append(
-                    {
-                        "kind": "spectrum_modulation_frequency_range",
-                        "device": binding.device,
-                        "source": event.source,
-                        "minimum_hz": low,
-                        "maximum_hz": high,
-                        "status": "outside_nominal_range_requires_waveform_acceptance",
-                    }
+            state = phase_states[binding.device]
+            if raw:
+                _validate_raw_controls(event, binding, phase_correction, state, members)
+                # A direct DAC voltage leaves the output oscillator's state alone.
+                phase, phase_evolution = 0.0, {"carrier_mode": "none"}
+            else:
+                phase, phase_evolution = _pulse_phase(
+                    event,
+                    binding,
+                    state,
+                    frequency,
+                    phase_correction,
+                    device,
+                    card,
+                    diagnostics,
                 )
-            phase = (
-                phase_evolution["carrier_phase_rad"]
-                + binding.phase_scale * params["phase"]
-                + binding.phase_offset
-                + phase_correction
-                + phase_evolution["inherited_modulation_phase_rad"]
-            ) % (2 * math.pi)
-            envelope = {"kind": "square"}
+            envelope = params.get("sampled", {"kind": "square"})
             if params.get("shape") == "flat_top_gaussian":
                 if Fraction(str(params["sample_interval_s"])) != Fraction(
                     1, card.sample_rate_hz
@@ -636,7 +703,11 @@ def _lower(logical, setup, mapping, diagnostics):
                 ),
             )
             program = build_card_program(
-                contract, pulses, duration, max_tile_samples=group.max_tile_samples
+                contract,
+                pulses,
+                duration,
+                max_tile_samples=group.max_tile_samples,
+                sample_assets=card_sample_assets(pulses, setup),
             )
             program["calibration_sha256"] = calibration_fingerprint(group.calibration)
             first_sample = (

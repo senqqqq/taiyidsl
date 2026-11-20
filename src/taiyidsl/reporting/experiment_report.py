@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from taiyidsl.backends.artiq_spectrum.awg import materialize_segment
+from taiyidsl.sample_assets import expand_sample_manifest
 
 from .resources import asset_text
 from .spectrum_report import card_execution, execution_html, export_execution_sources
@@ -127,47 +128,51 @@ def _card_report(item, group, directory):
         cursor = stop
     if cursor != program["physical_duration_samples"]:
         raise ValueError("Step lengths do not reproduce the complete card program")
-    pulses = [
-        {
-            "channel": pulse["channel"],
-            "start_sample": pulse["start_sample"],
-            "samples": pulse["duration_samples"],
-            "start_s_exact": _decimal_seconds(
-                sample_zero + pulse["start_sample"] * period
-            ),
-            "end_s_exact": _decimal_seconds(
-                sample_zero
-                + (pulse["start_sample"] + pulse["duration_samples"]) * period
-            ),
-            "start_us_T0": float(
-                (sample_zero + pulse["start_sample"] * period) * 10**6
-            ),
-            "end_us_T0": float(
-                (
+    pulses = []
+    for pulse in program["pulses"]:
+        has_carrier = pulse["envelope"].get("interpretation") != "waveform"
+        pulses.append(
+            {
+                "channel": pulse["channel"],
+                "start_sample": pulse["start_sample"],
+                "samples": pulse["duration_samples"],
+                "start_s_exact": _decimal_seconds(
+                    sample_zero + pulse["start_sample"] * period
+                ),
+                "end_s_exact": _decimal_seconds(
                     sample_zero
                     + (pulse["start_sample"] + pulse["duration_samples"]) * period
-                )
-                * 10**6
-            ),
-            "frequency_Hz": pulse["frequency_hz"],
-            "amplitude": pulse["amplitude"],
-            "start_phase_deg": math.degrees(_initial_phase(pulse)) % 360,
-            "envelope": pulse["envelope"],
-            "local_phase_modulation": pulse.get("phase_modulation"),
-            "phase_evolution": pulse.get("phase_evolution", {}),
-            "carrier_reference": pulse.get("phase_evolution", {}).get(
-                "carrier_reference_kind"
-            ),
-            "carrier_reference_us_T0": (
-                float(pulse["phase_evolution"]["carrier_reference_time_s"]) * 1e6
-                if "carrier_reference_time_s" in pulse.get("phase_evolution", {})
-                else None
-            ),
-            "operation_path": pulse.get("operation_path", []),
-            "section_schedule": pulse.get("section_schedule", []),
-        }
-        for pulse in program["pulses"]
-    ]
+                ),
+                "start_us_T0": float(
+                    (sample_zero + pulse["start_sample"] * period) * 10**6
+                ),
+                "end_us_T0": float(
+                    (
+                        sample_zero
+                        + (pulse["start_sample"] + pulse["duration_samples"]) * period
+                    )
+                    * 10**6
+                ),
+                "frequency_Hz": pulse["frequency_hz"] if has_carrier else None,
+                "amplitude": pulse["amplitude"],
+                "start_phase_deg": math.degrees(_initial_phase(pulse)) % 360
+                if has_carrier
+                else None,
+                "envelope": pulse["envelope"],
+                "local_phase_modulation": pulse.get("phase_modulation"),
+                "phase_evolution": pulse.get("phase_evolution", {}),
+                "carrier_reference": pulse.get("phase_evolution", {}).get(
+                    "carrier_reference_kind"
+                ),
+                "carrier_reference_us_T0": (
+                    float(pulse["phase_evolution"]["carrier_reference_time_s"]) * 1e6
+                    if "carrier_reference_time_s" in pulse.get("phase_evolution", {})
+                    else None
+                ),
+                "operation_path": pulse.get("operation_path", []),
+                "section_schedule": pulse.get("section_schedule", []),
+            }
+        )
     _csv(directory / "segments.csv", segments)
     _csv(directory / "steps.csv", steps)
     _csv(directory / "pulses.csv", pulses)
@@ -609,7 +614,9 @@ def export_experiment_report(compiled, output, *, source_path=None):
     source = source_bytes.decode("utf-8") if source_bytes is not None else None
     output.mkdir(parents=True, exist_ok=True)
     exported = compiled.export(output / "export")
-    manifest = json.loads(exported["manifest"].read_text(encoding="utf-8"))
+    manifest = expand_sample_manifest(
+        json.loads(exported["manifest"].read_text(encoding="utf-8"))
+    )
     execution = export_execution_sources(output)
     points = [
         _point_report(compiled, point, manifest_point, output)

@@ -44,7 +44,7 @@ The first pulse occupies 0–640 ns, and the second occupies 1920–2560 ns from
 
 | Mode | Card program | Timing and waveform limits |
 | --- | --- | --- |
-| AWG | DAC segments and a finite sequence step table | The sample grid is 0.8 ns. Square, flat-top Gaussian and supported phase modulation use the existing waveform renderer. Segment alignment can add a documented zero tail after the logical shot. |
+| AWG | DAC segments and a finite sequence step table | The sample grid is 0.8 ns. Use Square, Gaussian, GaussianSquare or [sampled envelope, IQ and waveform arrays](pulse_library.md). Segment alignment can add a documented zero tail after the logical shot. |
 | DDS20 | Timed commands for one RF carrier on each enabled output | A Square has a rectangular amplitude envelope and a sinusoidal carrier. Frequency, amplitude and phase can change between pulses. Edges lie on the 6.4 ns command grid and must allow time to prepare each update. Unsupported envelopes, phase modulation and infeasible command intervals raise compilation errors. |
 
 A 400 ns Square fits the AWG grid but falls halfway between DDS updates. A 403.2 ns Square lies on both grids. For the three-frequency, 20-shot example, run these offline commands from the project root.

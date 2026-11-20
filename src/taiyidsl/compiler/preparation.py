@@ -9,6 +9,7 @@ from dataclasses import dataclass, fields, is_dataclass
 
 from ..backends import Backend, get_backend
 from ..config.hardware import DeviceSetup, SignalMap
+from ..dsl.pulses import SampledPulse
 from ..dsl.values import SweepParameter, sweep_parameter_group
 from ..ir import CompileError
 from ..native.declarations import split_native_body
@@ -35,6 +36,16 @@ def _walk(nodes):
     for node in nodes:
         yield node
         yield from _walk(node.children)
+
+
+def source_sample_pulses(root):
+    """Yield one declaration for each distinct source buffer in a scan."""
+    seen = set()
+    for node in _walk([root]):
+        pulse = node.params.get("pulse")
+        if isinstance(pulse, SampledPulse) and pulse.sample_digest not in seen:
+            seen.add(pulse.sample_digest)
+            yield pulse
 
 
 def _parameter_references(value):
@@ -73,6 +84,10 @@ def _snapshot_inputs(experiment, setup, signal_map, backend, calibration):
     target.capabilities.validate(root, setup)
     target.validate_setup(setup, mapping)
     validate_shared_fields(root, setup, mapping, experiment.qubits)
+    setup._sample_assets = {
+        pulse.sample_digest: pulse.sample_asset()
+        for pulse in source_sample_pulses(root)
+    }
     return target, setup, mapping, root
 
 

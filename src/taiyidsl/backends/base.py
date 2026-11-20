@@ -6,7 +6,7 @@ import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from ..dsl.pulses import FlatTopGaussian, Square
+from ..dsl.pulses import FlatTopGaussian, SampledPulse, Square
 from ..ir import CompileError, PhysicalPlan
 
 
@@ -54,16 +54,22 @@ class BackendCapabilities:
         def visit(node):
             if node.kind in {"play", "trigplay"}:
                 pulse = node.params["pulse"]
+                shape = "square" if isinstance(pulse, Square) else type(pulse).__name__
+                if isinstance(pulse, FlatTopGaussian):
+                    shape = "flat_top_gaussian"
+                elif isinstance(pulse, SampledPulse):
+                    shape = "sampled"
+                if shape not in self.pulse_shapes:
+                    if shape == "sampled":
+                        raise CompileError(
+                            f"Sampled pulses require a Spectrum AWG at {node.source}"
+                        )
+                    raise CompileError(f"Backend does not support pulse shape {shape}")
                 if (
                     getattr(pulse, "phase_modulation", None) is not None
                     and not self.supports_phase_modulation
                 ):
                     raise CompileError("This backend does not support phase modulation")
-                shape = "square" if isinstance(pulse, Square) else type(pulse).__name__
-                if isinstance(pulse, FlatTopGaussian):
-                    shape = "flat_top_gaussian"
-                if shape not in self.pulse_shapes:
-                    raise CompileError(f"Backend does not support pulse shape {shape}")
             if node.kind in {"average", "sweep"}:
                 execution = node.params.get("execution", "host")
                 if execution not in getattr(self, f"{node.kind}_execution"):

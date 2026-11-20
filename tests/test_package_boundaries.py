@@ -135,7 +135,7 @@ def test_spectrum_programs_and_validation_keep_distinct_owners():
     program = import_module("taiyidsl.backends.artiq_spectrum.awg")
     checks = import_module("taiyidsl.backends.artiq_spectrum.validation_awg")
     # Validation shares the resource budget, not its independent expected samples.
-    assert checks._RENDER_WORK_BYTES is program._RENDER_WORK_BYTES
+    assert checks._remaining_tile_samples is program._remaining_tile_samples
     assert checks._expected_window.__module__ == checks.__name__
     for node in ast.walk(ast.parse(Path(program.__file__).read_text(encoding="utf-8"))):
         if isinstance(node, ast.ImportFrom):

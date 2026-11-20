@@ -21,6 +21,7 @@ from typing import Protocol
 
 import numpy as np
 
+from ...sample_assets import expand_sample_manifest
 from ...spectrum_identity import _canonical
 from ...spectrum_identity import calibration_fingerprint as calibration_fingerprint
 from ...spectrum_identity import hardware_fingerprint as hardware_fingerprint
@@ -415,6 +416,7 @@ class SpectrumRunner:
     def _load_bank(self, manifest, bank):
         from taiyidsl.backends.artiq_spectrum.banks import entry_program
 
+        expand_sample_manifest(manifest)
         if self.transport_state == "unknown":
             raise SpectrumRuntimeError(
                 "Transport position is unknown; close the session"
@@ -486,6 +488,7 @@ class SpectrumRunner:
         """Select one finite entry and re-arm it, without repeating resident DMA."""
         from taiyidsl.backends.artiq_spectrum.banks import bank_entry
 
+        expand_sample_manifest(manifest)
         if self.transport_state == "unknown":
             raise SpectrumRuntimeError(
                 "Transport position is unknown; close the session"

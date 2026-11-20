@@ -12,6 +12,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+from ..sample_assets import expand_sample_manifest
 from ._cleanup import run_cleanup
 
 
@@ -186,7 +187,9 @@ class Worker:
 
         root = Path(directory).resolve(strict=True)
         source = root / "experiment.py"
-        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+        manifest = expand_sample_manifest(
+            json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+        )
         # Refuse acquisition-bearing exports even if invoked outside public API.
         plan = json.loads((root / "compiled.json").read_text(encoding="utf-8"))
         if any(

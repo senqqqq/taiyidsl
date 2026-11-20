@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -11,10 +12,14 @@ import numpy as np
 from .._artifact_io import canonical_bytes, file_sha256
 from ..host_plan import execution_order
 from ..ir import CompiledPoint, CompileError, ScheduledEvent
+from ..sample_assets import point_programs, restore_program_assets
 
 
-def restore_point(value):
+def restore_point(value, sample_assets=None):
     result = dict(value)
+    if sample_assets:
+        result["physical_events"] = copy.deepcopy(value["physical_events"])
+        restore_program_assets(point_programs(result), sample_assets)
     for key in ("logical_events", "physical_events"):
         result[key] = [
             ScheduledEvent(
@@ -24,7 +29,7 @@ def restore_point(value):
                     "logical_ids": tuple(event.get("logical_ids", ())),
                 }
             )
-            for event in value[key]
+            for event in result[key]
         ]
     result["axis_indices"] = tuple(result["axis_indices"])
     return CompiledPoint(**result)
@@ -36,9 +41,15 @@ def restore_compiled(value, profile):
     from .artifact import CompiledExperiment
 
     lab = LabConfig.from_dict(profile)
+    # Scheduled ticks refer to the compiled timebase, including the Spectrum
+    # backend's finer clock when the author supplied a native lab profile.
+    lab.setup.tick_seconds = value["setup"]["tick_seconds"]
+    assets = copy.deepcopy(value.get("sample_assets"))
+    if assets:
+        lab.setup._sample_assets = assets
     return CompiledExperiment(
         value["name"],
-        [restore_point(p) for p in value["points"]],
+        [restore_point(p, assets) for p in value["points"]],
         value["shots"],
         value["averaging_mode"],
         value["axes"],

@@ -24,6 +24,8 @@ from .._artifact_io import atomic_json as atomic_json
 from .._artifact_io import canonical_bytes as canonical_bytes
 from .._artifact_io import file_sha256 as file_sha256
 from ..ir import CompileError
+from ..sample_assets import expand_sample_manifest, pack_program_assets, point_programs
+from .preparation import source_sample_pulses
 from .store import ArtifactSegments as ArtifactSegments
 from .store import CompilationStore as CompilationStore
 from .store import restore_compiled as restore_compiled
@@ -75,6 +77,8 @@ class _PointWriter:
             "native": native,
             "diagnostics": copy.deepcopy(diagnostics),
         }
+        # The common header retains the source table for every scan point.
+        pack_program_assets(point_programs(record["point"]), {})
         data = canonical_bytes(record)
         size = len(data)
         if size > self.metadata_budget:
@@ -178,7 +182,9 @@ class _PointWriter:
                         encoding="utf-8"
                     )
                 )
-                point = restore_point(record["point"])
+                point = restore_point(
+                    record["point"], getattr(header.setup, "_sample_assets", None)
+                )
                 point.index = local
                 points.append(point)
                 if record["native"] is not None:
@@ -235,7 +241,9 @@ class _PointWriter:
 
     def _store_segments(self, chunk_directory):
         """One immutable packed file per content hash across every chunk/card."""
-        manifest = json.loads((chunk_directory / "manifest.json").read_text())
+        manifest = expand_sample_manifest(
+            json.loads((chunk_directory / "manifest.json").read_text(encoding="utf-8"))
+        )
         directory = self.directory / "segments"
         directory.mkdir(exist_ok=True)
         for bank in manifest["banks"]:
@@ -291,14 +299,18 @@ def compile_stream(
     minimum_tile = 2 * max(384 // len(card.active_channels) for card in cards)
     unit_bytes = width * RENDER_BYTES_PER_SAMPLE_CHANNEL
     minimum_workspace = max(64 * 1024, minimum_tile * unit_bytes)
-    requested = max(group.max_tile_samples for group in groups.values()) * unit_bytes
+    tile_bytes = max(group.max_tile_samples for group in groups.values()) * unit_bytes
+    sizes = [pulse.samples.nbytes for pulse in source_sample_pulses(experiment.root)]
+    decode_scratch = 4 * ((max(sizes, default=0) + 2) // 3)
+    requested = sum(sizes) + max(tile_bytes, decode_scratch)
     workspace = min(requested, max(minimum_workspace, host_memory_budget_bytes // 2))
     if workspace >= host_memory_budget_bytes:
         raise CompileError(
             "Host budget cannot accommodate the minimum sample workspace"
         )
     tile_limit = workspace // unit_bytes // 32 * 32
-    workspace = tile_limit * unit_bytes
+    if not sizes:
+        workspace = tile_limit * unit_bytes
     setup.spectrum = replace(
         setup.spectrum,
         groups={

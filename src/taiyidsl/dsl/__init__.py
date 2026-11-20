@@ -31,8 +31,13 @@ from .instructions import trig as trig
 from .instructions import trigplay as trigplay
 from .nodes import Node as Node
 from .pulses import FlatTopGaussian as FlatTopGaussian
+from .pulses import Gaussian as Gaussian
+from .pulses import GaussianSquare as GaussianSquare
 from .pulses import HalfSinePhase as HalfSinePhase
 from .pulses import PolynomialPhase as PolynomialPhase
+from .pulses import Pulse as Pulse
+from .pulses import PulseLibrary as PulseLibrary
+from .pulses import SampledPulse as SampledPulse
 from .pulses import Square as Square
 from .pulses import _phase_modulation as _phase_modulation
 from .pulses import _phase_modulation_mode as _phase_modulation_mode
@@ -49,6 +54,11 @@ __all__ = [
     "validate_count",
     "resolve",
     "Square",
+    "Pulse",
+    "SampledPulse",
+    "PulseLibrary",
+    "Gaussian",
+    "GaussianSquare",
     "FlatTopGaussian",
     "HalfSinePhase",
     "PolynomialPhase",

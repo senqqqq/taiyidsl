@@ -95,10 +95,10 @@ def test_sample_workspace_bounds_long_single_shot_and_persists_unique_bytes(
     largest = 0
     original = waveforms._render
 
-    def observed(recipe, samples, card):
+    def observed(recipe, samples, card, decoded=None):
         nonlocal largest
         largest = max(largest, samples * len(card["active_channels"]) * 128)
-        return original(recipe, samples, card)
+        return original(recipe, samples, card, decoded)
 
     monkeypatch.setattr(waveforms, "_render", observed)
     store = lab().compile_stream(

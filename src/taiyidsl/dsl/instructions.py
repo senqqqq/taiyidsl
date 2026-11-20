@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from ..config.models import Qubit
 from ._context import _builder, _has_scope, _in_section, _reject_section_boundary
-from .pulses import FlatTopGaussian, Square
+from .pulses import FlatTopGaussian, SampledPulse, Square
 from .values import SweepParameter, _signal, validate_value
 
 _UNSET = object()
@@ -133,9 +133,24 @@ def _public_pulse_targets(signal, targets, builder):
 
 
 def _append_pulse(kind, signal, pulse, **values):
-    if not isinstance(pulse, (Square, FlatTopGaussian)):
-        raise NotImplementedError("Supported pulses are Square and FlatTopGaussian")
+    if not isinstance(pulse, (Square, FlatTopGaussian, SampledPulse)):
+        raise NotImplementedError(
+            "Supported pulses are Square, FlatTopGaussian and SampledPulse"
+        )
     overrides = {name: value for name, value in values.items() if value is not _UNSET}
+    if isinstance(pulse, SampledPulse):
+        if "duration" in overrides or "flat_duration" in overrides:
+            raise TypeError(
+                "Sampled pulse duration is fixed by sample count and interval"
+            )
+        if pulse.kind == "waveform" and overrides.keys() & {
+            "frequency",
+            "phase",
+            "detuning",
+        }:
+            raise ValueError(
+                "A final waveform cannot accept frequency, detuning or phase"
+            )
     detuning = overrides.pop("detuning", _UNSET)
     targets = overrides.pop("targets", _UNSET)
     parameters = {}

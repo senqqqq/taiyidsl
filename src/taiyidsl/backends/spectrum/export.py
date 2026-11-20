@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from taiyidsl.backends.artiq_spectrum.validation_awg import validate_program
+from taiyidsl.sample_assets import pack_sample_manifest
 
 
 def export_spectrum(compiled, output_dir):
@@ -29,6 +30,7 @@ def export_spectrum(compiled, output_dir):
                 "logical_duration_mu": point.duration_mu,
                 "physical_duration_mu": shot.duration_mu,
                 **shot.params,
+                "program": dict(program),
                 "offline_check": check,
             }
         )
@@ -44,6 +46,7 @@ def export_spectrum(compiled, output_dir):
         "verification": verification,
     }
     output = Path(output_dir)
+    pack_sample_manifest(manifest)
     output.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=output) as temporary:
         stage = Path(temporary)

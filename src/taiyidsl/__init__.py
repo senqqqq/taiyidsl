@@ -91,7 +91,17 @@ from .dsl.operations import (
     ramsey_body,
     rb_body,
 )
-from .dsl.pulses import FlatTopGaussian, HalfSinePhase, PolynomialPhase, Square
+from .dsl.pulses import (
+    FlatTopGaussian,
+    Gaussian,
+    GaussianSquare,
+    HalfSinePhase,
+    PolynomialPhase,
+    Pulse,
+    PulseLibrary,
+    SampledPulse,
+    Square,
+)
 from .dsl.sections import Section, add, layer, section
 from .dsl.values import SweepParameter
 from .ir import CompileError, PhysicalPlan, ScheduledEvent
@@ -164,6 +174,11 @@ __all__ = [
     "QubitOperations",
     "PairCalibration",
     "Square",
+    "Pulse",
+    "SampledPulse",
+    "PulseLibrary",
+    "GaussianSquare",
+    "Gaussian",
     "FlatTopGaussian",
     "HalfSinePhase",
     "PolynomialPhase",

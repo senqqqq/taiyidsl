@@ -8,7 +8,7 @@ from dataclasses import replace
 from taiyidsl.compiler.scheduling import Scheduler, resolve_frames
 from taiyidsl.compiler.timebase import native_factor
 from taiyidsl.compiler.trigger_routes import resolve_trigger_signal
-from taiyidsl.dsl.pulses import HalfSinePhase, PolynomialPhase
+from taiyidsl.dsl.pulses import HalfSinePhase, PolynomialPhase, SampledPulse
 from taiyidsl.dsl.values import resolve
 from taiyidsl.ir import CompileError, ScheduledEvent
 from taiyidsl.units import as_fraction
@@ -28,6 +28,26 @@ _REGION_OPERATIONS = {
     "section_delay",
     *_FRAME_OPERATIONS,
 }
+
+
+def validate_sampled_route(node, sample_rate_hz):
+    """Reject unsupported card routes or nonrepresentable sample timing."""
+    pulse = node.params["pulse"]
+    if sample_rate_hz is None:
+        raise CompileError(
+            f"Sampled pulses require a Spectrum AWG output at {node.source}"
+        )
+    rate = as_fraction(sample_rate_hz, "frequency")
+    interval = as_fraction(pulse.sample_interval, "time") * rate
+    if pulse.resample == "strict" and interval != 1:
+        raise CompileError(
+            f"Sample interval differs from the AWG sample grid at {node.source}; "
+            "select linear resampling explicitly"
+        )
+    if (interval * pulse.sample_count).denominator != 1:
+        raise CompileError(
+            f"Sampled pulse duration is off the AWG grid at {node.source}"
+        )
 
 
 class SpectrumPlaybackScheduler(Scheduler):
@@ -184,6 +204,23 @@ class SpectrumScheduler(SpectrumPlaybackScheduler):
             node_path = (*path, index)
             self._paths[id(node)] = node_path
             kind = node.kind
+            if kind in {"play", "trigplay"} and isinstance(
+                node.params["pulse"], SampledPulse
+            ):
+                devices = self._signal_devices.get(node.params["signal"], ())
+                awg_rate = (
+                    self.groups[group].sample_rate_hz
+                    if (
+                        group is not None
+                        and devices
+                        and all(
+                            self._output_groups.get(name) == group for name in devices
+                        )
+                        and not self._dds_outputs.intersection(devices)
+                    )
+                    else None
+                )
+                validate_sampled_route(node, awg_rate)
             if kind in {"play", "trigplay"} and self._dds_outputs.intersection(
                 self._signal_devices.get(node.params["signal"], ())
             ):

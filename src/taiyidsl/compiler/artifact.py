@@ -13,6 +13,7 @@ from ..config.hardware import DeviceSetup, SignalMap
 from ..dsl._serialization import json_value
 from ..host_plan import execution_order
 from ..ir import CompiledPoint, CompileError, acquisition_targets
+from ..sample_assets import pack_program_assets, point_programs
 
 
 @dataclass
@@ -135,14 +136,16 @@ class CompiledExperiment:
         return phases
 
     def to_dict(self):
-        return {
+        points = [asdict(p) for p in self.points]
+        assets = getattr(self.setup, "_sample_assets", {})
+        result = {
             "schema_version": 2,
             "name": self.name,
             "shots": self.shots,
             "averaging_mode": self.averaging_mode,
             "host_execution_plan": copy.deepcopy(self.host_execution_plan),
             "axes": self.axes,
-            "points": [asdict(p) for p in self.points],
+            "points": points,
             "qubits": {k: q.to_dict() for k, q in self.qubits.items()},
             "setup": self.setup.to_dict(),
             "signal_map": self.signal_map.to_dict(),
@@ -152,6 +155,12 @@ class CompiledExperiment:
             "diagnostics": self.diagnostics,
             "ir": self.ir,
         }
+        if assets:
+            table = {key: dict(record) for key, record in assets.items()}
+            for point in points:
+                pack_program_assets(point_programs(point), table)
+            result["sample_assets"] = table
+        return result
 
     def save(self, path):
         self.assert_integrity()

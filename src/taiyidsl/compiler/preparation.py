@@ -9,7 +9,7 @@ from dataclasses import dataclass, fields, is_dataclass
 
 from ..backends import Backend, get_backend
 from ..config.hardware import DeviceSetup, SignalMap
-from ..dsl.values import SweepParameter
+from ..dsl.values import SweepParameter, sweep_parameter_group
 from ..ir import CompileError
 from ..native.declarations import split_native_body
 from .chunking import build_execution_plan
@@ -26,7 +26,7 @@ class CompilationInputs:
     root: object
     average: object
     body: list
-    parameters: list[SweepParameter]
+    sweep_groups: list[tuple[SweepParameter, ...]]
     native_contract: dict | None
     host_execution_plan: dict
 
@@ -78,18 +78,19 @@ def _snapshot_inputs(experiment, setup, signal_map, backend, calibration):
 
 def _parse_sweeps(root):
     average = root.children[0]
-    body, parameters, sweep_nodes = average.children, [], []
+    body, groups, sweep_nodes = average.children, [], []
     while len(body) == 1 and body[0].kind == "sweep":
         sweep_nodes.append(body[0])
-        parameters.append(body[0].params["parameter"])
+        groups.append(sweep_parameter_group(body[0].params["parameter"]))
         body = body[0].children
     if any(node.kind in {"average", "sweep"} for node in _walk(body)):
         raise CompileError(
             "Sweeps must form one outer nested chain, before the shot body"
         )
-    if len({parameter.name for parameter in parameters}) != len(parameters):
-        raise CompileError("Sweep axis names must be unique")
+    parameters = [parameter for group in groups for parameter in group]
     axes_by_name = {parameter.name: parameter for parameter in parameters}
+    if len(axes_by_name) != len(parameters):
+        raise CompileError("Sweep axis names must be unique")
     for node in _walk(body):
         for reference in _parameter_references(node.params):
             if axes_by_name.get(reference.name) != reference:
@@ -97,7 +98,7 @@ def _parse_sweeps(root):
                     f"Unbound or conflicting parameter {reference.name} "
                     f"with its sweep definition at {node.source}"
                 )
-    return average, body, parameters, sweep_nodes
+    return average, body, groups, sweep_nodes
 
 
 def prepare_compilation(
@@ -106,33 +107,42 @@ def prepare_compilation(
     target, setup, mapping, root = _snapshot_inputs(
         experiment, setup, signal_map, backend, calibration
     )
-    average, body, parameters, sweep_nodes = _parse_sweeps(root)
+    average, body, groups, sweep_nodes = _parse_sweeps(root)
     if "native_artiq" in experiment.metadata:
         raise CompileError("native_artiq metadata is reserved for native declarations")
     body, native_contract = split_native_body(body)
-    count = math.prod(len(parameter.values) for parameter in parameters)
+    axis_parameters = [group[0] for group in groups]
+    count = math.prod(len(parameter.values) for parameter in axis_parameters)
     if count > max_points:
         raise CompileError("Sweep exceeds max_points")
-    plan = build_execution_plan(parameters, sweep_nodes, average)
+    plan = build_execution_plan(axis_parameters, sweep_nodes, average)
     if plan.get("chunk_policy") == "auto" and target.name != "artiq_spectrum":
         raise CompileError("Automatic chunk capacity currently requires artiq_spectrum")
     return CompilationInputs(
-        target, setup, mapping, root, average, body, parameters, native_contract, plan
+        target, setup, mapping, root, average, body, groups, native_contract, plan
     )
 
 
-def sweep_axes(parameters):
-    return [
-        {
-            "name": parameter.name,
-            "values": [float(value) for value in parameter.values],
-            "unit": parameter.unit,
-            "values_unit": {
-                "time": "s",
-                "frequency": "Hz",
-                "phase": "rad",
-                "dimensionless": "dimensionless",
-            }[parameter.dimension],
-        }
-        for parameter in parameters
-    ]
+def _parameter_descriptor(parameter):
+    return {
+        "name": parameter.name,
+        "values": [float(value) for value in parameter.values],
+        "unit": parameter.unit,
+        "values_unit": {
+            "time": "s",
+            "frequency": "Hz",
+            "phase": "rad",
+            "length": "m",
+            "dimensionless": "dimensionless",
+        }[parameter.dimension],
+    }
+
+
+def sweep_axes(groups):
+    axes = []
+    for first, *paired in groups:
+        axis = _parameter_descriptor(first)
+        if paired:
+            axis["paired_parameters"] = [_parameter_descriptor(p) for p in paired]
+        axes.append(axis)
+    return axes

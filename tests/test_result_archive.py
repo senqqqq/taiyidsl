@@ -4,7 +4,16 @@ import h5py
 import numpy as np
 import pytest
 
-from taiyidsl import Experiment, OpticsConfig, Qubit, measure, reference_lab
+from taiyidsl import (
+    Experiment,
+    OpticsConfig,
+    Qubit,
+    Square,
+    SweepParameter,
+    measure,
+    play,
+    reference_lab,
+)
 from taiyidsl.experiments.templates import rabi
 from taiyidsl.results import ResultSet, synthesize
 
@@ -94,6 +103,31 @@ def test_xarray_preserves_coordinates_mask_and_is_independent():
     assert ds["duration"].values[1] == 5e-6
     ds["value"].values[:] = 99
     assert result.data["population"][1, 0, 0] == 0
+
+
+def test_paired_coordinates_in_results_and_pulse_sheet(tmp_path):
+    q = Qubit("q0")
+    duration = SweepParameter("duration", [4, 4, 8], unit="us")
+    frequency = SweepParameter("frequency", [79, 80, 81], unit="MHz")
+    exp = Experiment("paired", [q])
+    with exp.average(1), exp.sweep([duration, frequency]), exp.realtime():
+        play(q.raman, Square(duration, frequency=frequency))
+        measure(q)
+
+    compiled = reference_lab([q]).compile(exp)
+    result = ResultSet.from_compiled(compiled)
+    restored = ResultSet.load_hdf5(result.save_hdf5(tmp_path / "paired.h5"))
+    ds = restored.to_xarray()
+    assert ds["duration"].dims == ds["frequency"].dims == ("point",)
+    np.testing.assert_equal(ds["duration"].values, [4e-6, 4e-6, 8e-6])
+    np.testing.assert_equal(ds["frequency"].values, [79e6, 80e6, 81e6])
+    assert ds["duration"].attrs["units"] == "s"
+    assert ds["frequency"].attrs["units"] == "Hz"
+
+    html = compiled.visualize(tmp_path / "paired.html").read_text(encoding="utf-8")
+    assert "<summary>Paired sweep duration, frequency</summary>" in html
+    assert "<th>duration (s)</th><th>frequency (Hz)</th>" in html
+    assert "<tr><td>4e-06</td><td>80000000.0</td></tr>" in html
 
 
 def test_hdf5_invalid_data_rejected_and_failed_write_preserves_old_file(tmp_path):

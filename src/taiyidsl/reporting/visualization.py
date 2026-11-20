@@ -1186,6 +1186,34 @@ padding:12px}
 """
 
 
+def _sweep_axis_html(axis):
+    def label(parameter):
+        name = escape(str(parameter["name"]))
+        unit = escape(str(parameter.get("values_unit", parameter.get("unit", ""))))
+        return f"{name} ({unit})" if unit else name
+
+    parameters = (axis, *axis.get("paired_parameters", ()))
+    if len(parameters) == 1:
+        values = escape(
+            json.dumps(_jsonable(axis["values"]), ensure_ascii=False, indent=2)
+        )
+        return (
+            f"<details open><summary>Sweep {label(axis)}</summary>"
+            f"<pre>{values}</pre></details>"
+        )
+    names = [escape(str(parameter["name"])) for parameter in parameters]
+    headings = "".join(f"<th>{label(parameter)}</th>" for parameter in parameters)
+    rows = []
+    for values in zip(*(parameter["values"] for parameter in parameters), strict=True):
+        cells = "".join(f"<td>{escape(str(value))}</td>" for value in values)
+        rows.append(f"<tr>{cells}</tr>")
+    return (
+        f"<details open><summary>Paired sweep {', '.join(names)}</summary>"
+        f"<table><thead><tr>{headings}</tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></details>"
+    )
+
+
 def visualize(compiled, path=None, *, waveform_path=None):
     """Save an offline pulse sheet, preserving the existing visualization API.
 
@@ -1219,20 +1247,12 @@ def visualize(compiled, path=None, *, waveform_path=None):
         config={"responsive": True, "displaylogo": False},
     )
 
-    def json_html(value, indent=None):
-        return escape(json.dumps(value, ensure_ascii=False, indent=indent))
-
     options = "".join(
         f'<option value="{i}">{point["index"]}: '
-        f"{json_html(point['coordinates'])}</option>"
+        f"{escape(json.dumps(point['coordinates'], ensure_ascii=False))}</option>"
         for i, point in enumerate(payload)
     )
-    axes = "".join(
-        f"<details open><summary>Sweep {escape(str(axis['name']))} "
-        f"({escape(str(axis.get('unit', '')))})</summary>"
-        f"<pre>{json_html(_jsonable(axis['values']), indent=2)}</pre></details>"
-        for axis in compiled.axes
-    )
+    axes = "".join(_sweep_axis_html(axis) for axis in compiled.axes)
     title = escape(compiled.name)
     diagnostics = escape(
         json.dumps(_jsonable(compiled.diagnostics), ensure_ascii=False, indent=2)

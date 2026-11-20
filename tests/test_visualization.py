@@ -20,6 +20,7 @@ def test_offline_html_has_both_views_and_selectors(tmp_path):
         "Physical resources",
         'id="shot"',
         "Loop structure",
+        "<summary>Sweep duration (s)</summary><pre>",
         "Compilation diagnostics",
         "dds_config",
         "dds_output",

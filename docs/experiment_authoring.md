@@ -14,6 +14,7 @@ The DSL schedules instructions in source order by default. Put simultaneous work
 | `serial/parallel(exact_duration=...)` | Asserts that the realized duration matches exactly. No implicit padding. |
 | `repeat(count)` | Statically expands repetitions within a shot for each sweep point. The count may be an integer sweep parameter. |
 | `average(shots, mode=...)` | Repeats on the host. Cyclic and sequential modes specify the order of points and shots. |
+| `sweep([amp, duration])` | Binds values at the same index on one host axis. The parameters must have equal lengths and distinct names. |
 | Nested `sweep` | Forms a Cartesian product of axes. |
 | `case(parameter, value)` | Selects a structural branch at compile time for the current point. |
 
@@ -57,6 +58,25 @@ Place this code in a `realtime` block inside `average`. The example gives the fo
 
 The two branches join at 10 µs. This fixture accepts a 2 µs gap. Another device may require more preparation time. Optical alignment at the atoms requires separate delay calibration.
 
+## Pair pulse amplitude and duration
+
+Pass a list or tuple of `SweepParameter` objects to one `sweep` to use the same index for all of them. Each parameter can take its values directly from a one-dimensional NumPy array or a Python list.
+
+```python
+import numpy as np
+from taiyidsl import Experiment, Qubit, Square, SweepParameter, play, reference_lab
+
+q = Qubit("q0")
+amp = SweepParameter("amp", np.array([0.2, 0.4, 0.7]), unit="")
+duration = SweepParameter("duration", np.array([4, 8, 12]), unit="us")
+exp = Experiment("paired_pulse", [q])
+with exp.average(1), exp.sweep([amp, duration]), exp.realtime():
+    play(q.rf, Square(duration, amplitude=amp))
+compiled = reference_lab([q]).compile(exp)
+```
+
+The three points are `(0.2, 4 µs)`, `(0.4, 8 µs)` and `(0.7, 12 µs)`, in that order. Both named values appear in each compiled point's `coordinates`, with duration in seconds. Repeated values keep their original index. Nest a separate `exp.sweep(phase)` inside the paired sweep to scan every phase for each pair. Two separate amplitude and duration sweeps would produce all nine combinations.
+
 ## Sweep several qubits together
 
 The same example defines `build_parallel_rabi(qubits, durations, ...)`. It uses one outer duration sweep across all qubits.
@@ -82,7 +102,7 @@ with exp.average(shots, mode=mode):
 
 Each qubit supplies its own Raman amplitude and frequency when the caller leaves them unspecified. A zero-duration point still belongs to the sweep and retains its readout, with no DDS pulse output. The builder returns an `Experiment`. The caller supplies wiring and devices through `lab.compile(exp)`. The example's `reference_lab` assigns a demonstration board to each qubit. A lab configuration should assign `readout_signal` to the actual camera TTL.
 
-This example varies a common duration. There is no zip-sweep over separate per-qubit lists. Nested sweeps would generate all combinations. `analyze_rabi` currently checks for a single-drive program shape and provides no automatic fitting and calibration write-back for this multi-qubit example.
+This example varies a common duration. To vary the qubit durations together using separate lists, declare one parameter per qubit and pass them to one paired sweep. The built-in `analyze_rabi` calibration accepts single-drive programs.
 
 Use one shared `acquire` for a single frame covering multiple sites. Its `duration` is the TTL pulse width. Schedule preparation, illumination, exposure and transfer waits where the lab protocol requires them. The image interface accepts one logical acquisition per selected handle per point. Give independent exposures distinct handles. If handles observe different sites, build separate `ImageResults` with matching ROI sets. Associate every site in one frame with the same `acquire`.
 

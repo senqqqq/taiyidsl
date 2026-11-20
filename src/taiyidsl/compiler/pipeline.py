@@ -25,12 +25,10 @@ def compile_experiment(
     host_execution_plan = inputs.host_execution_plan
     if _point_sink is not None:
         _point_sink.prepare(host_execution_plan)
-    axes = sweep_axes(inputs.parameters)
+    axes = sweep_axes(inputs.sweep_groups)
     points, native_points, diagnostics = [], [], []
     acquisition_signature = None
-    indices = product(
-        *(range(len(parameter.values)) for parameter in inputs.parameters)
-    )
+    indices = product(*(range(len(group[0].values)) for group in inputs.sweep_groups))
     for index, axis_indices in enumerate(indices):
         result = compile_point(
             inputs,

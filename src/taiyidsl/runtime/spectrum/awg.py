@@ -682,11 +682,36 @@ class SpcmAdapter:
         card.timeout(10_000)
         if card.card_mode(sdk.SPC_REP_STD_SEQUENCE) != sdk.SPC_REP_STD_SEQUENCE:
             raise SpectrumRuntimeError("Device did not enter static sequence mode")
+        self._configure_outputs(contract)
+        trigger = sdk.Trigger(card)
+        trigger_settings = (
+            ("or_mask", sdk.SPC_TMASK_EXT0),
+            ("and_mask", 0),
+            ("ext0_mode", sdk.SPC_TM_POS),
+            ("ext0_coupling", sdk.COUPLING_DC),
+            ("termination", int(contract.get("trigger_termination_ohm", 50) == 50)),
+            ("ext0_level0", contract.get("trigger_level_mv", 1000)),
+            # The compiler's calibrated trigger_latency_samples assumes zero.
+            ("delay", 0),
+        )
+        for setting, expected in trigger_settings:
+            if getattr(trigger, setting)(expected) != expected:
+                raise SpectrumRuntimeError(f"Trigger {setting} readback mismatch")
+        card.write_setup()
+        self._sequence = sdk.Sequence(card)
+        self._contract = copy.deepcopy(contract)
+        self._uploaded = self._armed = False
+
+    def _configure_outputs(self, contract, *, awg=True):
+        card, sdk = self._card, self._sdk
         # Explicitly turn off unused output amplifiers; channel selection alone
         # does not define the state left by a previous experiment.
         for channel in sdk.Channels(card, card_enable=3):
             channel.enable(False)
-            if channel.stop_level(sdk.SPCM_STOPLVL_ZERO) != sdk.SPCM_STOPLVL_ZERO:
+            if (
+                awg
+                and channel.stop_level(sdk.SPCM_STOPLVL_ZERO) != sdk.SPCM_STOPLVL_ZERO
+            ):
                 raise SpectrumRuntimeError("Device did not accept zero stop level")
         mask = sum(1 << channel for channel in contract["active_channels"])
         channels = sdk.Channels(card, card_enable=mask)
@@ -702,26 +727,9 @@ class SpcmAdapter:
                 raise SpectrumRuntimeError("Output range was rounded by the driver")
             if channel.offset(0) != 0:
                 raise SpectrumRuntimeError("Device did not accept zero output offset")
-            channel.enable(True)
-        trigger = sdk.Trigger(card)
-        trigger_settings = (
-            ("or_mask", sdk.SPC_TMASK_EXT0),
-            ("and_mask", 0),
-            ("ext0_mode", sdk.SPC_TM_POS),
-            ("ext0_coupling", sdk.COUPLING_DC),
-            ("termination", int(contract.get("trigger_termination_ohm", 50) == 50)),
-            ("ext0_level0", contract.get("trigger_level_mv", 1000)),
-            # Never inherit another application's programmable trigger delay:
-            # the compiler's calibrated trigger_latency_samples assumes zero.
-            ("delay", 0),
-        )
-        for setting, expected in trigger_settings:
-            if getattr(trigger, setting)(expected) != expected:
-                raise SpectrumRuntimeError(f"Trigger {setting} readback mismatch")
-        card.write_setup()
-        self._sequence = sdk.Sequence(card)
-        self._contract = copy.deepcopy(contract)
-        self._uploaded = self._armed = False
+            if awg:
+                channel.enable(True)
+        return channels
 
     def upload(self, program, segment_loader):
         if self._sequence is None or self._armed:

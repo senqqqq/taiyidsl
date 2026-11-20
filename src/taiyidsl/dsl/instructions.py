@@ -199,7 +199,7 @@ def move(qubits, *, to, duration, profile=None, settle=0):
 
 
 def delay(signal=_UNSET, duration=_UNSET):
-    """Wait on a signal, a Spectrum branch, or a declared native timed prelude."""
+    """Wait on a signal or branch, or extend a declared native timed prelude."""
     unqualified = signal is _UNSET or duration is _UNSET
     if signal is _UNSET and duration is _UNSET:
         raise TypeError("delay requires a duration")
@@ -211,17 +211,16 @@ def delay(signal=_UNSET, duration=_UNSET):
         if _in_section():
             exp._append("section_delay", duration=duration)
             return
-        if not any(node.kind == "triggered_sequence" for node in exp._stack):
-            if exp._stack[-1].kind == "realtime" and any(
-                node.kind == "native_call" and node.params["timing"] == "timed"
-                for node in exp._stack[-1].children
-            ):
-                exp._append("native_delay", duration=duration)
-                return
-            raise ValueError(
-                "delay(duration) requires an enclosing triggered_sequence "
-                "or a preceding native timed call in realtime"
-            )
+        if exp._stack[-1].kind == "realtime" and any(
+            node.kind == "native_call" and node.params["timing"] == "timed"
+            for node in exp._stack[-1].children
+        ):
+            exp._append("native_delay", duration=duration)
+            return
+        if not _has_scope(exp, "realtime"):
+            raise ValueError("delay(duration) requires an enclosing realtime block")
+        # The target is selected after construction. Hybrid compilation checks
+        # for its triggered_sequence, standalone compilation uses the whole shot.
         exp._append("scope_delay", duration=duration)
         return
     _builder()._append("delay", signal=_signal(signal), duration=duration)

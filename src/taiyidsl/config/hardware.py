@@ -219,9 +219,10 @@ class DeviceSetup:
     rtio_lane_count: int = 8
     # Optional offline target contract; native ARTIQ device mu fields are unchanged.
     spectrum: object = None
+    standalone_spectrum: object = None
 
     @classmethod
-    def from_descriptor(cls, descriptor, *, device_db, spec_db=None):
+    def from_descriptor(cls, descriptor, *, device_db=None, spec_db=None):
         """Resolve databases and wiring without importing or opening drivers."""
         from .descriptor import setup_from_descriptor
 
@@ -256,6 +257,16 @@ class DeviceSetup:
         return copy.deepcopy(getattr(self, "_zone_coverage", {}))
 
     def __post_init__(self):
+        if self.standalone_spectrum is not None:
+            from .spectrum import StandaloneSpectrumConfig
+
+            if not isinstance(self.standalone_spectrum, StandaloneSpectrumConfig):
+                raise TypeError(
+                    "standalone_spectrum must be a StandaloneSpectrumConfig"
+                )
+            if self.spectrum is not None:
+                raise ValueError("Select a standalone card or hybrid sync groups")
+            self.standalone_spectrum = copy.deepcopy(self.standalone_spectrum)
         if self.spectrum is not None:
             from .spectrum import SpectrumConfig
 
@@ -289,6 +300,10 @@ class DeviceSetup:
             result.pop("spectrum")
         else:
             result["spectrum"] = self.spectrum.to_dict()
+        if self.standalone_spectrum is None:
+            result.pop("standalone_spectrum")
+        else:
+            result["standalone_spectrum"] = self.standalone_spectrum.to_dict()
         if self.zone_coverage:
             result["zone_coverage"] = self.zone_coverage
         transport = getattr(self, "_transport", None)

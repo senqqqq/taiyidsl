@@ -1,10 +1,11 @@
 # Backends and laboratory configuration
 
-The experiment describes the intended operations. A backend maps them to a target schedule, physical events and offline programs. The built-in targets are `artiq` (ARTIQ 9, AD9910 and TTL) and `artiq_spectrum` (ARTIQ with Spectrum AWG/DDS). Backend construction, compilation and export are offline. Connecting instruments and executing a program require an explicit session or runner.
+The experiment describes the intended operations. A backend maps them to a target schedule, physical events and offline programs. The built-in targets are `artiq` (ARTIQ 9, AD9910 and TTL), `artiq_spectrum` (ARTIQ with Spectrum AWG/DDS), and `spectrum` (one software-started Spectrum card). Backend construction, compilation and export are offline. Connecting instruments and executing a program require an explicit session or runner.
 
 | Capability | Implementation and limits |
 | --- | --- |
 | AD9910 and TTL | `artiq`. Square and RAM paths have distinct timing and protocol constraints. |
+| Standalone RF playback | [Single-card Spectrum](spectrum_standalone.md). Choose AWG samples or DDS20 gated carriers, with one software start per shot. |
 | Multi-card AWG | `artiq_spectrum`. Synchronized group triggers and static banks. Physical synchronization requires measurement. |
 | Crossed-AOD transport | Spectrum DDS transport on the hybrid backend. Dedicated transport instructions address the DDS outputs. |
 | Native preparation and readout | `NativeKernelPackage` or `NativeProgram` at defined stage boundaries. Arbitrary interleaving between gates is unsupported. |
@@ -88,7 +89,7 @@ See the [source layout](source_layout.md). Build, real-compiler and physical acc
 
 ## Implement another backend
 
-Subclass `taiyidsl.Backend`. Give it a unique valid `name`. The built-in names `artiq` and `artiq_spectrum` are reserved. Maintain a semantic `version`, a `target` description and a `phase_policy` explaining how physical phase is realized. Declare supported devices, pulse shapes, operations and average/sweep execution locations through `BackendCapabilities`.
+Subclass `taiyidsl.Backend`. Give it a unique valid `name`. The built-in names `artiq`, `artiq_spectrum` and `spectrum` are reserved. Maintain a semantic `version`, a `target` description and a `phase_policy` explaining how physical phase is realized. Declare supported devices, pulse shapes, operations and average/sweep execution locations through `BackendCapabilities`.
 
 | Method | Contract |
 | --- | --- |

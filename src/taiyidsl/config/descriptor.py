@@ -17,7 +17,14 @@ from dataclasses import fields
 from pathlib import Path
 
 from .hardware import Device, DeviceSetup, SignalMap
-from .spectrum import SpectrumCard, SpectrumConfig, SpectrumGroup, SpectrumOutput
+from .spectrum import (
+    HYBRID_TICK_SECONDS,
+    SpectrumCard,
+    SpectrumConfig,
+    SpectrumGroup,
+    SpectrumOutput,
+    StandaloneSpectrumConfig,
+)
 
 
 def read_database(source, name):
@@ -210,6 +217,9 @@ def describe_setup(setup):
         for group in (setup.spectrum.groups.values() if setup.spectrum else ())
         for uid, card in group.cards.items()
     }
+    standalone = setup.standalone_spectrum
+    if standalone:
+        cards[standalone.card_name] = standalone.card
     for uid, instrument in descriptor["instruments"].items():
         item = copy.deepcopy(instrument)
         if instrument["kind"] == "artiq":
@@ -230,7 +240,11 @@ def describe_setup(setup):
                 else {"serial_number": cards[uid].serial_number}
             )
             item["connection"] = {"driver": "spcm.Card", **selector}
-            item["settings"] = {**cards[uid].to_dict(), "mode": cards[uid].mode}
+            item["settings"] = (
+                standalone.contract
+                if standalone
+                else {**cards[uid].to_dict(), "mode": cards[uid].mode}
+            )
         instruments[uid] = item
     return {
         "name": setup.name,
@@ -245,7 +259,7 @@ def describe_setup(setup):
     }
 
 
-def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
+def setup_from_descriptor(descriptor, *, device_db=None, spec_db=None):
     """Resolve one source of truth for devices, wiring and logical signals."""
     _keys(
         descriptor,
@@ -266,9 +280,21 @@ def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
     if descriptor.get("schema_version", 1) != 1:
         raise ValueError("Unsupported descriptor schema_version")
     backend = descriptor["backend"].replace("-", "_")
-    if backend not in {"artiq", "artiq_spectrum"}:
-        raise ValueError("Descriptor supports artiq or artiq-spectrum")
-    devices_db, artiq_source = read_database(device_db, "device_db")
+    if backend not in {"artiq", "artiq_spectrum", "spectrum"}:
+        raise ValueError("Descriptor supports artiq, artiq-spectrum or spectrum")
+    standalone = backend == "spectrum"
+    if standalone:
+        if descriptor.get("sync_groups") or any(
+            key in descriptor for key in ("rtio_coarse_mu", "rtio_lane_count")
+        ):
+            raise ValueError(
+                "Standalone Spectrum uses a software trigger and card clock"
+            )
+        devices_db, artiq_source = {}, None
+    else:
+        if device_db is None:
+            raise ValueError("An ARTIQ backend requires device_db")
+        devices_db, artiq_source = read_database(device_db, "device_db")
     specs, spec_source = (
         read_database(spec_db, "spec_db") if spec_db is not None else ({}, None)
     )
@@ -277,6 +303,10 @@ def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
     for uid, instrument in instruments.items():
         _keys(instrument, {"kind", "device"}, f"instrument {uid}", ("kind", "device"))
         if instrument["kind"] == "artiq":
+            if standalone:
+                raise ValueError(
+                    "Standalone Spectrum requires exactly one Spectrum card"
+                )
             core_name, core = resolve_device(devices_db, instrument["device"])
             if core.get("class") != "Core":
                 raise ValueError("ARTIQ instrument must refer to a Core device")
@@ -293,9 +323,14 @@ def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
             cards[uid] = SpectrumCard(**spec)
         else:
             raise ValueError(f"Unknown instrument kind: {instrument['kind']}")
-    if len(cores) != 1:
-        raise ValueError("Exactly one ARTIQ core is currently supported")
-    tick = cores[0].get("arguments", {}).get("ref_period", 1e-9)
+    if standalone:
+        if len(cards) != 1:
+            raise ValueError("Standalone Spectrum requires exactly one Spectrum card")
+        tick = HYBRID_TICK_SECONDS
+    else:
+        if len(cores) != 1:
+            raise ValueError("Exactly one ARTIQ core is currently supported")
+        tick = cores[0].get("arguments", {}).get("ref_period", 1e-9)
     devices, outputs, mapping, rows, sharing = {}, {}, SignalMap(), [], {}
     coverage = {}
     endpoint_names = {}
@@ -323,6 +358,8 @@ def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
             raise ValueError("Channel sharing must be exclusive or global")
         zones = None
         if "coverage" in channel:
+            if standalone:
+                raise ValueError("Zone coverage requires a hybrid transport setup")
             _keys(channel["coverage"], {"zones"}, "channel coverage", ("zones",))
             zones = channel["coverage"]["zones"]
             if (
@@ -472,6 +509,10 @@ def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
         raise ValueError("Every Spectrum card must belong to exactly one sync group")
     if backend == "artiq" and (cards or groups):
         raise ValueError("ARTIQ-only descriptor cannot declare Spectrum cards")
+    standalone_config = None
+    if standalone:
+        ((card_name, card),) = cards.items()
+        standalone_config = StandaloneSpectrumConfig(card_name, card, outputs)
     setup = DeviceSetup(
         devices=devices,
         tick_seconds=tick,
@@ -479,6 +520,7 @@ def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
         rtio_coarse_mu=descriptor.get("rtio_coarse_mu", 8),
         rtio_lane_count=descriptor.get("rtio_lane_count", 8),
         spectrum=SpectrumConfig(groups, artiq_tick_seconds=tick) if groups else None,
+        standalone_spectrum=standalone_config,
     )
     setup._descriptor = copy.deepcopy(dict(descriptor))
     setup._signal_map = mapping
@@ -490,5 +532,9 @@ def setup_from_descriptor(descriptor, *, device_db, spec_db=None):
     setup._device_db = devices_db
     setup._spec_db = specs
     setup._spectrum_addresses = addresses
-    setup._database_sources = {"device_db": artiq_source, "spec_db": spec_source}
+    setup._database_sources = (
+        {"spec_db": spec_source}
+        if standalone
+        else {"device_db": artiq_source, "spec_db": spec_source}
+    )
     return setup

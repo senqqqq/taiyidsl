@@ -44,7 +44,13 @@ from .config.models import (
 )
 from .config.optics import OpticsConfig
 from .config.pair_calibration import PairCalibration
-from .config.spectrum import SpectrumCard, SpectrumConfig, SpectrumGroup, SpectrumOutput
+from .config.spectrum import (
+    SpectrumCard,
+    SpectrumConfig,
+    SpectrumGroup,
+    SpectrumOutput,
+    StandaloneSpectrumConfig,
+)
 from .config.transport import IZ, MoveProfile, SiteRef, TransportConfig
 from .dsl.authoring import (
     average,
@@ -183,6 +189,7 @@ __all__ = [
     "Device",
     "DeviceSetup",
     "SpectrumCard",
+    "StandaloneSpectrumConfig",
     "SpectrumConfig",
     "SpectrumGroup",
     "SpectrumOutput",

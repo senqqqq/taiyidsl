@@ -30,8 +30,62 @@ _REGION_OPERATIONS = {
 }
 
 
-class SpectrumScheduler(Scheduler):
+class SpectrumPlaybackScheduler(Scheduler):
+    """Resolve pulse and modulation requests before assigning device timing."""
+
+    spatial = None
+
+    def schedule_play(self, node, frames, realtime):
+        pulse, signal = node.params["pulse"], node.params["signal"]
+        overrides = {"phase_modulation": None}
+        if hasattr(pulse, "phase_modulation_mode"):
+            overrides["phase_modulation_mode"] = "local"
+        ordinary = replace(
+            node,
+            kind="play",
+            params={**node.params, "pulse": replace(pulse, **overrides)},
+        )
+        events, duration = super().node(ordinary, frames, realtime)
+        if self.spatial is not None:
+            self.spatial.apply_coverage(node, events)
+        frame = self._signal_frames[signal]
+        for event in events:
+            event.resources = self._signal_devices[signal]
+            event.params.update(
+                phase=float(resolve(pulse.phase, self.coordinates, "phase")),
+                requested_phase=float(resolve(pulse.phase, self.coordinates, "phase")),
+                frame=frame,
+                qubit=self._frame_owners[frame]
+                if frame is not None
+                else event.params.get("qubit"),
+                frame_phase=0.0,
+                phase_modulation_mode=getattr(pulse, "phase_modulation_mode", "local"),
+            )
+            modulation = pulse.phase_modulation
+            if isinstance(modulation, HalfSinePhase):
+                event.params["phase_modulation"] = {
+                    "kind": "half_sine",
+                    "amplitude": float(
+                        resolve(modulation.amplitude, self.coordinates, "phase")
+                    ),
+                }
+            elif isinstance(modulation, PolynomialPhase):
+                event.params["phase_modulation"] = {
+                    "kind": "polynomial",
+                    "coefficients": [
+                        float(resolve(value, self.coordinates, "phase"))
+                        for value in modulation.coefficients
+                    ],
+                }
+        return events, duration
+
+
+class SpectrumScheduler(SpectrumPlaybackScheduler):
     """Preserve one explicit region while reusing the existing timing rules."""
+
+    @property
+    def ordered_frame_edges(self):
+        return self._region is not None
 
     def __init__(self, *args, body):
         super().__init__(*args)
@@ -301,47 +355,7 @@ class SpectrumScheduler(Scheduler):
     def _play_node(self, node, frames, realtime):
         if self._region is None:
             raise CompileError("trigplay requires an enclosing triggered_sequence")
-        pulse, signal = node.params["pulse"], node.params["signal"]
-        overrides = {"phase_modulation": None}
-        if hasattr(pulse, "phase_modulation_mode"):
-            overrides["phase_modulation_mode"] = "local"
-        ordinary = replace(
-            node,
-            kind="play",
-            params={**node.params, "pulse": replace(pulse, **overrides)},
-        )
-        events, duration = super().node(ordinary, frames, realtime)
-        if self.spatial is not None:
-            self.spatial.apply_coverage(node, events)
-        frame = self._signal_frames[signal]
-        for event in events:
-            event.resources = self._signal_devices[signal]
-            event.params.update(
-                phase=float(resolve(pulse.phase, self.coordinates, "phase")),
-                requested_phase=float(resolve(pulse.phase, self.coordinates, "phase")),
-                frame=frame,
-                qubit=self._frame_owners[frame]
-                if frame is not None
-                else event.params.get("qubit"),
-                frame_phase=0.0,
-                phase_modulation_mode=getattr(pulse, "phase_modulation_mode", "local"),
-            )
-            modulation = pulse.phase_modulation
-            if isinstance(modulation, HalfSinePhase):
-                event.params["phase_modulation"] = {
-                    "kind": "half_sine",
-                    "amplitude": float(
-                        resolve(modulation.amplitude, self.coordinates, "phase")
-                    ),
-                }
-            elif isinstance(modulation, PolynomialPhase):
-                event.params["phase_modulation"] = {
-                    "kind": "polynomial",
-                    "coefficients": [
-                        float(resolve(value, self.coordinates, "phase"))
-                        for value in modulation.coefficients
-                    ],
-                }
+        events, duration = self.schedule_play(node, frames, realtime)
         return self._tag(events), duration
 
     def _repeat_node(self, node, frames, realtime):

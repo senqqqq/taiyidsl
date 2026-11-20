@@ -276,24 +276,34 @@ def _carrier_phase(frequency, start_mu):
     return 2 * math.pi * float(cycles)
 
 
-def _card_pulses(
-    region, members, card_name, group, setup, mapping, diagnostics, preceding_resets=()
+def resolve_card_pulses(
+    members,
+    card_name,
+    card,
+    outputs,
+    setup,
+    mapping,
+    diagnostics,
+    *,
+    start_mu,
+    reference_kind,
+    prefix=0,
+    calibration=None,
+    preceding_resets=(),
 ):
+    """Resolve final pulse samples and phase from an already placed card timeline."""
     from taiyidsl.backends.artiq_spectrum.phase import OutputPhaseState
     from taiyidsl.spectrum_calibration import resolve_channel_calibration
 
-    card = group.cards[card_name]
-    prefix = _prefix_samples(group, card, setup)
     pulses = []
-    reference_kind = region.params.get("phase_reference", "sequence")
-    reference_ticks = region.start_mu if reference_kind == "sequence" else 0
+    reference_ticks = start_mu if reference_kind == "sequence" else 0
     phase_states = {
         name: OutputPhaseState(
             output,
             reference_ticks=reference_ticks,
             reference_kind=reference_kind,
         )
-        for name, output in group.outputs.items()
+        for name, output in outputs.items()
         if output.card == card_name
     }
     if reference_kind == "shot":
@@ -311,7 +321,7 @@ def _card_pulses(
         if event.kind != "play" or event.duration_mu == 0:
             continue
         for binding in mapping.bindings(event.signal):
-            output = group.outputs[binding.device]
+            output = outputs[binding.device]
             if output.card != card_name:
                 continue
             params = event.params
@@ -320,7 +330,7 @@ def _card_pulses(
             )
             try:
                 channel_cal = resolve_channel_calibration(
-                    group.calibration, card_name, output.channel, frequency
+                    calibration or {}, card_name, output.channel, frequency
                 )
             except ValueError as exc:
                 raise CompileError(str(exc)) from exc
@@ -342,7 +352,7 @@ def _card_pulses(
                 round(-Fraction(str(delay_ns)) * card.sample_rate_hz / 1_000_000_000),
             )
             relative_start = _exact_integer(
-                Fraction(event.start_mu - region.start_mu, 4), event.source
+                Fraction(event.start_mu - start_mu, 4), event.source
             )
             start_sample = prefix + relative_start + shift
             if start_sample < 0:
@@ -461,7 +471,7 @@ def _card_pulses(
                         "status": "requires_hardware_acceptance",
                     }
                 )
-    return pulses, prefix
+    return pulses
 
 
 def _lower(logical, setup, mapping, diagnostics):
@@ -600,15 +610,20 @@ def _lower(logical, setup, mapping, diagnostics):
                     physical_end, region.start_mu + program["duration_mu"]
                 )
                 continue
-            pulses, prefix = _card_pulses(
-                region,
+            prefix = _prefix_samples(group, card, setup)
+            pulses = resolve_card_pulses(
                 members,
                 card_name,
-                group,
+                card,
+                group.outputs,
                 setup,
                 mapping,
                 diagnostics,
-                preceding_resets,
+                start_mu=region.start_mu,
+                reference_kind=region.params.get("phase_reference", "sequence"),
+                prefix=prefix,
+                calibration=group.calibration,
+                preceding_resets=preceding_resets,
             )
             duration = prefix + _exact_integer(
                 Fraction(region.duration_mu, 4), region.source

@@ -40,6 +40,10 @@ class BackendCapabilities:
     def to_dict(self):
         return {name: sorted(getattr(self, name)) for name in self.__dataclass_fields__}
 
+    @property
+    def supports_phase_modulation(self):
+        return "trigplay" in self.operations
+
     def validate(self, root, setup):
         for device in setup.devices.values():
             if device.kind not in self.device_kinds:
@@ -52,7 +56,7 @@ class BackendCapabilities:
                 pulse = node.params["pulse"]
                 if (
                     getattr(pulse, "phase_modulation", None) is not None
-                    and "trigplay" not in self.operations
+                    and not self.supports_phase_modulation
                 ):
                     raise CompileError("This backend does not support phase modulation")
                 shape = "square" if isinstance(pulse, Square) else type(pulse).__name__

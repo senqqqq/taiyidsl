@@ -114,6 +114,8 @@ def resolve_frames(logical):
 
 
 class Scheduler:
+    ordered_frame_edges = False
+
     def __init__(
         self,
         exp,
@@ -393,7 +395,7 @@ class Scheduler:
                     }
                 )
             for i, edges in enumerate(frame_edges):
-                if getattr(self, "_region", None) is not None and any(
+                if self.ordered_frame_edges and any(
                     edges & starts for j, starts in enumerate(drive_edges) if i != j
                 ):
                     raise CompileError(

@@ -13,6 +13,44 @@ from taiyidsl.runtime.session import HardwareSession
 from taiyidsl.runtime.worker import Worker
 
 
+@pytest.mark.parametrize("mode", [None, "dds"])
+def test_standalone_descriptor_roundtrip_and_mode_selection(mode):
+    descriptor = {
+        "backend": "spectrum",
+        "instruments": {"bench": {"kind": "spectrum", "device": "card"}},
+        "channels": {"out": {"instrument": "bench", "channel": 0}},
+        "signals": {"q0": {"rf": "out"}},
+    }
+    spec_db = {"card": {"serial_number": "OFFLINE", "active_channels": [0]}}
+    if mode:
+        spec_db["card"]["mode"] = mode
+    setup = DeviceSetup.from_descriptor(descriptor, spec_db=spec_db)
+    selected = setup.describe()["instruments"]["bench"]["settings"]
+    assert selected["mode"] == (mode or "awg")
+    assert selected["clock_source"] == "internal"
+    assert selected["trigger_source"] == "software"
+    assert set(setup.describe()["databases"]) == {"spec_db"}
+    assert setup.trigger_connections() == []
+    lab = LabConfig(setup)
+    assert lab.backend == "spectrum"
+    with pytest.raises(RuntimeError, match="emulation"):
+        lab.connect()
+    restored = LabConfig.from_dict(json.loads(json.dumps(lab.to_dict())))
+    assert restored.to_dict() == lab.to_dict()
+    q = Qubit("q0")
+    pulse = Square(640 * ns, amplitude=0.2, frequency=10e6)
+    exp = Experiment("card", [q])
+    with exp.average(1), exp.realtime():
+        play(q.rf, pulse)
+    assert (
+        lab.compile(exp).points[0].physical_events
+        == restored.compile(exp).points[0].physical_events
+    )
+    descriptor["instruments"]["second"] = {"kind": "spectrum", "device": "card"}
+    with pytest.raises(ValueError, match="exactly one"):
+        DeviceSetup.from_descriptor(descriptor, spec_db=spec_db)
+
+
 def databases():
     device_db = {
         "core": {

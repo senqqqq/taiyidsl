@@ -11,6 +11,7 @@ Start with the [Ramsey tutorial](tutorials/ramsey_clock_plain.ipynb) to write an
 | `backends/` | Declare the target contract and explicitly register or select a target. | `base`, `register_backend`, `get_backend` |
 | `backends/artiq/` | Lower AD9910 and TTL operations, generate ARTIQ source and verify it offline. | `backend`, `codegen*`, `submission`, `mock_drivers`, `verification*`, `export` |
 | `backends/artiq_spectrum/` | Coordinate the two time domains, create AWG/DDS programs, check capacity and export banks. | `scheduling`, `phase`, `awg`, `validation_awg`, `dds`, `banks`, `export` |
+| `backends/spectrum/` | Schedule single-card shots, reuse AWG rendering and compile timed DDS Square commands. | `backend`, `dds`, `export` |
 | `native/` | Declare and pin external kernels, audit sources, compose and export components. | `declarations`, `components`, `sources`, `audit`, `component_export`, `export` |
 | `runtime/` | Own connections, execute programs, manage readout, journal attempts and recover results. | `session`, `worker`, `contracts`, `readout`, `run_store`, `streaming`, `spectrum/` |
 | `results/` | Interpret scalar and image observations, archives and analysis. | `scalar`, `imaging`, `archives`, `analysis`, `rb_results`, `rb_analysis` |

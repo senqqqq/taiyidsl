@@ -15,6 +15,7 @@ Import the experiment-authoring API from `taiyidsl`. Importing the library works
 | Move atoms | `IZ`, `SiteRef`, `MoveProfile`, `TransportConfig`, `move` | [DDS transport](transport_dds.md) |
 | Implement a backend | `Backend`, `BackendCapabilities`, `register_backend`, `get_backend` | [Backend contracts](backends.md) |
 | Integrate Spectrum hardware | `SpectrumAdapter`, `SpectrumRunner` and `SpcmAdapter` in `taiyidsl.runtime.spectrum.awg` and `SpcmDDSAdapter` in `taiyidsl.runtime.spectrum.dds` | [Spectrum](spectrum_hybrid.md) |
+| Play a shot on one Spectrum card | `DeviceSetup.from_descriptor(descriptor, spec_db=spec_db)`, `LabConfig.compile()`, and `LabConfig.connect()` | [Standalone Spectrum](spectrum_standalone.md) |
 
 `lab.compile(exp)` returns an artifact with inspection and export methods such as `export()`, `export_report()`, `visualize()` and `waveform_simulator()`. The lower-level entry point is `compile_experiment(exp, setup, mapping, ...)`. `CompiledExperiment.export_artiq()` supports an artifact compiled for ARTIQ. To change targets, compile the experiment again. Establish a connection with `lab.connect()`. A session's execution receipt records what ran. Detector retrieval follows the relevant runner's readout contract.
 

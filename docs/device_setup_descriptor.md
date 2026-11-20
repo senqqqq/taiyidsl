@@ -2,6 +2,8 @@
 
 `DeviceSetup.from_descriptor()` reads configuration offline. It accepts ARTIQ's standard `device_db` dictionary and TaiyiDSL's `spec_db` dictionary for Spectrum devices. Each can be supplied directly or as a declarative Python file. The reader supports literals, constant references and basic arithmetic. It never executes imports, functions or loops. For a dynamic database, evaluate it in the laboratory's trusted configuration process and pass the resulting dictionary. Reading a descriptor requires neither ARTIQ nor `spcm`.
 
+For a bench with one Spectrum card, use the [standalone descriptor](spectrum_standalone.md) with `spec_db` and an internal clock.
+
 ## Reuse an existing ARTIQ installation
 
 Pass the lab's `device_db.py` path and select device names in the descriptor. The core's address stays in `device_db["core"]["arguments"]["host"]`, the TTL's RTIO channel stays in `arguments.channel`, and the database supplies the DDS/SPI/CPLD topology. The DSL and the native GreenMOT package use the same database snapshot. The database can include devices used only by native programs.

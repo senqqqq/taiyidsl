@@ -5,7 +5,8 @@ pulses, timing, scans and repeated shots; compile an inspectable plan; then view
 its waveforms or explicitly run it through a configured laboratory connection.
 
 **Status: laboratory collaboration preview, offline first.** The available
-backends cover ARTIQ 9 / AD9910 / TTL and hybrid ARTIQ + Spectrum AWG/DDS.
+backends cover ARTIQ 9 / AD9910 / TTL, hybrid ARTIQ + Spectrum AWG/DDS, and
+[standalone single-card Spectrum playback](docs/spectrum_standalone.md).
 Offline verification, real ARTIQ compilation and instrument acceptance are
 separate evidence. Selected historical exports have real compile-only evidence;
 RTIO capacity, device synchronization, optical timing and camera acquisition

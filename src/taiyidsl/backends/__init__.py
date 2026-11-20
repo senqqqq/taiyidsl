@@ -22,7 +22,10 @@ def _validate_backend(backend):
 def register_backend(backend):
     """Register an explicit instance; never discover/import third-party plugins."""
     backend = _validate_backend(backend)
-    if backend.name in {"artiq", "artiq_spectrum"} or backend.name in _BACKENDS:
+    if (
+        backend.name in {"artiq", "artiq_spectrum", "spectrum"}
+        or backend.name in _BACKENDS
+    ):
         raise ValueError(f"Backend already registered: {backend.name}")
     _BACKENDS[backend.name] = backend
 
@@ -39,6 +42,10 @@ def get_backend(backend="artiq"):
         from taiyidsl.backends.artiq_spectrum.backend import ArtiqSpectrumBackend
 
         return ArtiqSpectrumBackend()
+    if backend == "spectrum":
+        from taiyidsl.backends.spectrum.backend import SpectrumBackend
+
+        return SpectrumBackend()
     if backend not in _BACKENDS:
         raise NotImplementedError(f"Unknown backend: {backend}")
     return _validate_backend(_BACKENDS[backend])

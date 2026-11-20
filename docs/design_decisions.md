@@ -20,7 +20,7 @@ The descriptor declares whether the RF, clock or Rydberg field is shared. A shar
 
 ## Targets, native code and transport
 
-Select `artiq` or `artiq_spectrum` explicitly. Backends are stateless. Include target configuration and backend version in the compiled snapshot. Change the backend version when its semantics change; hashes of artifact content do not inspect implementation files.
+Select `artiq`, `artiq_spectrum` or `spectrum` in the laboratory configuration. A [standalone Spectrum card](spectrum_standalone.md) executes one internally timed shot per software start. Backends are stateless. Include target configuration and backend version in the compiled snapshot. Change the backend version when its semantics change; hashes of artifact content do not inspect implementation files.
 
 ARTIQ lowering, source generation and offline execution have separate owners. The exporter invokes the generator and verifier. Spectrum's AWG checker uses an independent mathematical expectation and finite replay of final samples. DDS checks rebuild command intent and verify program integrity. The shared calibration module supplies both analysis and runtime parsing.
 

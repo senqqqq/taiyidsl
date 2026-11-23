@@ -112,7 +112,8 @@ def adapter_cells():
             # 保留原文件，导入基类；将两个内联阶段和一个收尾段写到自己的模块中。
             # MOT.build 沿用原设备绑定，统一 EW 偏置并保存每次读出前使用的 TOF 秒数。
             # MOT.load 负责一次装载，保留原入口的调度余量和 5 ms 前导。
-            header = """from artiq.experiment import HasEnvironment, kernel, delay, MHz, dB, ms, us
+            header = """\
+        from artiq.experiment import HasEnvironment, kernel, delay, MHz, dB, ms, us
         from lib._GreenMOTbase import _GreenMOTbase
 
         class MOT(_GreenMOTbase):

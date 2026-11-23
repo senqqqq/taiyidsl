@@ -7,6 +7,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import nbformat
+from tutorial_notebook_format import write_formatted_notebook
 
 ROOT = Path(__file__).resolve().parents[1]
 DESTINATION = ROOT / "docs/tutorials/spectrum_clock_578_zh.ipynb"
@@ -279,8 +280,7 @@ def build():
         "display_name": "Python 3 (TaiyiDSL)",
         "language": "python",
     }
-    nbformat.validate(notebook)
-    nbformat.write(notebook, DESTINATION)
+    write_formatted_notebook(notebook, DESTINATION)
 
 
 if __name__ == "__main__":

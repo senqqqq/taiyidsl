@@ -10,6 +10,7 @@ import nbformat
 from native_lab_adapter_cells import adapter_cells
 from native_lab_config_cells import config_cells
 from native_lab_tutorial_cells import demo_cells
+from tutorial_notebook_format import write_formatted_notebook
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "docs/tutorials/native_mot_clock_zh.ipynb"
@@ -267,8 +268,7 @@ def build():
         "name": "python3",
     }
     notebook.metadata.language_info = {"name": "python", "version": "3.12"}
-    nbformat.validate(notebook)
-    nbformat.write(notebook, NOTEBOOK)
+    write_formatted_notebook(notebook, NOTEBOOK)
     print(NOTEBOOK)
 
 

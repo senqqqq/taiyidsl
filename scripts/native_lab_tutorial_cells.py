@@ -41,7 +41,7 @@ def demo_cells():
         import numpy as np
         from IPython.display import Image, display
         from taiyidsl import (
-            DeviceSetup, Experiment, LabConfig, NativeModule, NativeProgram,
+            Experiment, LabConfig, NativeModule, NativeProgram,
             NativeStage, Qubit, Square, SweepParameter, delay, kHz, play, us,
         )
         from examples.artiq_spectrum.ramsey_lab.device_db import device_db as example_db

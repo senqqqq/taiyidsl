@@ -11,7 +11,7 @@ uv sync --locked --group notebooks
 uv run --locked --group notebooks jupyter lab docs/tutorials/ramsey_clock_plain.ipynb
 ```
 
-Select the project CPython 3.12 kernel and use **Restart Kernel → Run All**. The checkout includes examples, generator inputs and native sources that are outside the installed wheel. All five notebooks run offline by default. Example values are uncalibrated. A native TTL fixture illustrates timing. It cannot prepare atoms or return camera frames.
+Select the project CPython 3.12 kernel and use **Restart Kernel → Run All**. The checkout includes examples, generator inputs and native sources that are outside the installed wheel. All notebooks run offline by default. Example values are uncalibrated. A native TTL fixture illustrates timing. It cannot prepare atoms or return camera frames.
 
 | Notebook | What you can inspect | Local outputs |
 |---|---|---|
@@ -20,6 +20,7 @@ Select the project CPython 3.12 kernel and use **Restart Kernel → Run All**. T
 | [Clock Ramsey with transport](ramsey_clock_transport.ipynb) | Move to an interaction zone, align AWG and DDS outputs and inspect the return trajectory | `output/ramsey_clock_transport/` |
 | [¹⁷¹Yb global-RF tune-up](yb171_global_rf_tuneup.ipynb) | Design and analyze RF, clock, Rydberg and two-qubit experiments | `output/yb171_tuneup/` |
 | [Advanced hybrid control](hybrid_from_scratch.ipynb) | Combine native components, two-qubit RB, disk compilation, joint readout and durable shot records | `output/tutorial_from_scratch/` |
+| [中文版：原生 MOT、GM 冷却、态制备与 578 nm 钟谱](native_mot_clock_zh.ipynb) | Integrate atom-control sources and its device database with a Spectrum clock probe in one shot | `output/native_lab_tutorial/` |
 
 Reruns update demonstration outputs. Keep measured data in a separate location. The published notebooks contain source cells with cleared execution outputs.
 
@@ -57,6 +58,7 @@ Advanced hybrid uses an illustrative CZ and synthetic RB results. Replace the ga
 | Transport | [build_clock_transport_tutorial.py](../../scripts/build_clock_transport_tutorial.py) |
 | Yb tune-up | [build_yb171_tuneup_notebook.py](../../scripts/build_yb171_tuneup_notebook.py) |
 | Advanced hybrid | [build_hybrid_tutorial.py](../../scripts/build_hybrid_tutorial.py) |
+| Native MOT and 578 nm spectroscopy (Chinese) | [build_native_lab_tutorial.py](../../scripts/build_native_lab_tutorial.py) |
 
 Change the generators and their source inputs together. Transport reads configuration cells from the generated plain notebook. Generate Ramsey first.
 

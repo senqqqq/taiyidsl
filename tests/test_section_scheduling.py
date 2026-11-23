@@ -30,7 +30,7 @@ from taiyidsl import (
     section,
     shift_phase,
 )
-from taiyidsl.scheduling import resolve_frames
+from taiyidsl.compiler.scheduling import resolve_frames
 
 
 def lab_for(*, alias=False):

@@ -30,9 +30,9 @@ from taiyidsl import (
     ns,
     play,
 )
-from taiyidsl.spectrum_banks import build_manifest_banks
-from taiyidsl.spectrum_export import artiq_subplan
-from taiyidsl.spectrum_runtime import SpectrumRunner, SpectrumRuntimeError
+from taiyidsl.backends.artiq_spectrum.banks import build_manifest_banks
+from taiyidsl.backends.artiq_spectrum.export import artiq_subplan
+from taiyidsl.runtime.spectrum.awg import SpectrumRunner, SpectrumRuntimeError
 
 
 def n_card_lab(count, *, lanes=8):

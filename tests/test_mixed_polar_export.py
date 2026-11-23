@@ -8,7 +8,8 @@ import pytest
 from test_mixed_polar_backend import envelope, mixed_lab, selected, square
 
 from taiyidsl import Experiment, SweepParameter, delay, ns, play, rz
-from taiyidsl.artiq import generate_source, verify_equivalence, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 
 
 def build_mixed(*, duration=800, revision=8, count=1, xy=False, offset=0):

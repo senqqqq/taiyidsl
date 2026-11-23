@@ -18,7 +18,13 @@ from ._context import (
 )
 from ._serialization import json_value
 from .nodes import Node
-from .values import SweepParameter, _positive_int, _signal, validate_count
+from .values import (
+    SweepParameter,
+    _positive_int,
+    _signal,
+    sweep_parameter_group,
+    validate_count,
+)
 
 
 class Experiment:
@@ -100,11 +106,11 @@ class Experiment:
 
     @contextmanager
     def sweep(self, parameter, execution="host", *, chunks=None, chunk_size=None):
+        """Sweep one host axis. A list or tuple pairs parameter values by index."""
         _reject_section_boundary("sweep")
         if execution != "host":
             raise NotImplementedError("v0.1 sweeps support host execution only")
-        if not isinstance(parameter, SweepParameter):
-            raise TypeError("sweep requires a SweepParameter")
+        group = sweep_parameter_group(parameter)
         if any(n.kind == "realtime" for n in self._stack):
             raise ValueError("Host sweep cannot be inside realtime")
         if chunks is not None and chunk_size is not None:
@@ -115,8 +121,10 @@ class Experiment:
                 if not (name == "chunks" and value == "auto"):
                     _positive_int(value, name)
                 options[name] = value
-        with self._block("sweep", parameter=parameter, **options):
-            yield parameter
+        with self._block(
+            "sweep", parameter=group[0] if len(group) == 1 else group, **options
+        ):
+            yield parameter if isinstance(parameter, SweepParameter) else group
 
     def realtime(self, timing="strict"):
         """Build a strict shot body; children run serially unless grouped otherwise.

@@ -21,8 +21,8 @@ from taiyidsl import (
     play,
     trig,
 )
-from taiyidsl.artiq import verify_export
-from taiyidsl.visualization import _physical_traces
+from taiyidsl.backends.artiq.verification import verify_export
+from taiyidsl.reporting.visualization import _physical_traces
 
 
 def lab(idle=0):

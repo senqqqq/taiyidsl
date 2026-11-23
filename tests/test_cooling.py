@@ -17,14 +17,14 @@ from taiyidsl import (
     SweepParameter,
     us,
 )
-from taiyidsl.artiq import verify_equivalence
-from taiyidsl.cooling import (
+from taiyidsl.backends.artiq.verification import verify_equivalence
+from taiyidsl.config.optics import OpticsConfig
+from taiyidsl.experiments.cooling import (
     illuminated_readout,
     optical_pump,
     sideband_cool,
     trigger_readout,
 )
-from taiyidsl.optics import OpticsConfig
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = runpy.run_path(str(ROOT / "examples/raman_sideband_cooling.py"))

@@ -9,7 +9,8 @@ initialization is independently verified and included in the comparison.
 import hashlib
 import json
 
-from taiyidsl.artiq import _verify_source, generate_source, verify_equivalence
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import _verify_source, verify_equivalence
 
 
 def digest(value):

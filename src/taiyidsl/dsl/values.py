@@ -44,6 +44,23 @@ class SweepParameter:
         )
 
 
+def sweep_parameter_group(parameter) -> tuple[SweepParameter, ...]:
+    """Collect parameters that share one host sweep index."""
+    if isinstance(parameter, SweepParameter):
+        return (parameter,)
+    if not isinstance(parameter, (list, tuple)) or not all(
+        isinstance(item, SweepParameter) for item in parameter
+    ):
+        raise TypeError("sweep requires a SweepParameter or a list/tuple of them")
+    if not parameter:
+        raise ValueError("A sweep parameter group cannot be empty")
+    if len({item.name for item in parameter}) != len(parameter):
+        raise ValueError("Sweep parameter names must be unique within a group")
+    if len({len(item.values) for item in parameter}) != 1:
+        raise ValueError("Paired sweep parameters must have equal lengths")
+    return tuple(parameter)
+
+
 def _positive_int(value, name):
     if type(value) is not int or value <= 0:
         raise ValueError(f"{name} must be a positive integer")

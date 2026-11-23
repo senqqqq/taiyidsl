@@ -11,8 +11,13 @@ import pytest
 from test_spectrum_backend import lab
 
 from taiyidsl import Experiment, Qubit, Square, play, reset_phase, rz, trigplay, us
-from taiyidsl.viewer_execution import execution_axis
-from taiyidsl.visualization import _APPLICATION_JS, _payload, _trace, visualize
+from taiyidsl.reporting.viewer_execution import execution_axis
+from taiyidsl.reporting.visualization import (
+    _APPLICATION_JS,
+    _payload,
+    _trace,
+    visualize,
+)
 
 
 def test_hybrid_physical_sheet_expands_card_outputs_on_correct_timebase():

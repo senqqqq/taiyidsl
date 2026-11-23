@@ -8,8 +8,8 @@ import pytest
 from test_spectrum_backend import lab
 
 from taiyidsl import Experiment, Qubit, Square, SweepParameter, ns, play
+from taiyidsl.compiler.store import CompilationStore
 from taiyidsl.ir import CompileError
-from taiyidsl.streaming import CompilationStore
 
 
 def scan(chunks=2, scope="global"):
@@ -84,7 +84,7 @@ def test_sample_workspace_bounds_long_single_shot_and_persists_unique_bytes(
     import hashlib
 
     import taiyidsl.backends.artiq_spectrum.awg as waveforms
-    from taiyidsl.streaming import ArtifactSegments
+    from taiyidsl.compiler.store import ArtifactSegments
 
     q = Qubit("q")
     exp = Experiment("long_tile", [q])
@@ -95,10 +95,10 @@ def test_sample_workspace_bounds_long_single_shot_and_persists_unique_bytes(
     largest = 0
     original = waveforms._render
 
-    def observed(recipe, samples, card):
+    def observed(recipe, samples, card, decoded=None):
         nonlocal largest
         largest = max(largest, samples * len(card["active_channels"]) * 128)
-        return original(recipe, samples, card)
+        return original(recipe, samples, card, decoded)
 
     monkeypatch.setattr(waveforms, "_render", observed)
     store = lab().compile_stream(

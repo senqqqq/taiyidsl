@@ -247,10 +247,15 @@ first establishing whether the behavior change is intentional.
 
 ## Documentation and repository contents
 
-Keep the root `README.md` in English without CJK characters. The existing Chinese
-guide is in `docs/README.zh-CN.md`; additional language-specific tutorials may
-live under `docs/`. Keep units, defaults, unsupported capabilities, and hardware
-limitations consistent across the code and documentation.
+Write shared documentation in English, including tutorial generators, notebook
+Markdown, example instructions and contributor-facing project guidance. Keep
+units, defaults, supported operations and physical limits consistent with the
+code. Link previous validation evidence by commit when it explains a decision.
+Record new checks with the exact source identity, inputs, environment and scope.
+For an import migration, collect the suite, check installed public symbols from
+outside the checkout, run representative Python experiments and execute the
+affected tutorials in fresh offline kernels. Compare the plain and operation
+Ramsey outputs for timing, phase, acquisition indices and final device data.
 
 The tracked project should include source, tests, examples, documentation,
 `.python-version`, `pyproject.toml`, `uv.lock`, and collaboration configuration.

@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from ..config.models import Qubit
 from ._context import _builder, _has_scope, _in_section, _reject_section_boundary
-from .pulses import FlatTopGaussian, Square
+from .pulses import FlatTopGaussian, SampledPulse, Square
 from .values import SweepParameter, _signal, validate_value
 
 _UNSET = object()
@@ -133,9 +133,24 @@ def _public_pulse_targets(signal, targets, builder):
 
 
 def _append_pulse(kind, signal, pulse, **values):
-    if not isinstance(pulse, (Square, FlatTopGaussian)):
-        raise NotImplementedError("Supported pulses are Square and FlatTopGaussian")
+    if not isinstance(pulse, (Square, FlatTopGaussian, SampledPulse)):
+        raise NotImplementedError(
+            "Supported pulses are Square, FlatTopGaussian and SampledPulse"
+        )
     overrides = {name: value for name, value in values.items() if value is not _UNSET}
+    if isinstance(pulse, SampledPulse):
+        if "duration" in overrides or "flat_duration" in overrides:
+            raise TypeError(
+                "Sampled pulse duration is fixed by sample count and interval"
+            )
+        if pulse.kind == "waveform" and overrides.keys() & {
+            "frequency",
+            "phase",
+            "detuning",
+        }:
+            raise ValueError(
+                "A final waveform cannot accept frequency, detuning or phase"
+            )
     detuning = overrides.pop("detuning", _UNSET)
     targets = overrides.pop("targets", _UNSET)
     parameters = {}
@@ -199,7 +214,7 @@ def move(qubits, *, to, duration, profile=None, settle=0):
 
 
 def delay(signal=_UNSET, duration=_UNSET):
-    """Wait on a signal, a Spectrum branch, or a declared native timed prelude."""
+    """Wait on a signal or branch, or extend a declared native timed prelude."""
     unqualified = signal is _UNSET or duration is _UNSET
     if signal is _UNSET and duration is _UNSET:
         raise TypeError("delay requires a duration")
@@ -211,17 +226,16 @@ def delay(signal=_UNSET, duration=_UNSET):
         if _in_section():
             exp._append("section_delay", duration=duration)
             return
-        if not any(node.kind == "triggered_sequence" for node in exp._stack):
-            if exp._stack[-1].kind == "realtime" and any(
-                node.kind == "native_call" and node.params["timing"] == "timed"
-                for node in exp._stack[-1].children
-            ):
-                exp._append("native_delay", duration=duration)
-                return
-            raise ValueError(
-                "delay(duration) requires an enclosing triggered_sequence "
-                "or a preceding native timed call in realtime"
-            )
+        if exp._stack[-1].kind == "realtime" and any(
+            node.kind == "native_call" and node.params["timing"] == "timed"
+            for node in exp._stack[-1].children
+        ):
+            exp._append("native_delay", duration=duration)
+            return
+        if not _has_scope(exp, "realtime"):
+            raise ValueError("delay(duration) requires an enclosing realtime block")
+        # The target is selected after construction. Hybrid compilation checks
+        # for its triggered_sequence, standalone compilation uses the whole shot.
         exp._append("scope_delay", duration=duration)
         return
     _builder()._append("delay", signal=_signal(signal), duration=duration)

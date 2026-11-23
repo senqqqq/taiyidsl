@@ -19,7 +19,7 @@ from taiyidsl import (
     ns,
     section,
 )
-from taiyidsl.ramsey import ramsey_experiment
+from taiyidsl.experiments.ramsey import ramsey_experiment
 from taiyidsl.units import deg, kHz
 
 ROOT = Path(__file__).parents[1]

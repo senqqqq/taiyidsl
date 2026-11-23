@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from taiyidsl import QubitOperations, Square, ns, play, qubit_operation
-from taiyidsl.rb_results import joint_rb_counts
+from taiyidsl.results.rb_results import joint_rb_counts
 
 
 @pytest.fixture(scope="module")

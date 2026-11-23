@@ -5,7 +5,7 @@ from dataclasses import FrozenInstanceError, replace
 
 import pytest
 
-from taiyidsl.models import (
+from taiyidsl.config.models import (
     CalibrationPolicy,
     CalibrationProposal,
     DriveParameters,
@@ -181,7 +181,7 @@ def test_atomic_write_failure_preserves_memory_and_existing_file(tmp_path, monke
     def fail_replace(*args):
         raise OSError("simulated disk failure")
 
-    monkeypatch.setattr("taiyidsl.models.os.replace", fail_replace)
+    monkeypatch.setattr("taiyidsl.config.models.os.replace", fail_replace)
     with pytest.raises(OSError, match="disk failure"):
         store.apply(proposal_for(q))
     assert path.read_bytes() == before

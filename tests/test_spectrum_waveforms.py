@@ -6,14 +6,14 @@ import math
 import numpy as np
 import pytest
 
-from taiyidsl.ir import CompileError
-from taiyidsl.spectrum_waveforms import (
+from taiyidsl.backends.artiq_spectrum.awg import (
     build_card_program,
     iter_program_samples,
     materialize_segment,
     reconstruct_window,
-    validate_program,
 )
+from taiyidsl.backends.artiq_spectrum.validation_awg import validate_program
+from taiyidsl.ir import CompileError
 
 
 def card(**kwargs):

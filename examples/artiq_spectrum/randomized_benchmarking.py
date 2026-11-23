@@ -33,15 +33,16 @@ from taiyidsl import (
     SweepParameter,
     acquire,
     delay,
+    generate_rb_sequences,
     ns,
     parallel,
     play,
     qubit_operation,
+    rb_sequence_section,
     reset_frame,
     us,
 )
-from taiyidsl.rb import CATALOG_VERSION, generate_rb_sequences
-from taiyidsl.rb_dsl import rb_sequence_section
+from taiyidsl.experiments.rb_sequences import CATALOG_VERSION
 from taiyidsl.results.rb_analysis import analyze_rb
 from taiyidsl.results.rb_results import joint_rb_counts
 from taiyidsl.units import as_fraction

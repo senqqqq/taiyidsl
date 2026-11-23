@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from taiyidsl.artiq import generate_source, verify_equivalence, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 
 SCRIPT = Path(__file__).parents[1] / "examples" / "ram_gate_sequence.py"
 spec = importlib.util.spec_from_file_location("ram_gate_sequence_example", SCRIPT)

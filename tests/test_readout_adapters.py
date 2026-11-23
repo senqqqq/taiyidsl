@@ -18,7 +18,7 @@ def test_plain_adapter_keeps_empty_and_missing_frames_distinct(tmp_path):
     from my_lab.camera import CameraAdapter, FakeCamera
     from my_lab.configuration import image_results
 
-    from taiyidsl.readout import ResultAdapter
+    from taiyidsl.runtime.readout import ResultAdapter
 
     images = image_results(shots=3)
     camera = FakeCamera(
@@ -68,7 +68,10 @@ def test_persistent_adapter_recovers_saved_frame_without_retrigger(
     from test_streaming import scan
 
     from taiyidsl import RunStore, StreamingRunner
-    from taiyidsl.readout import PersistentResultAdapter, RecoverableResultAdapter
+    from taiyidsl.runtime.readout import (
+        PersistentResultAdapter,
+        RecoverableResultAdapter,
+    )
 
     artifact = lab().compile_stream(scan(), directory=tmp_path / "compiled")
     order = list(artifact.execution_order())

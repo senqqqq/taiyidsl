@@ -1,15 +1,13 @@
 import numpy as np
 import pytest
 
-from taiyidsl.models import Qubit
-from taiyidsl.templates import (
+from taiyidsl.config.models import Qubit
+from taiyidsl.experiments._single_qubit_clifford import (
     clifford_group,
-    rabi,
-    ramsey,
-    randomized_benchmarking,
     rb_sequences,
     sequence_rotation,
 )
+from taiyidsl.experiments.templates import rabi, ramsey, randomized_benchmarking
 
 
 def test_clifford_group_and_seeded_recovery():
@@ -70,11 +68,11 @@ def test_rb_requires_explicit_gap():
 
 
 def test_template_compile_synthetic_calibration_rebuild(tmp_path):
-    from taiyidsl.analysis import analyze_rabi, analyze_ramsey, analyze_rb
     from taiyidsl.compiler import compile_experiment
-    from taiyidsl.hardware import reference_setup
-    from taiyidsl.models import QubitStore
+    from taiyidsl.config.models import QubitStore
+    from taiyidsl.lab import reference_setup
     from taiyidsl.results import synthesize
+    from taiyidsl.results.analysis import analyze_rabi, analyze_ramsey, analyze_rb
 
     q = Qubit("q0")
     store = QubitStore([q], path=tmp_path / "qubits.json")
@@ -123,7 +121,7 @@ def test_template_compile_synthetic_calibration_rebuild(tmp_path):
 
 def test_real_compiler_averaging_has_same_observations():
     from taiyidsl.compiler import compile_experiment
-    from taiyidsl.hardware import reference_setup
+    from taiyidsl.lab import reference_setup
     from taiyidsl.results import synthesize
 
     q = Qubit("q0")
@@ -139,8 +137,8 @@ def test_real_compiler_averaging_has_same_observations():
 
 def test_readout_duration_comes_from_qubit_snapshot():
     from taiyidsl.compiler import compile_experiment
-    from taiyidsl.hardware import reference_setup
-    from taiyidsl.models import QubitStore
+    from taiyidsl.config.models import QubitStore
+    from taiyidsl.lab import reference_setup
 
     store = QubitStore([Qubit("q0")])
     q = store.update("q0", {"readout.duration": 25e-6})

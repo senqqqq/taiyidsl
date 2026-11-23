@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 
 from taiyidsl import LabConfig
-from taiyidsl.spectrum_export import artiq_subplan
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.export import artiq_subplan
 
 FOLDER = Path(__file__).resolve().parents[1] / "examples" / "artiq_spectrum"
 NAMES = ("rabi", "spin_echo", "spin_locking", "allxy")

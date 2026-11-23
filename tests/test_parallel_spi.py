@@ -19,16 +19,19 @@ from taiyidsl import (
     ns,
     play,
 )
-from taiyidsl.artiq import verify_equivalence
-from taiyidsl.backends._preparation import ConfigurationRequest, place_configurations
-from taiyidsl.ir import ScheduledEvent
-from taiyidsl.submission import (
+from taiyidsl.backends.artiq._preparation import (
+    ConfigurationRequest,
+    place_configurations,
+)
+from taiyidsl.backends.artiq.submission import (
     ordered_rtio_events,
     preparation_window,
     validate_channel_order,
     validate_sed,
     validate_submission_plan,
 )
+from taiyidsl.backends.artiq.verification import verify_equivalence
+from taiyidsl.ir import ScheduledEvent
 
 
 def setup_for(*, same_bus=False, unknown=False):

@@ -26,23 +26,23 @@ pre{overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 Con
 <h1>__TITLE__</h1><div class="stats"><span><b>__POINT_COUNT__</b> scan points</span>
 <span><b>__SHOTS__</b> shots / point</span><span><b>__MODE__</b> averaging</span></div></header>
 <nav><a href="pulse_sheet.html">01 · Pulse sheet ↗</a><a class="secondary" href="waveform.html">02 · Waveform simulator ↗</a></nav>
-<p><a class="pill" href="#execution">ARTIQ + Spectrum 执行流程</a><a class="pill" href="#spectrum-code">Spectrum 源码</a><a class="pill" href="#artiq-code">Host / ARTIQ 源码</a><a class="pill" href="#compiled-points">各点实际配置与 step 参数</a></p>
-<p>宏观时序与短窗口 DAC 波形分开查看。Pulse sheet 支持缩放、矩形脉冲详情和 waveform 跳转；
-waveform 读取最终 segment / step table，长零段循环不展开为整个实验长度的数组。</p>
-<p class="note">Offline compiler model only. 未连接仪器，未验证物理输出、双卡同步或校准。
-波形是理想 DAC 样本，不是 AOM / 模拟链路或 qubit 状态模拟。示例脉冲面积未标定。</p>
+<p><a class="pill" href="#execution">ARTIQ + Spectrum execution</a><a class="pill" href="#spectrum-code">Spectrum source</a><a class="pill" href="#artiq-code">Host and ARTIQ source</a><a class="pill" href="#compiled-points">Point settings and step parameters</a></p>
+<p>Use the pulse sheet to zoom out to the whole schedule, inspect a pulse, or open its DAC waveform.
+The waveform viewer reads the final segment and step table and renders short windows, keeping long runs of zeros compact.</p>
+<p class="note">This offline compiler model displays ideal DAC samples. Hardware measurements are required to verify
+the analog chain, optical output, multi-card synchronization and example pulse-area calibrations.</p>
 __NATIVE_LIFECYCLE__<h2>Phase and carrier reference</h2><p>__PHASE_REFERENCE__
-shift_phase(θ) 使 F 加 θ，Rz(θ) 使 F 减 θ；reset_frame 清整个 F，保留载波演化和已继承调制。
-reset_phase 也清整个 F，并清已继承调制、从该时刻重新建立载波原点。Rz 累计值仅作来源诊断，不能从 F 再扣一次。</p>
-<p><code>θ(t) = Φ_osc(t) + s[F(t) + φ_pulse(t)]</code>。
-Φ_osc 包括载波演化、已继承调制、映射偏移及校准；φ_pulse 包括本门基础相位和局部调制。
-epoch 模式按当前频率相对已选载波原点计算；continuous 模式沿实际频率历史积分；carry 继承调制解析终值。
-Section、chunk、segment 和 tile 不重新建立载波参考；各组及各门的实际参考位置列在表内。
-表内 start_phase_deg 是门首样本的最终相位，包含已推进的载波参考。
-所有表格时刻相对逻辑 T0；Pulse sheet 可另外显示物理准备时间。</p>
+shift_phase(θ) adds θ to F, and Rz(θ) subtracts θ. reset_frame clears F while preserving carrier evolution and inherited modulation.
+reset_phase also clears inherited modulation and sets the carrier origin to that instant. The accumulated Rz value records provenance and its contribution is already included in F.</p>
+<p><code>θ(t) = Φ_osc(t) + s[F(t) + φ_pulse(t)]</code>.
+Φ_osc includes carrier evolution, inherited modulation, mapping offsets and calibration. φ_pulse includes the gate's base phase and local modulation.
+Epoch mode uses the current frequency and selected carrier origin. Continuous mode integrates the actual frequency history.
+Carry mode inherits the analytic terminal modulation. The carrier reference persists across Section, chunk, segment and tile boundaries.
+Each group and gate lists its reference time. start_phase_deg is the phase at the first sample, including accrued carrier phase.
+Table times are relative to logical T0. The pulse sheet can also display physical preparation time.</p>
 <h2>Complete DSL source</h2><details><summary>Open complete authoring source</summary>__SOURCE__</details>
 __EXECUTION__
-<h2 id="compiled-points">Compiled points · 两卡程序与触发时序</h2>__POINTS__
+<h2 id="compiled-points">Compiled points, card programs and trigger timing</h2>__POINTS__
 <footer><a href="report.json">Decoded report JSON</a> · <a href="export/compiled.json">Compiled IR</a> ·
 <a href="export/manifest.json">Hybrid manifest</a> · <a href="export/artiq/experiment.py">Native ARTIQ program</a>
 <br>Compiled SHA-256: __HASH__</footer></main></body></html>

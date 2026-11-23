@@ -24,7 +24,7 @@ from taiyidsl import (
     trigplay,
     us,
 )
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
 
 
 def test_detuning_matches_explicit_frequency_in_both_backends_and_carrier_phase():

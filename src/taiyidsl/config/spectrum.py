@@ -1,7 +1,7 @@
-"""Offline contracts for Spectrum groups; no driver is imported here.
+"""Offline contracts for standalone Spectrum cards and hybrid trigger groups.
 
-ARTIQ device fields retain their original machine units. Only the hybrid
-scheduled event timebase is 200 ps. Timing values in example contracts are
+ARTIQ device fields retain their original machine units. Spectrum backends
+schedule events on a 200 ps logical timebase. Timing values in example contracts are
 declarations, never evidence of a measured trigger or analog latency.
 """
 
@@ -145,6 +145,85 @@ class SpectrumOutput:
             raise ValueError("initial_frequency_hz is only used by continuous carriers")
 
 
+def _validate_outputs(outputs, cards):
+    occupied = set()
+    for output in outputs.values():
+        if not isinstance(output, SpectrumOutput) or output.card not in cards:
+            raise ValueError("Spectrum output refers to an unknown card")
+        card = cards[output.card]
+        if output.channel not in card.active_channels:
+            raise ValueError("Spectrum output channel is not enabled")
+        if card.mode == "dds" and output.carrier_mode != "epoch":
+            raise ValueError("DDS tones do not use AWG carrier_mode settings")
+        physical = (output.card, output.channel)
+        if physical in occupied:
+            raise ValueError("Two Spectrum devices alias one physical output")
+        occupied.add(physical)
+
+
+@dataclass(frozen=True)
+class StandaloneSpectrumConfig:
+    """One internally clocked card, software-started once per shot."""
+
+    card_name: str
+    card: SpectrumCard
+    outputs: dict[str, SpectrumOutput]
+    signal_frames: dict[str, str | None] = field(default_factory=dict)
+    max_tile_samples: int = 500_000
+
+    def __post_init__(self):
+        if not isinstance(self.card_name, str) or not self.card_name:
+            raise ValueError("Standalone Spectrum requires a card name")
+        if not isinstance(self.card, SpectrumCard) or not self.outputs:
+            raise ValueError("Standalone Spectrum requires one card and its outputs")
+        _validate_outputs(self.outputs, {self.card_name: self.card})
+        _integer(self.max_tile_samples, "max_tile_samples", 384)
+        if self.max_tile_samples > 500_000:
+            raise ValueError("max_tile_samples must not exceed 500000")
+        object.__setattr__(self, "outputs", copy.deepcopy(dict(self.outputs)))
+        object.__setattr__(self, "signal_frames", dict(self.signal_frames))
+
+    @property
+    def contract(self):
+        """Settings that determine hardware playback under the internal clock."""
+        from ._serialization import config_json_value
+
+        card = self.card
+        result = {
+            "model": card.model,
+            "serial_number": card.serial_number,
+            "firmware": card.firmware,
+            "mode": card.mode,
+            "active_channels": card.active_channels,
+            "output_range_mv": card.output_range_mv,
+            "sample_rate_hz": card.sample_rate_hz,
+            "memory_bytes": card.memory_bytes,
+            "clock_source": "internal",
+            "trigger_source": "software",
+        }
+        if card.mode == "dds":
+            result["dds_routing"] = card.dds_routing
+        return config_json_value(result)
+
+    def to_dict(self):
+        from ._serialization import config_json_value
+
+        data = asdict(self)
+        data["card"] = self.contract
+        # These fixed playback policies belong to the standalone target.
+        del data["card"]["clock_source"], data["card"]["trigger_source"]
+        return config_json_value(data)
+
+    @classmethod
+    def from_dict(cls, data):
+        values = dict(data)
+        values["card"] = SpectrumCard(**values["card"])
+        values["outputs"] = {
+            name: SpectrumOutput(**output) for name, output in values["outputs"].items()
+        }
+        return cls(**values)
+
+
 @dataclass(frozen=True)
 class SpectrumGroup:
     trigger_device: str | None = None
@@ -194,21 +273,7 @@ class SpectrumGroup:
             raise TypeError("cards must contain SpectrumCard contracts")
         if len({c.serial_number for c in self.cards.values()}) != len(self.cards):
             raise ValueError("Two card names cannot select the same serial number")
-        occupied = set()
-        for output in self.outputs.values():
-            if not isinstance(output, SpectrumOutput) or output.card not in self.cards:
-                raise ValueError("Spectrum output refers to an unknown card")
-            if output.channel not in self.cards[output.card].active_channels:
-                raise ValueError("Spectrum output channel is not enabled")
-            if self.cards[output.card].mode == "dds" and (
-                output.carrier_mode != "epoch"
-                or output.initial_frequency_hz is not None
-            ):
-                raise ValueError("DDS tones do not use AWG carrier_mode settings")
-            physical = (output.card, output.channel)
-            if physical in occupied:
-                raise ValueError("Two Spectrum devices alias one physical output")
-            occupied.add(physical)
+        _validate_outputs(self.outputs, self.cards)
         for name in ("trigger_lead_mu", "trigger_width_mu", "epoch_grid_mu"):
             _integer(getattr(self, name), name, 1)
         _integer(self.epoch_offset_mu, "epoch_offset_mu")

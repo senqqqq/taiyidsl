@@ -24,9 +24,16 @@ from taiyidsl import (
     shift_phase,
     trigplay,
 )
-from taiyidsl.artiq import ExportError, _fake_artiq, generate_source, verify_export
-from taiyidsl.native_export import compose_native_source
-from taiyidsl.spectrum_export import _epochs, align_source_epochs, artiq_subplan
+from taiyidsl.backends.artiq._contracts import ExportError
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.mock_drivers import _fake_artiq
+from taiyidsl.backends.artiq.verification import verify_export
+from taiyidsl.backends.artiq_spectrum.export import (
+    _epochs,
+    align_source_epochs,
+    artiq_subplan,
+)
+from taiyidsl.native.export import compose_native_source
 
 PACKAGE = """from artiq.experiment import EnvExperiment, kernel, at_mu, now_mu
 

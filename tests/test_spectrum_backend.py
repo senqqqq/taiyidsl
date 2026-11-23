@@ -33,9 +33,10 @@ from taiyidsl import (
     trigplay,
     us,
 )
-from taiyidsl.spectrum_export import artiq_subplan, spectrum_manifest
-from taiyidsl.spectrum_runtime import calibration_fingerprint
-from taiyidsl.spectrum_waveforms import reconstruct_window, validate_program
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.export import artiq_subplan, spectrum_manifest
+from taiyidsl.backends.artiq_spectrum.validation_awg import validate_program
+from taiyidsl.runtime.spectrum.awg import calibration_fingerprint
 
 
 def lab(*, cooling=False, memory_bytes=4 * 1024**3):

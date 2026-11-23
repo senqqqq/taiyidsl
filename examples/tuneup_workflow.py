@@ -12,12 +12,11 @@ import ast
 import json
 from pathlib import Path
 
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl import Qubit, QubitStore, rabi, ramsey, randomized_benchmarking
+from taiyidsl.backends.artiq.verification import verify_equivalence
 from taiyidsl.lab import reference_lab
-from taiyidsl.models import Qubit, QubitStore
 from taiyidsl.results import synthesize
 from taiyidsl.results.analysis import analyze_rabi, analyze_ramsey, analyze_rb
-from taiyidsl.templates import rabi, ramsey, randomized_benchmarking
 
 
 def source_metrics(path):

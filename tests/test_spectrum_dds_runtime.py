@@ -2,14 +2,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from taiyidsl.spectrum_dds import (
+from taiyidsl.backends.artiq_spectrum.dds import (
     AMPLITUDE_STEP,
     FREQUENCY_SLOPE_STEP,
     FREQUENCY_STEP_HZ,
     build_dds_program,
 )
-from taiyidsl.spectrum_dds_runtime import SpcmDDSAdapter
-from taiyidsl.spectrum_runtime import SpectrumRuntimeError
+from taiyidsl.runtime.spectrum.awg import SpectrumRuntimeError
+from taiyidsl.runtime.spectrum.dds import SpcmDDSAdapter
 
 
 def fixture():

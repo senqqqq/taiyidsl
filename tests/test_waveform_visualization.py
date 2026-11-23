@@ -4,7 +4,7 @@ import json
 from dataclasses import replace
 
 from taiyidsl import Experiment, FlatTopGaussian, Qubit, play, reference_lab, us
-from taiyidsl.visualization import _payload
+from taiyidsl.reporting.visualization import _payload
 
 
 def test_ram_output_has_shape_and_actual_samples_in_details():

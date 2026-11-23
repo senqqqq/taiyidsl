@@ -24,7 +24,8 @@ from taiyidsl import (
     shift_phase,
     us,
 )
-from taiyidsl.artiq import generate_source, verify_equivalence
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 
 def timed_lab(count=1, *, shared=False, latencies=None):

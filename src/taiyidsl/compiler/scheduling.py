@@ -4,7 +4,7 @@ import math
 from bisect import bisect_left
 from dataclasses import replace
 
-from ..dsl.pulses import FlatTopGaussian
+from ..dsl.pulses import FlatTopGaussian, SampledPulse
 from ..dsl.values import resolve
 from ..ir import CompileError, ScheduledEvent
 from ..units import as_fraction
@@ -114,6 +114,8 @@ def resolve_frames(logical):
 
 
 class Scheduler:
+    ordered_frame_edges = False
+
     def __init__(
         self,
         exp,
@@ -393,7 +395,7 @@ class Scheduler:
                     }
                 )
             for i, edges in enumerate(frame_edges):
-                if getattr(self, "_region", None) is not None and any(
+                if self.ordered_frame_edges and any(
                     edges & starts for j, starts in enumerate(drive_edges) if i != j
                 ):
                     raise CompileError(
@@ -572,7 +574,27 @@ class Scheduler:
             uid = q.uid if q else None
             defaults = q.drive(role) if q and role in q.drive_names else None
             waveform = {}
-            if isinstance(pulse, FlatTopGaussian):
+            if isinstance(pulse, SampledPulse):
+                requested_duration = as_fraction(pulse.duration, "time")
+                interval = as_fraction(pulse.sample_interval, "time")
+                waveform = {
+                    "shape": "sampled",
+                    "sampled": {
+                        "kind": "sampled",
+                        "interpretation": pulse.kind,
+                        "sample_digest": pulse.sample_digest,
+                        "sample_count": pulse.sample_count,
+                        "sample_interval_s": {
+                            "numerator": interval.numerator,
+                            "denominator": interval.denominator,
+                        },
+                        "resample": pulse.resample,
+                    },
+                }
+                if pulse.kind == "waveform":
+                    # Raw samples already represent the complete output voltage.
+                    defaults = None
+            elif isinstance(pulse, FlatTopGaussian):
                 flat = resolve(pulse.flat_duration, self.coordinates, "time")
                 sigma = as_fraction(pulse.sigma, "time")
                 cutoff = as_fraction(pulse.cutoff_sigma, "dimensionless")

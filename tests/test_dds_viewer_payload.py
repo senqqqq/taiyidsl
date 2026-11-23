@@ -8,10 +8,10 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from taiyidsl.dds_view import dds_card_views
-from taiyidsl.output_simulator import _payload, simulate_output
-from taiyidsl.spectrum_dds import build_dds_program
-from taiyidsl.viewer_execution import execution_axis
+from taiyidsl.backends.artiq_spectrum.dds import build_dds_program
+from taiyidsl.reporting.dds_view import dds_card_views
+from taiyidsl.reporting.output_simulator import _payload, simulate_output
+from taiyidsl.reporting.viewer_execution import execution_axis
 
 
 def test_mixed_payload_adds_tones_without_changing_awg_bytes_or_times():

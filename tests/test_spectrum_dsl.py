@@ -24,6 +24,7 @@ from taiyidsl import (
     rz,
     shift_phase,
 )
+from taiyidsl.backends.artiq_spectrum.scheduling import schedule_spectrum
 from taiyidsl.config.spectrum import (
     SpectrumCard,
     SpectrumConfig,
@@ -31,7 +32,6 @@ from taiyidsl.config.spectrum import (
     SpectrumOutput,
 )
 from taiyidsl.dsl import HalfSinePhase, PolynomialPhase, json_value, trigplay
-from taiyidsl.spectrum_schedule import schedule_spectrum
 
 
 def setup_for(*, extra_mapping=None, signal_frames=None):
@@ -435,12 +435,17 @@ def test_builder_requires_explicit_scope_and_prevents_nested_scopes():
     with exp.average(1), exp.realtime():
         with pytest.raises(ValueError, match="triggered_sequence"):
             trigplay(q.rf, Square(8 * ns))
-        with pytest.raises(ValueError, match="triggered_sequence"):
-            delay(8 * ns)
+        delay(8 * ns)
         with exp.triggered_sequence(group="g"):
             with pytest.raises(ValueError, match="nest"):
                 with exp.triggered_sequence(group="g"):
                     pass
+    # The same branch delay is valid on a standalone card. Only compilation
+    # knows that this particular backend needs a triggered sequence.
+    with pytest.raises(CompileError, match="scope_delay requires"):
+        schedule(exp)
+    with pytest.raises(CompileError, match="scope_delay"):
+        reference_lab([q]).compile(exp)
 
 
 def test_spectrum_sample_grid_never_quantizes_a_requested_duration():

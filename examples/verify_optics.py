@@ -10,7 +10,7 @@ import runpy
 from pathlib import Path
 
 from taiyidsl import LabConfig, OpticsConfig, Qubit
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 EXPERIMENTS = {
     "initialization": (

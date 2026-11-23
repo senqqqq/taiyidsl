@@ -6,7 +6,7 @@ import textwrap
 import pytest
 
 from taiyidsl.ir import CompileError
-from taiyidsl.native_audit import audit_native_sources
+from taiyidsl.native.audit import audit_native_sources
 
 
 def _package(tmp_path, sources, **options):

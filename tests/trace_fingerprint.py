@@ -3,7 +3,8 @@
 import hashlib
 import json
 
-from taiyidsl.artiq import _verify_source, generate_source
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import _verify_source
 
 
 def digest(value):

@@ -9,9 +9,9 @@ from types import SimpleNamespace
 from test_transport_integration import _assert_hold, _mixed_runner
 
 from taiyidsl import Experiment, Square, SweepParameter, move, play, us
-from taiyidsl.run_store import RunStore
-from taiyidsl.stream_runtime import StreamingRunner
-from taiyidsl.streaming import CompilationStore
+from taiyidsl.compiler.store import CompilationStore
+from taiyidsl.runtime.run_store import RunStore
+from taiyidsl.runtime.streaming import StreamingRunner
 
 
 def test_streamed_transport_reopens_switches_chunks_and_returns_with_hold(tmp_path):

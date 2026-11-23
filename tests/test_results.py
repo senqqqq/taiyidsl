@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from taiyidsl.models import Qubit
+from taiyidsl.config.models import Qubit
 from taiyidsl.results import ResultSet, synthesize
 
 

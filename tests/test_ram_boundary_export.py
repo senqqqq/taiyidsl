@@ -24,7 +24,8 @@ from taiyidsl import (
     shift_phase,
     us,
 )
-from taiyidsl.artiq import generate_source, verify_equivalence, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
 
 ROOT = Path(__file__).resolve().parents[1]
 example = runpy.run_path(str(ROOT / "examples" / "ram_boundary_sequence.py"))
@@ -134,7 +135,7 @@ def test_long_table_reuses_one_envelope_and_has_constant_kernel_size():
 
 
 def test_pow_buffer_does_not_change_committed_carrier_before_update():
-    from taiyidsl.artiq import _DriverClock, _MockDDS
+    from taiyidsl.backends.artiq.mock_drivers import _DriverClock, _MockDDS
 
     compiled = multi_sequence(channels=1)
     device = compiled.setup.devices["dds0"]

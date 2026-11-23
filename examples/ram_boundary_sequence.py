@@ -21,7 +21,7 @@ from taiyidsl import (
     reset_frame,
     shift_phase,
 )
-from taiyidsl.artiq_ram import ram_bank_summary
+from taiyidsl.backends.artiq.codegen_ram import ram_bank_summary
 
 
 def build_sequence(

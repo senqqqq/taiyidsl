@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from taiyidsl.spectrum_waveforms import reconstruct_window, validate_program
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.validation_awg import validate_program
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "spectrum_hybrid.py"
 

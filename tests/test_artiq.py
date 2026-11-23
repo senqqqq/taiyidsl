@@ -3,13 +3,16 @@ from dataclasses import dataclass, field, replace
 
 import pytest
 
-from taiyidsl import artiq as artiq_backend
-from taiyidsl.artiq import ExportError, export_artiq, generate_source, verify_export
+from taiyidsl.backends.artiq import mock_drivers
+from taiyidsl.backends.artiq._contracts import ExportError
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.export import export_artiq
+from taiyidsl.backends.artiq.verification import verify_export
 from taiyidsl.compiler import compile_experiment
+from taiyidsl.config.models import Qubit
 from taiyidsl.dsl import Experiment, Square, delay, play, shift_phase
-from taiyidsl.hardware import reference_setup
-from taiyidsl.models import Qubit
-from taiyidsl.templates import rabi, ramsey
+from taiyidsl.experiments.templates import rabi, ramsey
+from taiyidsl.lab import reference_setup
 from taiyidsl.units import us
 
 
@@ -280,38 +283,38 @@ def test_emitted_budget_guard_detects_driver_that_exceeds_contract(
     compiled_fixture, monkeypatch
 ):
     source = generate_source(compiled_fixture)
-    original = artiq_backend._MockDDS.set_mu
+    original = mock_drivers._MockDDS.set_mu
 
     def slower_driver(self, *args, **kwargs):
         original(self, *args, **kwargs)
         self.clock.cursor += self.device.config_duration_mu - (332 * 8 + 8) + 8
 
-    monkeypatch.setattr(artiq_backend._MockDDS, "set_mu", slower_driver)
+    monkeypatch.setattr(mock_drivers._MockDDS, "set_mu", slower_driver)
     with pytest.raises(ValueError, match="exceeded declared configuration budget"):
         verify_export(compiled_fixture, source=source)
 
 
 def test_emitted_target_check_rejects_wrong_core_clock(compiled_fixture, monkeypatch):
     source = generate_source(compiled_fixture)
-    original = artiq_backend._MockCore.__init__
+    original = mock_drivers._MockCore.__init__
 
     def wrong_clock(self, *args, **kwargs):
         original(self, *args, **kwargs)
         self.ref_period *= 2
 
-    monkeypatch.setattr(artiq_backend._MockCore, "__init__", wrong_clock)
+    monkeypatch.setattr(mock_drivers._MockCore, "__init__", wrong_clock)
     with pytest.raises(ValueError, match="Core reference period differs"):
         verify_export(compiled_fixture, source=source)
 
 
 def test_emitted_target_check_rejects_wrong_dds_clock(compiled_fixture, monkeypatch):
     source = generate_source(compiled_fixture)
-    original = artiq_backend._MockDDS.__init__
+    original = mock_drivers._MockDDS.__init__
 
     def wrong_clock(self, *args, **kwargs):
         original(self, *args, **kwargs)
         self.sysclk *= 0.8
 
-    monkeypatch.setattr(artiq_backend._MockDDS, "__init__", wrong_clock)
+    monkeypatch.setattr(mock_drivers._MockDDS, "__init__", wrong_clock)
     with pytest.raises(ValueError, match="DDS clock differs"):
         verify_export(compiled_fixture, source=source)

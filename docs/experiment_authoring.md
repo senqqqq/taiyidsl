@@ -1,36 +1,30 @@
-# 实验书写：时序、复用与多 qubit
+# Timing, reuse and multi-qubit experiments
 
-当前 DSL 默认顺序执行。不同 signal 不会自动并行；同一 signal 写在 `parallel` 的不同分支中，也不会自动排队。需要同时发生的操作放入 `parallel`，每条完整流程用 `serial` 包住。这套规则能直接表达精确时序，并让编译器检查是否满足设备资源和准备时间。
+The DSL schedules instructions in source order by default. Put simultaneous work inside `parallel` and group the steps of each branch with `serial`. Separate signal names do not imply independent scheduling. Two branches using the same physical resource may conflict.
 
-## 当前时序规则
+## Scheduling rules
 
-以下是保留的默认串行/显式 parallel 规则。新增 `Section` 和
-`@qubit_operation` 用于复用 Node 子树；需要独立 qubit 自动并发时，显式写
-`section(schedule="asap")`。它按 qubit、输出和 frame 依赖排程，退出时合流；
-不改变其他范围的默认行为。详见 [Section 与操作](sections_and_operations.md)。
-`average(scope=...)` 和 `sweep(chunks=... / chunk_size=...)` 的 host 顺序见
-[分块执行](chunked_execution.md)。
-
-| 写法 | 当前含义 |
+| Construct | Behavior |
 | --- | --- |
-| 连续两次 `play` | 第二次从第一次结束后开始，即使 signal 不同 |
-| `with exp.parallel():` | 每个直接子节点从同一时刻开始；退出时等待最长分支 |
-| `with exp.serial():` | 内部节点依次执行；整个块可作为一个并行分支 |
-| `parallel(align="end")` | 各分支结束时间相同，较短分支向后偏移 |
-| `delay(signal, duration)` | 推进所在串行分支的时间；不会让其他分支等待 |
-| `serial/parallel(exact_duration=...)` | 检查实际时长是否恰好相等，不自动填充 |
-| `repeat(count)` | shot 内重复操作；可用整数扫描参数，当前逐点静态展开 |
-| `average(shots, mode=...)` | host 重复采样；cyclic/sequential 只改变点与 shot 的执行顺序 |
-| 嵌套 `sweep` | 扫描笛卡尔积；不是多个 qubit 的逐项 zip |
-| `case(parameter, value)` | 编译时选择结构分支，不是测量反馈或 Python `if` |
+| Consecutive `play` calls | The second starts after the first ends, even on different signals. |
+| `with exp.parallel():` | Each direct child starts at a common time. The block exits when the longest branch finishes. |
+| `with exp.serial():` | Children run in order. The block can serve as a single parallel branch. |
+| `parallel(align="end")` | Branches end together. Shorter branches start later. |
+| `delay(signal, duration)` | Advances its serial branch independently of other branches. |
+| `serial/parallel(exact_duration=...)` | Asserts that the realized duration matches exactly. No implicit padding. |
+| `repeat(count)` | Statically expands repetitions within a shot for each sweep point. The count may be an integer sweep parameter. |
+| `average(shots, mode=...)` | Repeats on the host. Cyclic and sequential modes specify the order of points and shots. |
+| `sweep([amp, duration])` | Binds values at the same index on one host axis. The parameters must have equal lengths and distinct names. |
+| Nested `sweep` | Forms a Cartesian product of axes. |
+| `case(parameter, value)` | Selects a structural branch at compile time for the current point. |
 
-`parallel` 表达时序要求。两个逻辑 signal 若映射到同一 DDS 或互斥资源，编译器仍可能拒绝它们。timed Square 可以在前门输出期间准备下一组参数，支持不额外插 gap 的连续变参；准备吞吐不足会明确拒绝。旧路径和 RAM 仍有各自的空窗限制，不能靠自动推迟脉冲改变实验。见 [Square 时序契约](square_timing.md)。
+Use a `Section` or `@qubit_operation` to reuse a subtree. Where independent qubits should start as soon as possible, opt in with `section(schedule="asap")`. It respects qubit, hardware-output and frame dependencies, and joins at exit. For details see [Sections and operations](sections_and_operations.md). For host order with `average(scope=...)` and `sweep(chunks=... / chunk_size=...)`, see [Chunked execution](chunked_execution.md).
 
-同一 signal 上相邻且参数完全相同的 Square，可能在物理层合并成一个连续脉冲。`serial` 保证逻辑先后，不会自动产生 RF-off 的低电平间隔；需要分开的两门应明确写 `delay`，并满足所需的准备时间。
+An explicit parallel request still has to fit the hardware. Two logical signals may map to one DDS or contend for another exclusive resource. A timed Square can prepare the next configuration during the preceding output and change parameters back-to-back if programming throughput permits. The compiler rejects infeasible timing. Legacy single-tone and RAM paths have different preparation windows. Adjacent Squares with identical parameters on the same signal may lower to one continuous RF output. To require RF-off between gates, insert an explicit `delay` and check its duration against the selected path. See the [Square timing contract](square_timing.md).
 
-## 精确偏移与函数复用
+## Express exact offsets with a Python helper
 
-可运行代码在 [`examples/parallel_experiments.py`](../examples/parallel_experiments.py)。其中 `pulse_pair` 是普通 Python 函数，内部仅用现有 DSL：
+The [parallel experiments example](../examples/parallel_experiments.py) defines a two-pulse branch.
 
 ```python
 def pulse_pair(exp, qubit, pulse, *, gap=2 * us, second_phase=1):
@@ -40,7 +34,7 @@ def pulse_pair(exp, qubit, pulse, *, gap=2 * us, second_phase=1):
         play(qubit.raman, pulse, phase=second_phase)
 ```
 
-内部 `serial` 使整个函数调用成为一个并行分支。没有这层包装，函数生成的多个节点会各自成为外层 `parallel` 的子节点，并非预期的先后两门。`play` 的覆盖只影响本次调用，不会修改 `pulse` 模板。
+The inner `serial` makes the whole pair one child of an enclosing parallel block. Without it each instruction would become a separate parallel branch. Overrides on `play` apply to that call and preserve the pulse template.
 
 ```python
 pulse = Square(4 * us)
@@ -52,21 +46,40 @@ with exp.parallel():
 acquire(q0.readout, duration=10 * us, handle="population", qubits=[q0, q1])
 ```
 
-这段代码应放在 `average` 内的 `realtime` 中。完整例子得到：
+Place this code in a `realtime` block inside `average`. The example gives the following logical times.
 
-| 操作 | 起点 | 终点 |
-| --- | --- | --- |
-| q0 第一脉冲 | 0 µs | 4 µs |
-| q0 显式 gap | 4 µs | 6 µs |
-| q0 第二脉冲，phase=1 rad | 6 µs | 10 µs |
-| q1 脉冲，含起始偏移 | 2 µs | 8 µs |
-| 共享相机触发 | 10 µs | 20 µs |
+| Event | Start | End |
+| --- | ---: | ---: |
+| q0 first pulse | 0 µs | 4 µs |
+| q0 explicit gap | 4 µs | 6 µs |
+| q0 second pulse, phase 1 rad | 6 µs | 10 µs |
+| q1 pulse after initial offset | 2 µs | 8 µs |
+| Shared camera trigger | 10 µs | 20 µs |
 
-join 自然发生在 10 µs。这里 2 µs gap 只在示例设备契约下通过检查，不是任意实验室设备的保证。数字时序对齐也不代表原子处光场已做延迟标定。
+The two branches join at 10 µs. This fixture accepts a 2 µs gap. Another device may require more preparation time. Optical alignment at the atoms requires separate delay calibration.
 
-## 同时扫描多个 qubit
+## Pair pulse amplitude and duration
 
-同一文件提供 `build_parallel_rabi(qubits, durations, ...)`。这是可复制修改的实验脚手架，不是新增 DSL 语法。一个外层 duration sweep 同时用于各 qubit：
+Pass a list or tuple of `SweepParameter` objects to one `sweep` to use the same index for all of them. Each parameter can take its values directly from a one-dimensional NumPy array or a Python list.
+
+```python
+import numpy as np
+from taiyidsl import Experiment, Qubit, Square, SweepParameter, play, reference_lab
+
+q = Qubit("q0")
+amp = SweepParameter("amp", np.array([0.2, 0.4, 0.7]), unit="")
+duration = SweepParameter("duration", np.array([4, 8, 12]), unit="us")
+exp = Experiment("paired_pulse", [q])
+with exp.average(1), exp.sweep([amp, duration]), exp.realtime():
+    play(q.rf, Square(duration, amplitude=amp))
+compiled = reference_lab([q]).compile(exp)
+```
+
+The three points are `(0.2, 4 µs)`, `(0.4, 8 µs)` and `(0.7, 12 µs)`, in that order. Both named values appear in each compiled point's `coordinates`, with duration in seconds. Repeated values keep their original index. Nest a separate `exp.sweep(phase)` inside the paired sweep to scan every phase for each pair. Two separate amplitude and duration sweeps would produce all nine combinations.
+
+## Sweep several qubits together
+
+The same example defines `build_parallel_rabi(qubits, durations, ...)`. It uses one outer duration sweep across all qubits.
 
 ```python
 duration = SweepParameter("duration", durations, unit="s")
@@ -87,39 +100,33 @@ with exp.average(shots, mode=mode):
             )
 ```
 
-未显式覆盖的 amplitude/frequency 来自各 qubit 自己的 Raman 标定，因而无需复制整套脉冲模板。零时长点仍保留逻辑扫描点与统一读出，不产生 DDS 输出。
+Each qubit supplies its own Raman amplitude and frequency when the caller leaves them unspecified. A zero-duration point still belongs to the sweep and retains its readout, with no DDS pulse output. The builder returns an `Experiment`. The caller supplies wiring and devices through `lab.compile(exp)`. The example's `reference_lab` assigns a demonstration board to each qubit. A lab configuration should assign `readout_signal` to the actual camera TTL.
 
-构建函数只返回 `Experiment`；设备和映射在调用方通过 `lab.compile(exp)` 提供。例子中的 `reference_lab` 是每 qubit 一块板的离线演示；真实使用应加载实验室 `LabConfig`，并按实际相机 TTL 设置 `readout_signal`。
+This example varies a common duration. To vary the qubit durations together using separate lists, declare one parameter per qubit and pass them to one paired sweep. The built-in `analyze_rabi` calibration accepts single-drive programs.
 
-这里所有 qubit 扫描同一个时长轴。各 qubit 使用不同数值表的逐项同步扫描，目前没有 zip-sweep 接口；多个嵌套 sweep 会形成笛卡尔积。现有 `analyze_rabi` 对程序形状还有单路校验，本例不宣称已经提供多 qubit 自动拟合和标定回写。
+Use one shared `acquire` for a single frame covering multiple sites. Its `duration` is the TTL pulse width. Schedule preparation, illumination, exposure and transfer waits where the lab protocol requires them. The image interface accepts one logical acquisition per selected handle per point. Give independent exposures distinct handles. If handles observe different sites, build separate `ImageResults` with matching ROI sets. Associate every site in one frame with the same `acquire`.
 
-共享 `acquire` 代表一次触发得到多个 site；不要把它写成每个 qubit 各触发一次。`duration` 仅为 TTL 脉宽，制备、照明、曝光与传输等待仍应由真实实验流程显式安排。
+## Reusable operations
 
-图像入口对每个扫描点、每个选中的 handle 只接受一个逻辑采集。独立拍摄使用不同 handle；如果各 handle 观察的 site 集合不同，可分别创建匹配 ROI 集合的 `ImageResults`。同一帧的多个 site 应关联到同一条 `acquire`。
-
-## 已有复用入口
-
-| 用途 | 已实现入口 |
+| Task | Entry points |
 | --- | --- |
-| 单 qubit tune-up | `rabi`、`ramsey`、`randomized_benchmarking` |
-| 可追溯 RB 门序列 | `rb_sequences`，包含 seed、Clifford 和 recovery |
-| 共享光学参数 | `OpticsConfig`，操作参数与执行顺序分离 |
-| 泵浦、Raman、边带冷却 | `optical_pump`、`raman_pulse`、`sideband_cool` |
-| 读出流程 | `trigger_readout`、`illuminated_readout`、共享 `acquire` |
-| 并行书写示例 | `pulse_pair`、`build_precise_offsets`、`build_parallel_rabi` |
+| Single-qubit tune-up | `rabi`, `ramsey`, `randomized_benchmarking` |
+| Traceable RB gate sequence | `rb_sequences`, including seed, Cliffords and recovery |
+| Shared optical settings | `OpticsConfig` separates settings from the operation order |
+| Pumping, Raman and sideband cooling | `optical_pump`, `raman_pulse`, `sideband_cool` |
+| Readout | `trigger_readout`, `illuminated_readout`, shared `acquire` |
+| Parallel examples | `pulse_pair`, `build_precise_offsets`, `build_parallel_rabi` |
 
-优先使用普通 Python 函数组合已有块。扫描脉冲时长直接传 `SweepParameter`，扫描相同操作的次数直接用 `repeat(parameter)`；不必为每个数值写一份 `case`。只有操作结构发生变化时才需要选择分支，例如不同 RB 门词、push-out 与等长 idle。RB 的任意门词无法仅靠改变 repeat 次数表达，保留 case 比新增一套符号门表 lookup 更简单。
+Compose these blocks with Python functions. Pass a `SweepParameter` for a duration or use `repeat(parameter)` to vary the number of identical operations. Use `case` when the structure changes, for instance to select an RB gate word or choose between push-out and an equal-duration idle. Repetition count alone cannot express an arbitrary RB word.
 
-## 关于 Tetris / ASAP
+## Explicit parallelism and ASAP
 
-“不同 signal 尽早并行，同 signal 自动顺序排队”可以作为未来显式选择的模式，但当前没有此 API，也不改变默认规则。它需要同时定义同步点、复合操作和 frame 的依赖：同一 qubit 的 Raman/RF 共用 frame，相机触发可能要等待多路驱动，多个逻辑 signal 可能争用同一硬件资源。只维护每根线的时间游标不足以表达这些关系。
+Use `parallel`, `serial` and `delay` when relative times matter. Use an explicit ASAP Section for resource-aware placement. A global per-signal “Tetris” scheduler would also have to represent shared Raman/RF frames, camera joins and hardware contention across logical names. The base language keeps its declared serial and parallel boundaries.
 
-当前用 `parallel + serial + delay` 精确控制时序；再把常用流程封装成操作函数，既能减少重复，也能看见脉冲之间的因果关系。
-
-## 运行与验证边界
+## Run and inspect
 
 ```powershell
 uv run --locked python examples/parallel_experiments.py
 ```
 
-输出位于 `output/parallel_experiments/`，每个实验保存 `compiled.json`、`timeline.html` 和 `artiq/` 导出程序。导出包含独立 mock 检查，不执行 kernel 或操作仪器；脚本也不自动运行真实 ARTIQ 编译器。真实编译、RTIO 容量、光学同步和相机集成需分别验证。
+Each experiment writes `compiled.json`, `timeline.html` and an `artiq/` export under `output/parallel_experiments/`. Export includes an independent mock-driver check. The example does not invoke a real ARTIQ compiler or run a kernel. Real compilation, RTIO capacity, optical alignment and camera integration each need their own verification.

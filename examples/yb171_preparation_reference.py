@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 
 from taiyidsl import Experiment, LabConfig, OpticsConfig, Qubit
-from taiyidsl.cooling import illuminated_readout, sideband_cool
+from taiyidsl.experiments.cooling import illuminated_readout, sideband_cool
 
 SOURCE = "https://doi.org/10.1103/PhysRevX.12.021027"
 REQUIRED_BUILDERS = ("load", "enter_control", "readout")

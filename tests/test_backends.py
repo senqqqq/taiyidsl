@@ -28,7 +28,9 @@ from taiyidsl import (
     reference_setup,
     register_backend,
 )
-from taiyidsl.artiq import ExportError, export_artiq, generate_source
+from taiyidsl.backends.artiq._contracts import ExportError
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.export import export_artiq
 
 
 class PulseBackend(Backend):
@@ -181,8 +183,7 @@ def test_importing_frontend_and_visualization_does_not_load_artiq():
             sys.executable,
             "-c",
             "import sys; import taiyidsl; "
-            "import taiyidsl.visualization; "
-            "assert 'taiyidsl.artiq' not in sys.modules; "
+            "import taiyidsl.reporting.visualization; "
             "assert 'taiyidsl.backends.artiq' not in sys.modules",
         ],
         env=dict(os.environ, PYTHONIOENCODING="utf-8"),

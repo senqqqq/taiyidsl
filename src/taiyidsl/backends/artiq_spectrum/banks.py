@@ -8,7 +8,11 @@ import json
 
 import numpy as np
 
-from taiyidsl.backends.artiq_spectrum.awg import _memory, materialize_segment
+from taiyidsl.backends.artiq_spectrum.awg import (
+    _memory,
+    _sample_digests,
+    materialize_segment,
+)
 from taiyidsl.backends.artiq_spectrum.validation_awg import validate_program
 from taiyidsl.ir import CompileError
 
@@ -111,6 +115,12 @@ def build_bank(programs):
                 "A Spectrum bank cannot mix card or calibration contracts"
             )
         validate_program(program)
+        for digest, asset in program.get("sample_assets", {}).items():
+            table = bank.setdefault("sample_assets", {})
+            if digest not in table:
+                table[digest] = copy.deepcopy(asset)
+            elif table[digest] != asset:
+                raise CompileError("Spectrum bank sample asset collision")
         segment_ids = []
         for segment in program["segments"]:
             key = (segment["sample_count"], segment["sha256"])
@@ -152,7 +162,7 @@ def build_bank(programs):
                 "program": {
                     key: copy.deepcopy(value)
                     for key, value in program.items()
-                    if key not in {"segments", "steps", "memory"}
+                    if key not in {"segments", "steps", "memory", "sample_assets"}
                 },
             }
         )
@@ -189,6 +199,14 @@ def entry_program(bank, point):
         raise CompileError("Invalid Spectrum bank segment references")
     reverse = {slot: index for index, slot in enumerate(ids)}
     result = copy.deepcopy(entry["program"])
+    required = _sample_digests(result["pulses"])
+    if required:
+        assets = bank.get("sample_assets", {})
+        if required - assets.keys():
+            raise CompileError("Spectrum bank entry has missing sample assets")
+        result["sample_assets"] = {
+            key: copy.deepcopy(assets[key]) for key in sorted(required)
+        }
     for key in ("card_spec", "max_tile_samples", "calibration_sha256"):
         if _identity(result.get(key)) != _identity(bank.get(key)):
             raise CompileError("Spectrum bank entry contract differs from its bank")
@@ -235,7 +253,7 @@ def validate_bank(bank):
         raise CompileError("Spectrum bank exceeds the sequence step limit")
     if _memory(bank["card_spec"], bank["segments"]) != bank["memory"]:
         raise CompileError("Spectrum bank memory accounting differs from its segments")
-    cursor, points, used = 0, set(), set()
+    cursor, points, used, required = 0, set(), set(), set()
     for entry in bank["entries"]:
         point = entry["point"]
         if type(point) is not int or point < 0 or point in points:
@@ -245,11 +263,15 @@ def validate_bank(bank):
             raise CompileError(
                 "Spectrum bank contains unreachable or overlapping steps"
             )
-        validate_program(entry_program(bank, point))
+        point_program = entry_program(bank, point)
+        validate_program(point_program)
+        required.update(point_program.get("sample_assets", {}))
         used.update(entry["segment_ids"])
         cursor += entry["step_count"]
     if cursor != len(bank["steps"]) or used != set(range(len(bank["segments"]))):
         raise CompileError("Spectrum bank has unreachable steps or unused segments")
+    if required != set(bank.get("sample_assets", {})):
+        raise CompileError("Spectrum bank sample assets do not match its entries")
     # Entry validation above checks every slot's materialization bounds first.
     # Upload uses the shared slot recipes, independently of point provenance.
     for segment in bank["segments"]:

@@ -5,16 +5,16 @@ from dataclasses import replace
 import pytest
 
 from taiyidsl import Device, Experiment, Qubit, Square, delay, play, reference_lab, us
-from taiyidsl.artiq import (
-    ExportError,
+from taiyidsl.backends.artiq._contracts import ExportError
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.export import export_artiq
+from taiyidsl.backends.artiq.mock_drivers import (
     _DriverClock,
     _fake_artiq,
     _MockCore,
     _MockDDS,
-    export_artiq,
-    generate_source,
-    verify_export,
 )
+from taiyidsl.backends.artiq.verification import verify_export
 from taiyidsl.execution import device_execution_plan
 
 

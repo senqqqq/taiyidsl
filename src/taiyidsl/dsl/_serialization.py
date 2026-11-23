@@ -6,7 +6,13 @@ from types import MappingProxyType
 
 from ..units import Quantity
 from .nodes import Node
-from .pulses import FlatTopGaussian, HalfSinePhase, PolynomialPhase, Square
+from .pulses import (
+    FlatTopGaussian,
+    HalfSinePhase,
+    PolynomialPhase,
+    SampledPulse,
+    Square,
+)
 from .values import SweepParameter
 
 
@@ -31,6 +37,27 @@ def json_value(value):
         return {"kind": "half_sine", "amplitude": json_value(value.amplitude)}
     if isinstance(value, PolynomialPhase):
         return {"kind": "polynomial", "coefficients": json_value(value.coefficients)}
+    if isinstance(value, SampledPulse):
+        seconds = value.sample_interval.value
+        result = {
+            "shape": "sampled",
+            "kind": value.kind,
+            "sample_digest": value.sample_digest,
+            "sample_count": value.sample_count,
+            "sample_interval_s": {
+                "numerator": seconds.numerator,
+                "denominator": seconds.denominator,
+            },
+            "resample": value.resample,
+            "amplitude": json_value(value.amplitude),
+            "frequency": json_value(value.frequency),
+            "phase": json_value(value.phase),
+        }
+        if value.phase_modulation is not None:
+            result["phase_modulation"] = json_value(value.phase_modulation)
+        if value.phase_modulation_mode != "local":
+            result["phase_modulation_mode"] = value.phase_modulation_mode
+        return result
     if isinstance(value, FlatTopGaussian):
         return {
             "shape": "flat_top_gaussian",

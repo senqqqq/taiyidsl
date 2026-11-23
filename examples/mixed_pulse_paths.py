@@ -24,7 +24,7 @@ from taiyidsl import (
     play,
     rz,
 )
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 
 def laboratory(*, include_asf=False, selector="urukul_rev8", joint_frame=False):

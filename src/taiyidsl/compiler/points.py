@@ -49,8 +49,9 @@ def compile_point(
     max_events_per_point,
 ):
     coordinates = {
-        parameter.name: parameter.values[value]
-        for parameter, value in zip(inputs.parameters, axis_indices)
+        parameter.name: parameter.values[axis_index]
+        for group, axis_index in zip(inputs.sweep_groups, axis_indices, strict=True)
+        for parameter in group
     }
     logical, duration = inputs.target.schedule(
         experiment,

@@ -33,7 +33,7 @@ from taiyidsl import (
     QubitParameters,
     SweepParameter,
 )
-from taiyidsl.cooling import optical_pump, trigger_readout
+from taiyidsl.experiments.cooling import optical_pump, trigger_readout
 
 
 def build_initialization_scan(

@@ -28,9 +28,9 @@ from taiyidsl import (
     turn,
     us,
 )
-from taiyidsl.artiq import verify_equivalence, verify_export
+from taiyidsl.backends.artiq.verification import verify_equivalence, verify_export
+from taiyidsl.compiler.scheduling import resolve_virtual_z
 from taiyidsl.ir import ScheduledEvent
-from taiyidsl.scheduling import resolve_virtual_z
 
 
 def lab_for(qubits, *, carrier_latency=112):

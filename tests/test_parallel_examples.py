@@ -15,7 +15,7 @@ from taiyidsl import (
     reference_lab,
     us,
 )
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "parallel_experiments.py"
 

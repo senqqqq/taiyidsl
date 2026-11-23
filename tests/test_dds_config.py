@@ -7,7 +7,7 @@ import pytest
 from test_device_descriptor import databases
 
 from taiyidsl import DeviceSetup, SpectrumCard, SpectrumConfig, SpectrumGroup
-from taiyidsl.spectrum_config import SpectrumOutput
+from taiyidsl.config.spectrum import SpectrumOutput
 
 
 def mixed_descriptor():

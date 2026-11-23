@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from taiyidsl.spectrum_export import spectrum_manifest
-from taiyidsl.templates import rb_sequences, sequence_rotation
+from taiyidsl.backends.artiq_spectrum.export import spectrum_manifest
+from taiyidsl.experiments._single_qubit_clifford import rb_sequences, sequence_rotation
 
 
 @pytest.fixture(scope="module")

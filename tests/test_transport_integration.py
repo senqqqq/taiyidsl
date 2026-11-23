@@ -10,9 +10,9 @@ import pytest
 from test_spectrum_contracts import _exported_bridge, _LifecycleCard
 from test_spectrum_dds_runtime import fixture as dds_fixture
 
-from taiyidsl.spectrum_banks import entry_program, validate_bank
-from taiyidsl.spectrum_export import spectrum_manifest
-from taiyidsl.spectrum_runtime import SpectrumRunner, SpectrumRuntimeError
+from taiyidsl.backends.artiq_spectrum.banks import entry_program, validate_bank
+from taiyidsl.backends.artiq_spectrum.export import spectrum_manifest
+from taiyidsl.runtime.spectrum.awg import SpectrumRunner, SpectrumRuntimeError
 
 
 @pytest.fixture(scope="module")

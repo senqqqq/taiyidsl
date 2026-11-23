@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from taiyidsl import Experiment, LabConfig, OpticsConfig, Qubit, SweepParameter
-from taiyidsl.cooling import illuminated_readout, raman_pulse, sideband_cool
+from taiyidsl.experiments.cooling import illuminated_readout, raman_pulse, sideband_cool
 
 
 def reference_rsc_lab(qubit):

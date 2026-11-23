@@ -20,7 +20,7 @@ from taiyidsl import (
     reserve,
     us,
 )
-from taiyidsl.artiq import verify_equivalence
+from taiyidsl.backends.artiq.verification import verify_equivalence
 
 SLOT = 3 * us
 

@@ -21,7 +21,7 @@ from taiyidsl import (
     shift_phase,
     triggered_sequence,
 )
-from taiyidsl.scheduling import resolve_frames
+from taiyidsl.compiler.scheduling import resolve_frames
 
 
 def test_reused_reset_section_uses_each_final_insertion_time():

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from taiyidsl import Experiment, Qubit, delay, measure, reference_lab, us
-from taiyidsl.imaging import ImageResults
+from taiyidsl.results.imaging import ImageResults
 
 
 def image_results():

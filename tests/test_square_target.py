@@ -13,7 +13,8 @@ from taiyidsl import (
     play,
     us,
 )
-from taiyidsl.artiq import generate_source, verify_export
+from taiyidsl.backends.artiq.codegen import generate_source
+from taiyidsl.backends.artiq.verification import verify_export
 
 
 def test_timed_square_cannot_alias_an_independent_legacy_update_line():

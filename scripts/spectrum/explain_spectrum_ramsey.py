@@ -131,13 +131,23 @@ def inspect_export(export, output):
             for e in physical["physical_events"]
             if e["kind"] != "spectrum_program"
         ]
-        assert (
-            sum(
-                e["operation"] == "ttl_on" and e["device"] == "awg_trigger"
-                for e in timing
+        trigger_devices = set((group.get("trigger_devices") or {}).values())
+        if not trigger_devices:
+            trigger_devices = {group["trigger_device"]}
+        trigger_windows = set()
+        for device in trigger_devices:
+            edges = [
+                event
+                for event in timing
+                if event["device"] == device
+                and event["operation"] in ("ttl_on", "ttl_off")
+            ]
+            assert [e["operation"] for e in edges] == ["ttl_on", "ttl_off"], (
+                f"Expected one trigger pulse on {device}"
             )
-            == 1
-        )
+            trigger_windows.add(tuple(e["start_ns_T0"] for e in edges))
+        assert len(trigger_windows) == 1, "This figure requires a synchronous trigger"
+        (trigger_window,) = trigger_windows
         write_csv(point_dir / "artiq_timing.csv", timing)
         cards = {}
         for name, item in group["cards"].items():
@@ -229,6 +239,7 @@ def inspect_export(export, output):
                 "index": point["index"],
                 "dark_time_ms": point["coordinates"]["dark_time"] * 1000,
                 "artiq": timing,
+                "trigger_window_ns_T0": trigger_window,
                 "cards": cards,
                 "native_origin_mu": physical["origin_mu"] // 5,
                 "native_origin_ns": float(physical["origin_mu"] * tick_ns),
@@ -269,9 +280,7 @@ def draw_figure(manifest, points, output):
             if event["operation"] == kind and event["device"] == device
         )
 
-    trigger_on, trigger_off = (
-        edge(kind, "awg_trigger") for kind in ("ttl_on", "ttl_off")
-    )
+    trigger_on, trigger_off = (t / 1000 for t in chosen["trigger_window_ns_T0"])
     cooling_on, cooling_off = (
         edge(kind, "cooling_dds") for kind in ("dds_on", "dds_off")
     )
@@ -461,12 +470,13 @@ def draw_figure(manifest, points, output):
 
 def write_walkthrough(points, export, output):
     lines = [
-        "# Ramsey 实际编译产物",
-        "所有时间相对逻辑 shot 原点 T0。样本周期 0.8 ns；"
-        "half-open 区间 [start, stop)。",
-        "图与表来自实际导出，不是手工设计的预期分段。模拟序列号/延迟未标定，未运行硬件。",
-        "![时序与实际重建 RF](ramsey_timing.png)",
-        "## 扫描与相位",
+        "# Compiled Ramsey output",
+        "Times are relative to logical shot T0. Sample spacing is 0.8 ns. "
+        "Intervals include their start and exclude their stop.",
+        "Plots and tables decode the exported programs. The simulated serial numbers "
+        "and latencies are uncalibrated. No hardware was run.",
+        "![Timing and reconstructed RF samples](ramsey_timing.png)",
+        "## Sweep and carrier phase",
         table(
             [
                 {
@@ -490,33 +500,33 @@ def write_walkthrough(points, export, output):
                 "reference_us_T0",
             ],
         ),
-        "P1/P2 的 phase 指第一个 RF sample 的载波相位，"
-        "不是包络相位或物理 qubit 自由进动相位。",
-        "载波参考从实际 pulse.phase_evolution 与 group.phase_reference 读取。"
-        "sequence 参考序列入口，shot 参考逻辑 shot T0；显式 reset_phase 可建立新参考。"
-        "旧产物缺少参考字段时按其历史约定使用 shot T0。",
-        "epoch 载波按 C = 2π f × (逻辑播放时刻 − 载波参考时刻) 验算；"
-        "continuous 使用导出中已积分的 C。"
-        "实际起相为 C + M + s × (base + F) + binding offset + calibration。"
-        "脚本从逻辑事件和配置独立组合这些量，再核对最终 phase_rad 与 packed samples。"
-        "Rz(θ) 使 F 减 θ；reset_frame 清 F，reset_phase 同时清 C/M。"
-        "等待计入载波演化，没有在暗区实际播放 NCO。",
-        "## 表格约定",
-        "S0 等编号是每张卡当前扫描点的 segment ID，不是跨卡共享的波形。"
-        "END 时 next_step=0 不再执行；不是循环回 S0。",
-        "samples_per_channel 是每通道样本数；"
-        "bytes 包含启用通道的 int16 交织数据。A CH1 关闭；"
-        "本 Ramsey 的 B 两路保持零输出，"
-        "但仍 arm 并执行同一公共触发下的有限零程序。",
-        "memory.resident_bytes 是实际唯一段数据；"
-        "allocated_bytes 是按最大段长度与槽位数算出的容量需求，"
-        "slot_bytes 是硬件等分后的每槽可用容量，不代表上传字节数。",
+        "P1 and P2 phases are carrier phases at each pulse's first RF sample.",
+        "The carrier reference comes from pulse.phase_evolution and "
+        "group.phase_reference. Sequence mode uses sequence entry and shot mode "
+        "uses logical T0. An explicit reset_phase establishes a new reference. "
+        "Historical exports without a reference field use shot T0.",
+        "For an epoch carrier, C = 2π f × (logical playback time − reference time). "
+        "Continuous mode uses the integrated C in the export. The starting phase "
+        "is C + M + s × (base + F) + binding offset + calibration. The decoder "
+        "combines the logical events and configuration, then checks phase_rad "
+        "and the packed samples. Rz(θ) subtracts θ from F. reset_frame clears F. "
+        "reset_phase also clears C and M. Carrier evolution includes dark time, "
+        "during which the AWG outputs zero.",
+        "## Reading the tables",
+        "Segment IDs such as S0 are local to a card and scan point. A step marked "
+        "END terminates playback even when its next_step field is zero.",
+        "samples_per_channel counts samples on one channel. bytes counts all enabled "
+        "channels as interleaved int16. A CH1 is disabled. Both outputs on B play "
+        "a finite zero program armed by the common trigger.",
+        "memory.resident_bytes counts unique segment data. allocated_bytes is the "
+        "capacity required by the maximum segment length and slot count. slot_bytes "
+        "is the available capacity per hardware slot.",
     ]
     for point in points:
         lines.extend(
             [
-                f"## 扫描点 {point['index']}：delay = {point['dark_time_ms']} ms",
-                "### ARTIQ 物理事件",
+                f"## Point {point['index']} with delay {point['dark_time_ms']} ms",
+                "### Physical ARTIQ events",
                 table(
                     point["artiq"],
                     ["operation", "device", "start_ns_T0", "duration_ns"],
@@ -526,9 +536,9 @@ def write_walkthrough(points, export, output):
         for name, card in point["cards"].items():
             lines.extend(
                 [
-                    f"### 卡 {name}",
-                    f"程序 sample 0 = T0 + {card['program_start_us_T0']} µs；"
-                    f"内存：`{card['memory']}`。",
+                    f"### Card {name}",
+                    f"Program sample 0 is at T0 + {card['program_start_us_T0']} µs. "
+                    f"Memory usage is `{card['memory']}`.",
                     table(
                         card["segments"],
                         [
@@ -561,20 +571,20 @@ def write_walkthrough(points, export, output):
     tail_ns = (card["steps"][-1]["stop_us_T0"] - second["end_us_T0"]) * 1000
     lines.extend(
         [
-            f"## {chosen['dark_time_ms']:g} ms 点的边界核算",
-            f"两门之间 {gap:g} µs，对应 {round(gap * card['sample_rate_hz'] / 1e6)} "
-            f"个样本。有限程序结束于第二门之后 {tail_ns:g} ns；"
-            "段对齐的末尾零不计入门宽，不改变读出起点。",
-            f"卡 A 程序 sample 0 在 T0 + {card['program_start_us_T0']:g} µs，"
-            f"第一门在 T0 + {first['start_us_T0']:g} µs。"
-            "预先触发与 cooling 末尾重叠是声明 latency 补偿，不是门内 ARTIQ 控制。",
-            f"此点实际载波参考为 {second['reference_mode']}，位于 T0 + "
-            f"{second['reference_us_T0']:g} µs；"
-            "不能把图表时间坐标 T0 自动当作载波原点。"
-            f"导出 native pre-roll 偏移为 {chosen['native_origin_ns']:g} ns，"
-            "它与载波参考分别记录。生成代码的 epoch 对齐参数以导出为准。",
-            f"原始 manifest：`{(export / 'manifest.json').resolve()}`。"
-            "每卡每点CSV及逐段`.bin`位于本报告同级目录。",
+            f"## Timing boundaries at {chosen['dark_time_ms']:g} ms",
+            f"The gap between gates is {gap:g} µs, or "
+            f"{round(gap * card['sample_rate_hz'] / 1e6)} samples. "
+            f"The program ends {tail_ns:g} ns after the second gate. Trailing "
+            "alignment zeros preserve the gate width and the readout start.",
+            f"Card A sample 0 is at T0 + {card['program_start_us_T0']:g} µs. "
+            f"The first gate starts at T0 + {first['start_us_T0']:g} µs. "
+            "The early trigger overlaps cooling to compensate for declared latency.",
+            f"The carrier reference is {second['reference_mode']} at T0 + "
+            f"{second['reference_us_T0']:g} µs. The native pre-roll offset is "
+            f"{chosen['native_origin_ns']:g} ns. Read the epoch alignment "
+            "from the generated code.",
+            f"Source manifest: `{(export / 'manifest.json').resolve()}`. "
+            "The per-card CSV files and packed segment binaries accompany this report.",
         ]
     )
     (output / "walkthrough.md").write_text("\n\n".join(lines) + "\n", encoding="utf-8")

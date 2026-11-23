@@ -2,8 +2,6 @@
 
 __version__ = "0.1.0"
 
-from pathlib import Path as _Path
-
 from taiyidsl.experiments.ramsey import ramsey_experiment, ramsey_gates
 from taiyidsl.experiments.rb_sections import rb_sequence_section
 from taiyidsl.experiments.rb_sequences import (
@@ -46,7 +44,13 @@ from .config.models import (
 )
 from .config.optics import OpticsConfig
 from .config.pair_calibration import PairCalibration
-from .config.spectrum import SpectrumCard, SpectrumConfig, SpectrumGroup, SpectrumOutput
+from .config.spectrum import (
+    SpectrumCard,
+    SpectrumConfig,
+    SpectrumGroup,
+    SpectrumOutput,
+    StandaloneSpectrumConfig,
+)
 from .config.transport import IZ, MoveProfile, SiteRef, TransportConfig
 from .dsl.authoring import (
     average,
@@ -87,7 +91,17 @@ from .dsl.operations import (
     ramsey_body,
     rb_body,
 )
-from .dsl.pulses import FlatTopGaussian, HalfSinePhase, PolynomialPhase, Square
+from .dsl.pulses import (
+    FlatTopGaussian,
+    Gaussian,
+    GaussianSquare,
+    HalfSinePhase,
+    PolynomialPhase,
+    Pulse,
+    PulseLibrary,
+    SampledPulse,
+    Square,
+)
 from .dsl.sections import Section, add, layer, section
 from .dsl.values import SweepParameter
 from .ir import CompileError, PhysicalPlan, ScheduledEvent
@@ -104,9 +118,6 @@ from .runtime.contracts import ObservationCommit, RecoveryRequired, ShotContext
 from .runtime.run_store import RunStore
 from .runtime.streaming import StreamingRunner
 from .units import Hz, MHz, Quantity, deg, kHz, m, mm, ms, ns, rad, s, turn, um, us
-
-# Resolve historical flat imports on demand, after the normal package directory.
-__path__.append(str(_Path(__file__).with_name("_compat")))
 
 __all__ = [
     "s",
@@ -163,6 +174,11 @@ __all__ = [
     "QubitOperations",
     "PairCalibration",
     "Square",
+    "Pulse",
+    "SampledPulse",
+    "PulseLibrary",
+    "GaussianSquare",
+    "Gaussian",
     "FlatTopGaussian",
     "HalfSinePhase",
     "PolynomialPhase",
@@ -188,6 +204,7 @@ __all__ = [
     "Device",
     "DeviceSetup",
     "SpectrumCard",
+    "StandaloneSpectrumConfig",
     "SpectrumConfig",
     "SpectrumGroup",
     "SpectrumOutput",

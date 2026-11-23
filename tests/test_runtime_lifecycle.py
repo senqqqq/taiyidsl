@@ -3,7 +3,6 @@
 import hashlib
 import io
 import json
-import runpy
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,7 +11,6 @@ import pytest
 
 from taiyidsl import DeviceSetup, Experiment, LabConfig, Qubit, acquire, trig, us
 from taiyidsl.runtime import session as session_module
-from taiyidsl.runtime import worker as worker_module
 from taiyidsl.runtime.session import HardwareSession
 from taiyidsl.runtime.worker import Worker
 
@@ -423,11 +421,3 @@ def test_failed_process_launch_closes_worker_log(tmp_path, monkeypatch):
     assert caught.value is primary
     assert observed["stderr"].closed
     assert current._stderr is current._process is None
-
-
-def test_legacy_worker_module_remains_an_executable_entry(monkeypatch):
-    calls = []
-    monkeypatch.setattr(worker_module, "main", action(calls, "main"))
-    monkeypatch.delitem(sys.modules, "taiyidsl.session_worker", raising=False)
-    runpy.run_module("taiyidsl.session_worker", run_name="__main__")
-    assert calls == ["main"]

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from taiyidsl import LabConfig, OpticsConfig, Qubit
-from taiyidsl.cooling import illuminated_readout
+from taiyidsl.experiments.cooling import illuminated_readout
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = ROOT / "examples/yb171_preparation_reference.py"

@@ -13,20 +13,20 @@ from taiyidsl.ir import CompileError
 from .awg import (
     _ALIGNMENT,
     _FULL_SCALE,
-    _RENDER_WORK_BYTES,
-    RENDER_BYTES_PER_SAMPLE_CHANNEL,
     _card,
     _check_sample_workspace,
+    _decode_assets,
     _integer,
     _memory,
     _pulses,
+    _remaining_tile_samples,
+    _sample_digests,
     _walk,
     materialize_segment,
-    reconstruct_window,
 )
 
 
-def _expected_window(pulses, channels, rate, start, stop):
+def _expected_window(pulses, channels, rate, start, stop, decoded):
     """Independent output oracle: no segment recipe or replay annotation input."""
     _check_sample_workspace(stop - start, len(channels))
     expected = np.zeros((stop - start, len(channels)), dtype=np.float64)
@@ -68,9 +68,24 @@ def _expected_window(pulses, channels, rate, start, stop):
                 0,
                 1,
             )
-        expected[a - start : b - start, channels.index(pulse["channel"])] = (
-            amp * np.cos(angle)
-        )
+        if env["kind"] == "sampled":
+            source = decoded[env["sample_digest"]]
+            # Evaluate the source at actual DAC times independently of the
+            # segment renderer's integer quotient/remainder implementation.
+            position = n * (len(source) / duration)
+            left = np.minimum(position.astype(np.int64), len(source) - 1)
+            right = np.minimum(left + 1, len(source) - 1)
+            fraction = position - left
+            value = (1 - fraction) * source[left] + fraction * source[right]
+            if env["interpretation"] == "waveform":
+                output = amp * value
+            else:
+                output = amp * (value * np.exp(1j * angle)).real
+        else:
+            output = amp * np.cos(angle)
+        expected[a - start : b - start, channels.index(pulse["channel"])] = output
+    if not np.all(np.isfinite(expected)) or np.any(np.abs(expected) > 1 + 1e-14):
+        raise CompileError("Spectrum pulse targets clip or are not finite")
     return np.rint(expected * _FULL_SCALE).astype("<i2")
 
 
@@ -84,17 +99,22 @@ def validate_program(program, *, expected_pulses=None, chunk_samples=500000):
     """
     card = _card(program["card_spec"])
     chunk = _integer(chunk_samples, "validation chunk", 1)
-    limit = _RENDER_WORK_BYTES.get()
-    if limit is not None:
-        chunk = min(
-            chunk,
-            limit // (len(card["active_channels"]) * RENDER_BYTES_PER_SAMPLE_CHANNEL),
-        )
+    assets = program.get("sample_assets", {})
+    required = _sample_digests(program["pulses"])
+    if set(assets) != required:
+        raise CompileError("Spectrum program sample assets do not match its pulses")
+    decoded = _decode_assets(required, assets)
+    room = _remaining_tile_samples(decoded, card["active_channels"])
+    if room is not None:
+        chunk = min(chunk, room)
         if chunk < 1:
             raise CompileError("Sample work budget cannot accommodate validation")
     logical = _integer(program["logical_duration_samples"], "logical duration")
     targets = _pulses(
-        program["pulses"] if expected_pulses is None else expected_pulses, card, logical
+        program["pulses"] if expected_pulses is None else expected_pulses,
+        card,
+        logical,
+        decoded,
     )
     segments, steps = program["segments"], program["steps"]
     if len({s["id"] for s in segments}) != len(segments):
@@ -121,7 +141,7 @@ def validate_program(program, *, expected_pulses=None, chunk_samples=500000):
     if memory != program["memory"]:
         raise CompileError("Spectrum memory accounting does not match segments")
     for segment in segments:
-        packed = materialize_segment(program, segment["id"])
+        packed = materialize_segment(program, segment["id"], _decoded=decoded)
         if hashlib.sha256(packed.tobytes()).hexdigest() != segment["sha256"]:
             raise CompileError("Spectrum packed segment hash mismatch")
     for step in steps:
@@ -135,7 +155,7 @@ def validate_program(program, *, expected_pulses=None, chunk_samples=500000):
     checked, physical = 0, 0
     for left, right, segment, loops in _walk(program):
         physical = right
-        packed = materialize_segment(program, segment["id"])
+        packed = materialize_segment(program, segment["id"], _decoded=decoded)
         if not np.any(packed):
             windows = [
                 (
@@ -153,6 +173,7 @@ def validate_program(program, *, expected_pulses=None, chunk_samples=500000):
                         card["sample_rate_hz"],
                         offset,
                         min(end, offset + chunk),
+                        decoded,
                     )
                     checked += len(expected)
                     if np.any(np.abs(expected.astype(np.int32)) > 1):
@@ -168,6 +189,7 @@ def validate_program(program, *, expected_pulses=None, chunk_samples=500000):
                         card["sample_rate_hz"],
                         begin + offset,
                         begin + offset + len(actual),
+                        decoded,
                     )
                     checked += len(actual)
                     if np.any(
@@ -178,7 +200,7 @@ def validate_program(program, *, expected_pulses=None, chunk_samples=500000):
         raise CompileError("Spectrum physical duration or zero tail is invalid")
     if program["tail_samples"] != physical - logical:
         raise CompileError("Spectrum zero tail length is inconsistent")
-    if np.any(reconstruct_window(program, physical - 1, physical)):
+    if np.any(packed[-1]):
         raise CompileError("Spectrum final output sample is not zero")
     return dict(
         status="passed",

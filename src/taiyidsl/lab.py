@@ -27,6 +27,7 @@ from .config.hardware import (
     TriggerSequence,
     TriggerStep,
 )
+from .config.spectrum import StandaloneSpectrumConfig
 from .units import as_fraction, us
 
 
@@ -135,6 +136,8 @@ class LabConfig:
 
         self.transport = normalize_transport(self.transport)
         if self.transport is not None:
+            if self.setup.standalone_spectrum is not None:
+                raise ValueError("AOD transport requires the artiq_spectrum backend")
             self.setup = copy.deepcopy(self.setup)
             self.setup._transport = self.transport.snapshot()
         self.setup = self._setup_for_qubits(self.qubits)
@@ -159,17 +162,27 @@ class LabConfig:
                 frames[signal] = qubit.drive_frame(role)
         if setup.spectrum is not None:
             setup.spectrum = replace(setup.spectrum, signal_frames=frames)
+        if setup.standalone_spectrum is not None:
+            setup.standalone_spectrum = replace(
+                setup.standalone_spectrum, signal_frames=frames
+            )
         return setup
 
     def connect(self, *, clock_session_ids=None):
         """Open an explicit hardware session; compilation always stays offline.
 
-        The returned context owns a separate ARTIQ process. No worker or SDK is
-        started in emulation mode. Detector data require a separate adapter;
-        camera trigger kernels alone yield execution receipts, not measurements.
+        ARTIQ sessions own a separate worker. A standalone Spectrum session
+        opens the selected card directly with the optional Spectrum SDK.
         """
         if self.emulation:
             raise RuntimeError("emulation=True permits offline compilation only")
+        backend = self.backend if isinstance(self.backend, str) else self.backend.name
+        if backend == "spectrum":
+            if clock_session_ids:
+                raise ValueError("Standalone Spectrum uses the card's internal clock")
+            from .runtime.spectrum.standalone import StandaloneSpectrumSession
+
+            return StandaloneSpectrumSession(self).open()
         from .runtime.session import HardwareSession
 
         return HardwareSession(self, clock_session_ids=clock_session_ids).open()
@@ -233,6 +246,7 @@ class LabConfig:
                 "rtio_coarse_mu",
                 "rtio_lane_count",
                 "spectrum",
+                "standalone_spectrum",
                 "zone_coverage",
             },
             required={"name", "tick_seconds", "devices"},
@@ -357,6 +371,11 @@ class LabConfig:
             rtio_coarse_mu=setup.get("rtio_coarse_mu", 8),
             rtio_lane_count=setup.get("rtio_lane_count", 8),
             spectrum=_spectrum_config(setup.get("spectrum")),
+            standalone_spectrum=(
+                StandaloneSpectrumConfig.from_dict(setup["standalone_spectrum"])
+                if "standalone_spectrum" in setup
+                else None
+            ),
         )
         coverage = setup.get("zone_coverage", {})
         if not isinstance(coverage, Mapping) or any(
@@ -396,6 +415,11 @@ class LabConfig:
                 **(
                     {"spectrum": self.setup.spectrum.to_dict()}
                     if self.setup.spectrum is not None
+                    else {}
+                ),
+                **(
+                    {"standalone_spectrum": self.setup.standalone_spectrum.to_dict()}
+                    if self.setup.standalone_spectrum is not None
                     else {}
                 ),
                 "name": self.setup.name,

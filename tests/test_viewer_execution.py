@@ -10,8 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from taiyidsl.chunking import execution_order
-from taiyidsl.viewer_execution import execution_axis
+from taiyidsl.host_plan import execution_order
+from taiyidsl.reporting.viewer_execution import execution_axis
 
 JS = Path(__file__).parents[1] / "src/taiyidsl/reporting/assets/viewer_execution.js"
 

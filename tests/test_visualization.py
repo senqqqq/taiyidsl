@@ -3,11 +3,11 @@ from pathlib import Path
 from test_artiq import make_compiled
 
 from taiyidsl.compiler import compile_experiment
-from taiyidsl.hardware import reference_setup
-from taiyidsl.models import Qubit
-from taiyidsl.templates import rabi
+from taiyidsl.config.models import Qubit
+from taiyidsl.experiments.templates import rabi
+from taiyidsl.lab import reference_setup
+from taiyidsl.reporting.visualization import visualize
 from taiyidsl.units import us
-from taiyidsl.visualization import visualize
 
 
 def test_offline_html_has_both_views_and_selectors(tmp_path):
@@ -20,6 +20,7 @@ def test_offline_html_has_both_views_and_selectors(tmp_path):
         "Physical resources",
         'id="shot"',
         "Loop structure",
+        "<summary>Sweep duration (s)</summary><pre>",
         "Compilation diagnostics",
         "dds_config",
         "dds_output",

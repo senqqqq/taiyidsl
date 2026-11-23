@@ -83,7 +83,7 @@ def test_minimum_gap_is_explicit_and_not_inserted():
 
 
 def test_rearm_budget_cannot_undercut_reference_spi_driver():
-    from taiyidsl.artiq import verify_export
+    from taiyidsl.backends.artiq.verification import verify_export
 
     # Rev9 and coarse=8 mu: 3440 mu SPI cursor + 112 mu pipeline, no margin.
     compiled = gates([0.5, 0.5], budget=3440, gap_mu=3552)
@@ -189,7 +189,7 @@ def test_overlapping_rearms_on_independent_boards_are_rejected():
 
 
 def test_repeated_banks_reloaded_per_point_and_square_state_restored():
-    from taiyidsl.artiq import verify_equivalence
+    from taiyidsl.backends.artiq.verification import verify_equivalence
 
     q = Qubit("q0")
     exp = Experiment("bank_scan_and_square", [q])
@@ -211,7 +211,7 @@ def test_repeated_banks_reloaded_per_point_and_square_state_restored():
 
 
 def test_replay_phase_tracking_accounts_for_preroll_and_device_latency():
-    from taiyidsl.artiq import verify_export
+    from taiyidsl.backends.artiq.verification import verify_export
 
     q = Qubit("q0")
     exp = Experiment("tracking_after_preroll", [q])
@@ -243,7 +243,7 @@ def test_replay_phase_tracking_accounts_for_preroll_and_device_latency():
 
 
 def test_shared_bus_square_configuration_avoids_ram_rearm_and_launch():
-    from taiyidsl.artiq import verify_export
+    from taiyidsl.backends.artiq.verification import verify_export
 
     q0, q1 = Qubit("q0"), Qubit("q1")
     exp = Experiment("shared_bus_rearm", [q0, q1])

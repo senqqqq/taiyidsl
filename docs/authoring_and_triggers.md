@@ -1,10 +1,8 @@
-# 实验 decorator、块级触发与独立 TTL
+# Experiment factories, sequence triggers and independent TTL pulses
 
-这些接口已经实现，并与原 `Experiment` / `exp.xxx()` 写法共用编译器。
-可运行示例是 [decorated_ramsey.py](../examples/artiq_spectrum/decorated_ramsey.py)。
-默认只构建、编译和导出两个扫描点，不调用仪器。
+The decorator and context functions use the same builder and compiler as `Experiment` and its methods. The [Ramsey example](../examples/artiq_spectrum/decorated_ramsey.py) builds, compiles and exports two sweep points offline.
 
-## 一整个 gate 块只有一次同步启动
+## Start a sequence on multiple cards
 
 ```python
 with exp.triggered_sequence(group="qubit_awg", trigger="qubit.start"):
@@ -14,67 +12,37 @@ with exp.triggered_sequence(group="qubit_awg", trigger="qubit.start"):
     play(q.rf, p2)
 ```
 
-`trigger="qubit.start"` 是逻辑触发名，经 signal map 解析为同步组配置的 TTL 集合。
-旧 `trigger_device="awg_trigger"` 表示公共线路；双独立线路使用
-`trigger_devices={"A": "awg_trigger_a", "B": "awg_trigger_b"}`，二者互斥。
-各路 TTL 在同一个 RTIO 时刻上升和结束，各卡 contract 记录自己的线路。
-增加 C/D 等卡及对应 TTL 可沿用同一接口，没有两卡数量上限；实际数量受到 TTL、
-时间网格和 RTIO 提交容量限制。2/3/4 卡可运行例子：
-`python -m examples.artiq_spectrum.multicard_trigger --cards 4`。
-逻辑触发的 fanout 必须恰好覆盖该集合，不能遗漏、重复或夹带其他输出，不能带幅频相变换。
-这只保证计划时刻一致；实际两卡采样同步仍依赖参考时钟、接线和逐卡延迟校准。
-
-当前示例的关系是：
+The signal map resolves `qubit.start` to the TTL outputs wired to the synchronization group. Configure either a shared `trigger_device="awg_trigger"` or per-card lines such as `trigger_devices={"A": "awg_trigger_a", "B": "awg_trigger_b"}`. All lines rise and fall at the same scheduled RTIO times. Each card's contract records its own line. The logical trigger must resolve to precisely those endpoints, once each, with identity amplitude, frequency and phase transforms.
 
 ```text
-q.rf → nuclear_rf → qubit_awg / 卡 A CH0
-qubit.start → awg_trigger_a → 卡 A 外触发
-            → awg_trigger_b → 卡 B 外触发
+q.rf → nuclear_rf → qubit_awg / card A CH0
+qubit.start → awg_trigger_a → card A external trigger
+            → awg_trigger_b → card B external trigger
 ```
 
-LabConfig 中可配置 `group.trigger_signal="qubit.start"` 作为默认逻辑触发名。
-省略块参数时使用该默认；旧配置没有 trigger_signal 时仍沿用 trigger_device。
-真实 TTL 端口由实际 device_db 及接线确定。SIM_* 卡、脉宽与延迟示例不是实机校准。
+Set `group.trigger_signal="qubit.start"` to select the default when the sequence omits `trigger`. Older configurations without a logical trigger name use `trigger_device`. Add cards C, D and their TTLs in the same way. Run `python -m examples.artiq_spectrum.multicard_trigger --cards 4` to exercise the two-, three- or four-card example (select the count with `--cards`). Available TTLs, the time grid and RTIO submission capacity bound the group size. Physical sample alignment also requires a shared reference, verified wiring and measured delays for each card. The `SIM_*` identifiers, widths and delays in the example are illustrative.
 
-每个有实际播放的块仍只有一次同步启动（可同时发 N 路 TTL），与 play 数量无关。纯 frame 或
-没有硬件输出的块可以不发触发。编译器按块起点与既有提前量安排 TTL，而不是把
-`trigger=` 理解为“第一条 gate 开始时才发 TTL”。内部 gate、delay、Rz 仍由卡上
-完整静态程序自主执行，不产生逐门 TTL。
+A block containing playback launches the group **once**, regardless of the number of gates or trigger lines. A frame-only block can omit a hardware launch. The compiler schedules the trigger ahead of the sequence origin by the configured lead. The card runs its static gates, delays and virtual Z operations autonomously. The compiler owns the active group's trigger outputs for the shot, including aliases. Give an independently triggered instrument a separate TTL.
 
-活动同步组的触发线由编译器管理，禁止同 shot 再用手动 `trig`、`play` 等控制它，
-包括经另一个逻辑信号映射到同一设备的情况。独立仪器的触发必须使用独立 TTL。
-
-## 独立数字触发 trig
+## Pulse an independent TTL
 
 ```python
 with exp.realtime():
     trig("scope.trigger", width=64 * ns)
 ```
 
-`trig` 在当前串行时刻输出一个数字脉冲，宽度必须为正且满足所映射设备的时间网格。
-它占用该输出并推进串行分支时间 **64 ns**；在 parallel 中沿用原有分支对齐和合流规则。
-width 可用合法时间扫描参数。它不会隐含等待被触发设备的任务结束。
+`trig` occupies its output and advances the serial branch by the pulse width (64 ns here). The width must be positive and lie on the mapped device grid. A time sweep parameter can supply the width. Parallel alignment and joins work as usual. The branch can continue as soon as the TTL pulse ends, irrespective of how long the external instrument takes.
 
-极性由 TTL 设备配置明确决定：
-
-| `Device.ttl_idle_level` | 空闲态 | 脉冲期间 | 脉冲结束 |
+| `Device.ttl_idle_level` | Idle | During pulse | End of pulse |
 | --- | --- | --- | --- |
-| 0，默认 | 低 | 高 | 恢复低 |
-| 1 | 高 | 低 | 恢复高 |
+| `0` (default) | Low | High | Return low |
+| `1` | High | Low | Return high |
 
-示例用独立 `scope_ttl`，设置 `ttl_idle_level=1`，因此输出下降沿启动的低脉冲。
-ARTIQ 初始化设置声明的空闲态，每个 trig 结束恢复该电平；不能把“输出低电平”解释为不输出事件。
-波形只有数字电平和持续时间，不接受模拟幅度、载频或相位。
-连续两次触发之间须显式安排空闲间隔，例如 `delay("scope.trigger", 1 * us)`；
-编译器不会把相邻 trig 合并成一个长脉冲，也不会自动插入间隔。
-旧 `play(signal, Square(...))` 的 TTL 写法保留为高脉冲；新配置空闲高电平的输出使用 trig。
+The example configures `scope_ttl` with `ttl_idle_level=1`, so the falling edge starts the pulse. ARTIQ initializes the output to the declared idle level and restores it after every pulse. The low transition is a real digital event. Digital triggers accept a width only. Insert an explicit idle interval, for example `delay("scope.trigger", 1 * us)`, to separate consecutive pulses. The compiler neither merges adjacent triggers nor inserts idle time. Existing TTL `play(signal, Square(...))` calls generate active-high pulses. Use `trig` for an idle-high output.
 
-trig 可用于纯 ARTIQ 或混合 realtime，但禁止放在 Spectrum 自主执行的
-triggered_sequence 内。它不会上传/arm 第三方设备、获取数据、生成 acquisition
-handle、复位 qubit frame 或建立新的相位原点。需要实验采集语义时使用 acquire；
-需要整段 AWG 编译和 ready 协议时使用 triggered_sequence。
+`trig` runs in pure ARTIQ or hybrid realtime, outside a Spectrum `triggered_sequence`. It has no instrument upload, arm, capture, acquisition handle or phase side effects. Use `acquire` for shot-associated results and `triggered_sequence` for AWG compilation and group readiness.
 
-## 用 decorator 省略重复的 exp.
+## Build a fresh experiment with a decorator
 
 ```python
 from taiyidsl import experiment, average, sweep, realtime, triggered_sequence
@@ -96,33 +64,15 @@ exp = ramsey(dark_time)
 compiled = lab.compile(exp)
 ```
 
-每次调用 ramsey 都创建并返回一个新的 Experiment；不在调用之间累积节点。
-qubit 集合在声明 decorator 时确定，其值、parameters 和 metadata 在每次构建时
-按现有 Experiment 规则快照。name 省略时取函数名；函数签名与文档保持可检查。
+Each call to `ramsey` returns a new `Experiment`. The decorator fixes the qubit membership at declaration. Each build snapshots values, parameters and metadata. By default the experiment takes the function name, and the wrapper preserves the function signature and documentation. The builder must be a synchronous function returning `None`. Generators, async functions and native kernels are unsupported. Ordinary Python executes at build time on the host. Compilation, export and execution are separate calls.
 
-decorator 不自动编译、导出或执行；函数内部普通 Python 仍在 host 构建时运行，
-不是 ARTIQ kernel。builder 应不返回值，返回 Experiment 由 decorator 负责。
-异步、生成器及原生 kernel 函数不能充当这种 builder。
+The module-level `average`, `sweep`, `realtime`, `triggered_sequence`, `repeat`, `case`, `stage`, `serial` and `parallel` contexts delegate to the active experiment. They can be mixed with calls such as `with exp.average(...)` and preserve the IR, timing, phase, sweep order and backend. A stage is optional. An active experiment can call a Python helper, `section()` or a `@qubit_operation`. Calling a decorated whole-experiment factory inside it raises an error. If building fails, the previous context is restored. See [Sections and operations](sections_and_operations.md).
 
-可导入的无 exp. 上下文接口包括 average、sweep、realtime、triggered_sequence、
-repeat、case、stage，以及原有 serial、parallel。它们调用同一活动 Experiment
-的方法，不引入新 IR 层、不改变时间单位、phase、扫描顺序或运行后端。
-也可在旧 `with exp.average(...)` 内混用这些简写。
+Keep ARTIQ kernels in a separate module and declare them through `NativeKernelPackage`. Both ARTIQ and the DSL define names such as `delay` and `parallel` with different behavior. Use explicit imports.
 
-复用局部门序列可使用普通 Python helper、`section()` 或 `@qubit_operation`；
-后两者提供独立捕获与快照插入，见 [Section 接口](sections_and_operations.md)。禁止在活动实验内部调用另一个已装饰的
-完整实验 factory。构建异常会恢复上下文，后续构建不会接到失败实验上。
-原有 with exp.xxx() 写法继续支持，stage 仍完全可选。
-DSL 简写与 ARTIQ 的 delay/parallel 等名字不同义；不要在同一模块混用两者的星号导入。
-原生 kernel 保持在独立模块，通过 NativeKernelPackage 声明接入。
+Inside `triggered_sequence`, `play` and the existing block-only `trigplay` both express Spectrum playback. Native ARTIQ, acquisitions and host sweeps belong outside. A serial position in the enclosing realtime block may update a Spectrum-only frame belonging to the same group with `rz`, `shift_phase`, `reset_frame` or `reset_phase`. Entry preserves explicit frame updates. The default carrier reference starts at sequence entry. Select `phase_reference="shot"` to use shot T0. See [Spectrum phase modes](spectrum_phase_modes.md).
 
-`triggered_sequence` 内可直接使用普通 `play`；`trigplay` 保留兼容，仍只允许在块内。
-它是后端归属边界，不意味着任意 DSL 指令都可由 AWG 执行：原生 ARTIQ、采集及 host sweep
-仍留在块外。Spectrum-only、同一同步组的 frame 可在 realtime 外层串行位置执行
-`Rz/shift_phase/reset_frame/reset_phase`。入口保留显式 frame 更新；默认从序列入口
-建立零载波参考，`phase_reference="shot"` 则保留 shot T0。详见 [相位模式](spectrum_phase_modes.md)。
-
-## 运行示例和相位参考
+## Run the example and inspect phase
 
 ```powershell
 uv run --locked python examples/artiq_spectrum/decorated_ramsey.py
@@ -130,15 +80,8 @@ uv run --locked python examples/artiq_spectrum/decorated_ramsey.py `
   --default-trigger --output output/artiq_spectrum/decorated_ramsey_default
 ```
 
-示例复制公共 profile 到内存后添加逻辑触发映射与独立 scope_ttl，不修改原 JSON 或
-原纯 ARTIQ 示例。默认与显式路径选到同一个 awg_trigger；第二条命令仅演示省略
-块级 trigger 选择（传入 None 等同省略），正常使用无需重复导出两份报告。
+The example copies the shared profile in memory and adds a logical trigger route and independent scope TTL. Both commands select the same `awg_trigger`. The second exercises the group default. Passing `None` has the same effect as omitting the trigger.
 
-两个点为 10 µs 和 100 ms Ramsey dark delay。每 shot 的 F 从零开始，载波默认从
-AWG 序列入口推进；20 µs 的 DDS 前置脉冲不计入，序列内部 dark delay 计入。
-正 Rz(π/2) 使后续驱动相位减 90°。scope 脉冲不改变这一参考，也不代表原子态复位。
+The dark delays are 10 µs and 100 ms. The frame offset F starts at zero each shot. With the default sequence reference the 20 µs DDS prelude contributes no AWG carrier phase. The in-sequence dark delay advances the carrier, and a positive Rz(π/2) subtracts 90° from the following drive. The scope TTL leaves both the carrier reference and the qubit frame unchanged.
 
-报告包含完整 DSL、两卡 segment/step table、公共 AWG trigger 和独立 scope TTL
-时序、pulse sheet 与最终 Spectrum DAC 样本。它不模拟 scope 模拟波形、物理 AOM
-或原子态；本例没有实际采集。原生 GreenMOT 的严格准备尾段接入仍见
-[native_artiq_integration.md](native_artiq_integration.md)。
+The report shows the DSL, both cards' segment and step tables, AWG and scope trigger timing, the pulse sheet, and the final DAC samples. It models digital scope triggering. It contains no scope acquisition, analog AOM response or atomic state simulation. For a timed native GreenMOT preparation tail see [Native ARTIQ integration](native_artiq_integration.md).

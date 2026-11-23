@@ -24,7 +24,7 @@ from taiyidsl import (
     us,
 )
 from taiyidsl.dsl import _active
-from taiyidsl.templates import rb_sequences
+from taiyidsl.experiments._single_qubit_clifford import rb_sequences
 
 
 @qubit_operation

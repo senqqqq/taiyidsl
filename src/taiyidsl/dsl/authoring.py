@@ -76,7 +76,7 @@ def average(shots, mode="cyclic", execution="host", *, scope="global"):
 
 
 def sweep(parameter, execution="host", *, chunks=None, chunk_size=None):
-    """Use the existing host sweep scope; this does not bind a runtime value."""
+    """Sweep one parameter or pair a group of parameters by index on the host."""
     return _builder().sweep(
         parameter, execution=execution, chunks=chunks, chunk_size=chunk_size
     )

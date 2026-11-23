@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from taiyidsl.spectrum_waveforms import reconstruct_window
+from taiyidsl.backends.artiq_spectrum.awg import reconstruct_window
 
 _COLORS = ("#2563a6", "#d97706", "#008779", "#a84872", "#6b52a3")
 _ROW_TITLES = (
@@ -601,7 +601,7 @@ def export_clock_transport_view(compiled, output_dir, *, point=0):
     )
     notice = (
         '<div style="font:15px system-ui;padding:20px 50px;max-width:1100px">'
-        "<b>统一时间轴 / One common time axis.</b> "
+        "<b>One common time axis.</b> "
         "T=0 is the Spectrum gate-sequence entry; "
         "all cards retain their trigger latency and idle intervals. "
         "The red dashed line is the common trigger. "

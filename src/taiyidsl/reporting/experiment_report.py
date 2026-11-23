@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from taiyidsl.backends.artiq_spectrum.awg import materialize_segment
+from taiyidsl.sample_assets import expand_sample_manifest
 
 from .resources import asset_text
 from .spectrum_report import card_execution, execution_html, export_execution_sources
@@ -48,7 +49,7 @@ def _text(value):
 
 def _table(rows):
     if not rows:
-        return '<p class="muted">None / 无</p>'
+        return '<p class="muted">None</p>'
     headings = "".join(f"<th>{_text(k)}</th>" for k in rows[0])
     body = "".join(
         "<tr>" + "".join(f"<td>{_text(v)}</td>" for v in row.values()) + "</tr>"
@@ -127,47 +128,51 @@ def _card_report(item, group, directory):
         cursor = stop
     if cursor != program["physical_duration_samples"]:
         raise ValueError("Step lengths do not reproduce the complete card program")
-    pulses = [
-        {
-            "channel": pulse["channel"],
-            "start_sample": pulse["start_sample"],
-            "samples": pulse["duration_samples"],
-            "start_s_exact": _decimal_seconds(
-                sample_zero + pulse["start_sample"] * period
-            ),
-            "end_s_exact": _decimal_seconds(
-                sample_zero
-                + (pulse["start_sample"] + pulse["duration_samples"]) * period
-            ),
-            "start_us_T0": float(
-                (sample_zero + pulse["start_sample"] * period) * 10**6
-            ),
-            "end_us_T0": float(
-                (
+    pulses = []
+    for pulse in program["pulses"]:
+        has_carrier = pulse["envelope"].get("interpretation") != "waveform"
+        pulses.append(
+            {
+                "channel": pulse["channel"],
+                "start_sample": pulse["start_sample"],
+                "samples": pulse["duration_samples"],
+                "start_s_exact": _decimal_seconds(
+                    sample_zero + pulse["start_sample"] * period
+                ),
+                "end_s_exact": _decimal_seconds(
                     sample_zero
                     + (pulse["start_sample"] + pulse["duration_samples"]) * period
-                )
-                * 10**6
-            ),
-            "frequency_Hz": pulse["frequency_hz"],
-            "amplitude": pulse["amplitude"],
-            "start_phase_deg": math.degrees(_initial_phase(pulse)) % 360,
-            "envelope": pulse["envelope"],
-            "local_phase_modulation": pulse.get("phase_modulation"),
-            "phase_evolution": pulse.get("phase_evolution", {}),
-            "carrier_reference": pulse.get("phase_evolution", {}).get(
-                "carrier_reference_kind"
-            ),
-            "carrier_reference_us_T0": (
-                float(pulse["phase_evolution"]["carrier_reference_time_s"]) * 1e6
-                if "carrier_reference_time_s" in pulse.get("phase_evolution", {})
-                else None
-            ),
-            "operation_path": pulse.get("operation_path", []),
-            "section_schedule": pulse.get("section_schedule", []),
-        }
-        for pulse in program["pulses"]
-    ]
+                ),
+                "start_us_T0": float(
+                    (sample_zero + pulse["start_sample"] * period) * 10**6
+                ),
+                "end_us_T0": float(
+                    (
+                        sample_zero
+                        + (pulse["start_sample"] + pulse["duration_samples"]) * period
+                    )
+                    * 10**6
+                ),
+                "frequency_Hz": pulse["frequency_hz"] if has_carrier else None,
+                "amplitude": pulse["amplitude"],
+                "start_phase_deg": math.degrees(_initial_phase(pulse)) % 360
+                if has_carrier
+                else None,
+                "envelope": pulse["envelope"],
+                "local_phase_modulation": pulse.get("phase_modulation"),
+                "phase_evolution": pulse.get("phase_evolution", {}),
+                "carrier_reference": pulse.get("phase_evolution", {}).get(
+                    "carrier_reference_kind"
+                ),
+                "carrier_reference_us_T0": (
+                    float(pulse["phase_evolution"]["carrier_reference_time_s"]) * 1e6
+                    if "carrier_reference_time_s" in pulse.get("phase_evolution", {})
+                    else None
+                ),
+                "operation_path": pulse.get("operation_path", []),
+                "section_schedule": pulse.get("section_schedule", []),
+            }
+        )
     _csv(directory / "segments.csv", segments)
     _csv(directory / "steps.csv", steps)
     _csv(directory / "pulses.csv", pulses)
@@ -338,7 +343,7 @@ def _point_html(point):
         f"<p>Terminal frame F [rad]: {_text(point['terminal_frame_rad'])}; "
         "Rz source diagnostic since last reset [rad]: "
         f"{_text(point['terminal_virtual_z_rad'])}</p>",
-        "<h3>Frame operations · 零时长相位操作</h3>",
+        "<h3>Zero-duration frame operations</h3>",
         _table(point["frame_events"]),
         "<details><summary>ARTIQ trigger &amp; output timing [ns from T0]</summary>",
         _table(point["artiq_timing"]),
@@ -356,7 +361,7 @@ def _point_html(point):
     ]
     if point.get("transport"):
         pieces += [
-            "<h3>Atom transport · 计划位置</h3>",
+            "<h3>Planned atom transport</h3>",
             "<p>Each move resolves its source from this compilation's current layout. "
             "Positions are predicted, not measured. "
             "Every shot returns to its initial layout.</p>",
@@ -410,10 +415,11 @@ def _point_html(point):
             folder = card["directory"]
             if card.get("mode") == "dds":
                 pieces += [
-                    f"<h4>Card {_text(name)} · DDS20 持续囚禁</h4>",
-                    "<p>以下为编译命令轨迹，不是最终 DAC 样本或实测原子轨迹。"
-                    "末端继续 hold，直到下一条命令或关闭会话；"
-                    "不参与 qubit phase frame。</p>",
+                    f"<h4>Card {_text(name)} · DDS20 trap hold</h4>",
+                    "<p>These curves show compiled DDS commands. The card holds the "
+                    "endpoint until its next command or until the session closes. "
+                    "Qubit phase frames evolve separately. RF samples and measured "
+                    "atom positions require hardware acquisition.</p>",
                     _table(card["spectrum_execution"]["configuration"]),
                     f'<img style="width:100%" src="{folder}/frequency.svg" '
                     'alt="Planned DDS frequency"/>',
@@ -435,13 +441,14 @@ def _point_html(point):
                 f"Memory: {_text(card['memory'])}</p>",
                 _table([card["playback_timing"]]),
                 "<details><summary>Clock / trigger / output configuration · "
-                "实际值和来源</summary>",
+                "values and sources</summary>",
                 _table(card["spectrum_execution"]["configuration"]),
                 "</details>",
-                "<details><summary>Resolved Spectrum calls · 波形上传与 step 写入"
-                "</summary><p>这是本点独立程序的反解视图；schema 2 的实际上传 slot、"
-                "完整 step table 与入口见 chunk/bank 页面。"
-                "完整执行检查与调用顺序见上方实际适配器源码。</p>",
+                "<details><summary>Resolved Spectrum calls for waveform uploads and "
+                "step writes</summary><p>This listing decodes the point in isolation. "
+                "For schema 2, the chunk/bank page shows the resident segment slots, "
+                "complete step table and entry indices. The adapter source above "
+                "shows the execution checks and call order.</p>",
                 _table(card["spectrum_execution"]["uploads"]),
                 f'<a href="{folder}/sdk_calls.txt">Download SDK call listing</a>',
                 '<pre class="source"><code>'
@@ -492,10 +499,10 @@ def _bank_html(bank):
     pieces = [
         f"<h2>Resident bank {bank['index']}</h2>",
         f"<p>Points: {_text(bank['points'])}; SHA-256: {_text(bank['sha256'])}</p>",
-        "<p>下面是 schema 2 实际上传的共享 segment slot 与完整 step table。"
-        "这些是编译计划；执行时的 uploaded、entry_step、bank_sha256 "
-        "记录在 runner receipt 中。"
-        "本报告未执行实验，没有实机上传回执。</p>",
+        "<p>The schema 2 plan gives the shared segment slots in upload order "
+        "and the complete step table. During execution, the runner records "
+        "uploaded, entry_step and bank_sha256 in its receipt. "
+        "This offline report contains the plan only.</p>",
     ]
     for card in bank["cards"]:
         folder = card["directory"]
@@ -607,7 +614,9 @@ def export_experiment_report(compiled, output, *, source_path=None):
     source = source_bytes.decode("utf-8") if source_bytes is not None else None
     output.mkdir(parents=True, exist_ok=True)
     exported = compiled.export(output / "export")
-    manifest = json.loads(exported["manifest"].read_text(encoding="utf-8"))
+    manifest = expand_sample_manifest(
+        json.loads(exported["manifest"].read_text(encoding="utf-8"))
+    )
     execution = export_execution_sources(output)
     points = [
         _point_report(compiled, point, manifest_point, output)
@@ -643,15 +652,16 @@ def export_experiment_report(compiled, output, *, source_path=None):
             compiled, program_path="export/artiq/experiment.py"
         ),
         "PHASE_REFERENCE": (
-            "每个 shot 在原生 prefix 结束后建立控制时间轴 T0，F = 0。"
-            "原生 MOT/cooling prefix 的运行时间不计入载波参考。"
-            "timed 准备尾段及后续间隔仍在控制时间轴上；"
-            "AWG 默认从 triggered_sequence 入口建立载波参考，准备时长不计入。"
-            "显式 phase_reference='shot' 时才从控制 T0 计入准备与间隔。"
+            "Each shot starts its control timeline at T0 with F = 0 after the native "
+            "MOT/cooling prefix. The carrier reference excludes the native prefix. "
+            "The timed preparation tail and subsequent delays occupy the control "
+            "timeline. By default the AWG carrier starts at triggered_sequence entry. "
+            "With phase_reference='shot', the carrier evolves from control T0 through "
+            "preparation and delays. "
             if lifecycle
-            else "每个 shot 的 frame 从 F = 0 开始，板卡从本点入口重放。"
-            "AWG 默认以 triggered_sequence 入口为载波参考；"
-            "显式 phase_reference='shot' 可选择共同逻辑 T0。"
+            else "Each shot starts with F = 0 and the card replays the point entry. "
+            "By default the AWG carrier starts at triggered_sequence entry. Set "
+            "phase_reference='shot' to use the shared logical T0. "
         ),
     }
     pages = []
@@ -678,9 +688,9 @@ def export_experiment_report(compiled, output, *, source_path=None):
             )
     if pages:
         replacements["POINTS"] = (
-            "<h3>Chunk / bank pages</h3><p>每页至多 20 个点，"
-            "包含实际驻留 bank 的上传参数。"
-            "概览最多展开前 20 点。</p>" + "\n".join(pages) + replacements["POINTS"]
+            "<h3>Chunk / bank pages</h3><p>Each page lists the upload parameters "
+            "for a resident bank and covers up to 20 points. The overview includes "
+            "the first 20 points.</p>" + "\n".join(pages) + replacements["POINTS"]
         )
     document = _render_report(replacements)
     (output / "index.html").write_text(document, encoding="utf-8")

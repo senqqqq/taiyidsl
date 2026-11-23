@@ -8,7 +8,7 @@ from dataclasses import replace
 from taiyidsl.compiler.scheduling import Scheduler, resolve_frames
 from taiyidsl.compiler.timebase import native_factor
 from taiyidsl.compiler.trigger_routes import resolve_trigger_signal
-from taiyidsl.dsl.pulses import HalfSinePhase, PolynomialPhase
+from taiyidsl.dsl.pulses import HalfSinePhase, PolynomialPhase, SampledPulse
 from taiyidsl.dsl.values import resolve
 from taiyidsl.ir import CompileError, ScheduledEvent
 from taiyidsl.units import as_fraction
@@ -30,8 +30,82 @@ _REGION_OPERATIONS = {
 }
 
 
-class SpectrumScheduler(Scheduler):
+def validate_sampled_route(node, sample_rate_hz):
+    """Reject unsupported card routes or nonrepresentable sample timing."""
+    pulse = node.params["pulse"]
+    if sample_rate_hz is None:
+        raise CompileError(
+            f"Sampled pulses require a Spectrum AWG output at {node.source}"
+        )
+    rate = as_fraction(sample_rate_hz, "frequency")
+    interval = as_fraction(pulse.sample_interval, "time") * rate
+    if pulse.resample == "strict" and interval != 1:
+        raise CompileError(
+            f"Sample interval differs from the AWG sample grid at {node.source}; "
+            "select linear resampling explicitly"
+        )
+    if (interval * pulse.sample_count).denominator != 1:
+        raise CompileError(
+            f"Sampled pulse duration is off the AWG grid at {node.source}"
+        )
+
+
+class SpectrumPlaybackScheduler(Scheduler):
+    """Resolve pulse and modulation requests before assigning device timing."""
+
+    spatial = None
+
+    def schedule_play(self, node, frames, realtime):
+        pulse, signal = node.params["pulse"], node.params["signal"]
+        overrides = {"phase_modulation": None}
+        if hasattr(pulse, "phase_modulation_mode"):
+            overrides["phase_modulation_mode"] = "local"
+        ordinary = replace(
+            node,
+            kind="play",
+            params={**node.params, "pulse": replace(pulse, **overrides)},
+        )
+        events, duration = super().node(ordinary, frames, realtime)
+        if self.spatial is not None:
+            self.spatial.apply_coverage(node, events)
+        frame = self._signal_frames[signal]
+        for event in events:
+            event.resources = self._signal_devices[signal]
+            event.params.update(
+                phase=float(resolve(pulse.phase, self.coordinates, "phase")),
+                requested_phase=float(resolve(pulse.phase, self.coordinates, "phase")),
+                frame=frame,
+                qubit=self._frame_owners[frame]
+                if frame is not None
+                else event.params.get("qubit"),
+                frame_phase=0.0,
+                phase_modulation_mode=getattr(pulse, "phase_modulation_mode", "local"),
+            )
+            modulation = pulse.phase_modulation
+            if isinstance(modulation, HalfSinePhase):
+                event.params["phase_modulation"] = {
+                    "kind": "half_sine",
+                    "amplitude": float(
+                        resolve(modulation.amplitude, self.coordinates, "phase")
+                    ),
+                }
+            elif isinstance(modulation, PolynomialPhase):
+                event.params["phase_modulation"] = {
+                    "kind": "polynomial",
+                    "coefficients": [
+                        float(resolve(value, self.coordinates, "phase"))
+                        for value in modulation.coefficients
+                    ],
+                }
+        return events, duration
+
+
+class SpectrumScheduler(SpectrumPlaybackScheduler):
     """Preserve one explicit region while reusing the existing timing rules."""
+
+    @property
+    def ordered_frame_edges(self):
+        return self._region is not None
 
     def __init__(self, *args, body):
         super().__init__(*args)
@@ -130,6 +204,23 @@ class SpectrumScheduler(Scheduler):
             node_path = (*path, index)
             self._paths[id(node)] = node_path
             kind = node.kind
+            if kind in {"play", "trigplay"} and isinstance(
+                node.params["pulse"], SampledPulse
+            ):
+                devices = self._signal_devices.get(node.params["signal"], ())
+                awg_rate = (
+                    self.groups[group].sample_rate_hz
+                    if (
+                        group is not None
+                        and devices
+                        and all(
+                            self._output_groups.get(name) == group for name in devices
+                        )
+                        and not self._dds_outputs.intersection(devices)
+                    )
+                    else None
+                )
+                validate_sampled_route(node, awg_rate)
             if kind in {"play", "trigplay"} and self._dds_outputs.intersection(
                 self._signal_devices.get(node.params["signal"], ())
             ):
@@ -301,47 +392,7 @@ class SpectrumScheduler(Scheduler):
     def _play_node(self, node, frames, realtime):
         if self._region is None:
             raise CompileError("trigplay requires an enclosing triggered_sequence")
-        pulse, signal = node.params["pulse"], node.params["signal"]
-        overrides = {"phase_modulation": None}
-        if hasattr(pulse, "phase_modulation_mode"):
-            overrides["phase_modulation_mode"] = "local"
-        ordinary = replace(
-            node,
-            kind="play",
-            params={**node.params, "pulse": replace(pulse, **overrides)},
-        )
-        events, duration = super().node(ordinary, frames, realtime)
-        if self.spatial is not None:
-            self.spatial.apply_coverage(node, events)
-        frame = self._signal_frames[signal]
-        for event in events:
-            event.resources = self._signal_devices[signal]
-            event.params.update(
-                phase=float(resolve(pulse.phase, self.coordinates, "phase")),
-                requested_phase=float(resolve(pulse.phase, self.coordinates, "phase")),
-                frame=frame,
-                qubit=self._frame_owners[frame]
-                if frame is not None
-                else event.params.get("qubit"),
-                frame_phase=0.0,
-                phase_modulation_mode=getattr(pulse, "phase_modulation_mode", "local"),
-            )
-            modulation = pulse.phase_modulation
-            if isinstance(modulation, HalfSinePhase):
-                event.params["phase_modulation"] = {
-                    "kind": "half_sine",
-                    "amplitude": float(
-                        resolve(modulation.amplitude, self.coordinates, "phase")
-                    ),
-                }
-            elif isinstance(modulation, PolynomialPhase):
-                event.params["phase_modulation"] = {
-                    "kind": "polynomial",
-                    "coefficients": [
-                        float(resolve(value, self.coordinates, "phase"))
-                        for value in modulation.coefficients
-                    ],
-                }
+        events, duration = self.schedule_play(node, frames, realtime)
         return self._tag(events), duration
 
     def _repeat_node(self, node, frames, realtime):

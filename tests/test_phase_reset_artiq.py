@@ -24,9 +24,9 @@ from taiyidsl import (
     rz,
     shift_phase,
 )
-from taiyidsl.artiq import verify_equivalence
-from taiyidsl.hardware import DeviceCalibration
-from taiyidsl.polar_validation import verify_polar_output
+from taiyidsl.backends.artiq.validation_polar_output import verify_polar_output
+from taiyidsl.backends.artiq.verification import verify_equivalence
+from taiyidsl.config.hardware import DeviceCalibration
 
 
 def _lab(shape, mode="continuous", *, calibrated=False):

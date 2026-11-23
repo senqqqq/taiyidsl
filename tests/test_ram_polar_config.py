@@ -6,8 +6,8 @@ from dataclasses import replace
 import pytest
 
 from taiyidsl import CompileError, Device, DeviceSetup, LabConfig, SignalMap
+from taiyidsl.backends.artiq.submission import validate_submission_plan
 from taiyidsl.ir import ScheduledEvent
-from taiyidsl.submission import validate_submission_plan
 
 
 def polar_device(name="a", bus="spi0", **options):

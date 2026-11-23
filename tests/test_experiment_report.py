@@ -26,7 +26,7 @@ from taiyidsl import (
     trigplay,
     us,
 )
-from taiyidsl.spectrum_report import card_execution
+from taiyidsl.reporting.spectrum_report import card_execution
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples" / "artiq_spectrum"
@@ -73,7 +73,7 @@ def test_report_preserves_ramsey_samples_steps_trigger_and_frame(tmp_path):
     assert 'href="export/artiq/experiment.py"' in page
     assert "reset_frame" in page
     assert "reset_phase" in page and "Φ_osc" in page
-    assert "H − V" not in page and "只清 H" not in page
+    assert "reset_frame clears F" in page and "H − V" not in page
     assert result["pulse_sheet"].exists() and result["waveform"].exists()
     execution = report["execution"]
     assert execution["status"] == "code_preview_not_execution"

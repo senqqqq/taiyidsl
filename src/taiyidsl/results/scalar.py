@@ -270,15 +270,18 @@ class ResultSet:
             },
         )
         for axis in self.axes:
-            name = axis["name"]
-            if name in ds:
-                raise ValueError(
-                    f"Sweep axis {name!r} conflicts with a result dimension"
+            for parameter in (axis, *axis.get("paired_parameters", ())):
+                name = parameter["name"]
+                if name in ds:
+                    raise ValueError(
+                        f"Sweep axis {name!r} conflicts with a result dimension"
+                    )
+                ds = ds.assign_coords(
+                    {name: ("point", [c[name] for c in self.coordinates])}
                 )
-            ds = ds.assign_coords(
-                {name: ("point", [c[name] for c in self.coordinates])}
-            )
-            ds[name].attrs["units"] = axis.get("values_unit", axis.get("unit", ""))
+                ds[name].attrs["units"] = parameter.get(
+                    "values_unit", parameter.get("unit", "")
+                )
         return ds
 
     def save(self, directory):

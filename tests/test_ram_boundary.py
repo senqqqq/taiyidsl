@@ -27,7 +27,7 @@ from taiyidsl import (
     shift_phase,
     us,
 )
-from taiyidsl.visualization import _payload
+from taiyidsl.reporting.visualization import _payload
 
 
 def boundary_lab(count=1, **overrides):
@@ -473,7 +473,7 @@ def test_two_board_800ns_same_axis_example_includes_terminal_hardware_updates():
 
 
 def test_single_board_800ns_example_includes_real_terminal_frame_update():
-    from taiyidsl.artiq_ram import ram_bank_summary
+    from taiyidsl.backends.artiq.codegen_ram import ram_bank_summary
 
     script = Path(__file__).parents[1] / "examples" / "ram_boundary_sequence.py"
     example = runpy.run_path(str(script))

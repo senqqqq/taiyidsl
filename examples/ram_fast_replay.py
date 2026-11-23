@@ -20,7 +20,7 @@ from taiyidsl import (
     reference_lab,
     us,
 )
-from taiyidsl.artiq_ram import ram_bank_summary
+from taiyidsl.backends.artiq.codegen_ram import ram_bank_summary
 
 
 def build_sequence(

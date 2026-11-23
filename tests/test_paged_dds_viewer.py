@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from taiyidsl.output_simulator import _dds_views
+from taiyidsl.reporting.output_simulator import _dds_views
 
 ROOT = Path(__file__).parents[1]
 

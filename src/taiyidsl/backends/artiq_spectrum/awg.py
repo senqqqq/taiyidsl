@@ -1,6 +1,7 @@
 """Finite, resident Spectrum AWG programs, without instrument access.
 
-The JSON representation contains recipes, never sample arrays. ``phase_rad`` is
+The JSON representation contains recipes and content-addressed sampled inputs.
+``phase_rad`` is
 the resolved carrier phase at the pulse's first sample; calibration prefixes
 therefore do not enter the carrier calculation here. Samples cover [0, N), and
 local modulation uses u = n/N. Polynomial coefficients are in ascending order.
@@ -13,6 +14,7 @@ import hashlib
 import math
 from contextlib import contextmanager
 from contextvars import ContextVar
+from fractions import Fraction
 
 import numpy as np
 
@@ -95,7 +97,92 @@ def _card(spec):
     return result
 
 
-def _pulses(pulses, card, duration):
+def _sample_digests(pulses):
+    return {
+        p["envelope"]["sample_digest"]
+        for p in pulses
+        if p.get("envelope", {}).get("kind") == "sampled"
+    }
+
+
+def _decode_assets(required, assets):
+    if not required:
+        return {}
+    from taiyidsl.sample_assets import decode_sample_asset
+
+    result = {}
+    available = _RENDER_WORK_BYTES.get()
+    keys = sorted(required)
+    if available is not None:
+        # Decode the largest first to minimize peak scratch while accumulating
+        # the source arrays used by this program. The encoded text already lives
+        # in its input record and is distinct from the decoder's ASCII copy.
+        keys.sort(
+            key=lambda key: len(assets.get(key, {}).get("data", "")), reverse=True
+        )
+    for key in keys:
+        if key not in assets:
+            raise CompileError(f"Missing Spectrum sample asset {key!r}")
+        asset = assets[key]
+        if available is not None:
+            size = _integer(asset["count"], "asset sample count", 1) * (
+                16 if asset["dtype"] == "<c16" else 8
+            )
+            ascii_scratch = 4 * ((size + 2) // 3)
+            # Also covers the float magnitude array and boolean validity mask.
+            if size + ascii_scratch > available:
+                raise CompileError("Source samples exceed managed sample work budget")
+            available -= size
+        try:
+            result[key] = decode_sample_asset(key, asset)
+        except ValueError as error:
+            raise CompileError(str(error)) from error
+    return result
+
+
+def _remaining_tile_samples(decoded, channels):
+    limit = _RENDER_WORK_BYTES.get()
+    if limit is None:
+        return None
+    remaining = limit - sum(values.nbytes for values in decoded.values())
+    return remaining // (len(channels) * RENDER_BYTES_PER_SAMPLE_CHANNEL)
+
+
+def _check_sampled(pulse, card, decoded):
+    env = pulse["envelope"]
+    if env["sample_digest"] not in decoded:
+        raise CompileError("Spectrum pulse references an unavailable sample asset")
+    source = decoded[env["sample_digest"]]
+    count = _integer(env["sample_count"], "sample count", 1)
+    kind = env["interpretation"]
+    if count != len(source) or kind not in {"waveform", "envelope", "iq"}:
+        raise CompileError("Spectrum sampled interpretation/count mismatch")
+    if (source.dtype.kind == "c") != (kind == "iq"):
+        raise CompileError("Spectrum sampled dtype differs from its interpretation")
+    time = env["sample_interval_s"]
+    if any(
+        type(time.get(part)) is not int or time[part] <= 0
+        for part in ("numerator", "denominator")
+    ):
+        raise CompileError("Sample interval requires a positive exact fraction")
+    dt = Fraction(time["numerator"], time["denominator"])
+    ratio = dt * Fraction(str(card["sample_rate_hz"]))
+    if env["resample"] not in {"strict", "linear"}:
+        raise CompileError("Unsupported Spectrum resampling policy")
+    if env["resample"] == "strict" and ratio != 1:
+        raise CompileError("Sampled pulse interval differs from the AWG sample grid")
+    if count * ratio != pulse["duration_samples"]:
+        raise CompileError("Sampled pulse duration differs from its source samples")
+    if kind == "waveform" and (
+        pulse["frequency_hz"]
+        or pulse["phase_rad"]
+        or pulse.get("phase_steps")
+        or pulse.get("phase_modulation")
+    ):
+        raise CompileError("Raw waveform accepts gain only, without carrier or phase")
+
+
+def _pulses(pulses, card, duration, decoded=None):
     result = []
     for source in pulses:
         p = copy.deepcopy(source)
@@ -142,6 +229,8 @@ def _pulses(pulses, card, duration):
                 cutoff_sigma=cutoff,
                 flat_samples=flat,
             )
+        elif env["kind"] == "sampled":
+            _check_sampled(p, card, decoded or {})
         elif env["kind"] != "square":
             raise CompileError("Unsupported Spectrum envelope")
         p["envelope"] = env
@@ -178,7 +267,29 @@ def _pulses(pulses, card, duration):
     return result
 
 
-def _pulse_values(p, n, rate):
+def _sampled_values(pulse, n, decoded):
+    env = pulse["envelope"]
+    source = decoded[env["sample_digest"]]
+    start = int(n[0])
+    if len(source) == pulse["duration_samples"]:
+        return source[start : start + len(n)]
+    # Anchor each fragment to the original pulse. Integer division fixes the
+    # first source index even when a late tile follows a very long idle span.
+    duration = pulse["duration_samples"]
+    first, remainder = divmod(start * len(source), duration)
+    offsets = np.arange(len(n), dtype=np.int64) * len(source) + remainder
+    lower, weight = np.divmod(offsets, duration)
+    lower += first
+    upper = np.minimum(lower + 1, len(source) - 1)
+    return source[lower] + (source[upper] - source[lower]) * (weight / duration)
+
+
+def _pulse_values(p, n, rate, decoded):
+    env = p["envelope"]
+    if env["kind"] == "sampled":
+        samples = _sampled_values(p, n, decoded)
+        if env["interpretation"] == "waveform":
+            return p["amplitude"] * samples
     u = n / p["duration_samples"]
     phase = p["phase_rad"] + 2 * np.pi * np.remainder(
         n * (p["frequency_hz"] / rate), 1.0
@@ -193,8 +304,13 @@ def _pulse_values(p, n, rate):
     for step in p.get("phase_steps", []):
         phase = phase + (n >= step["sample"]) * step["delta_rad"]
     envelope = np.ones(len(n))
-    env = p["envelope"]
-    if env["kind"] == "flat_top_gaussian":
+    if env["kind"] == "sampled":
+        if env["interpretation"] == "iq":
+            return p["amplitude"] * (
+                samples.real * np.cos(phase) - samples.imag * np.sin(phase)
+            )
+        envelope = samples
+    elif env["kind"] == "flat_top_gaussian":
         sigma, cutoff = env["sigma_samples"], env["cutoff_sigma"]
         distance = np.maximum(
             sigma * cutoff - np.minimum(n, p["duration_samples"] - n), 0
@@ -207,7 +323,7 @@ def _pulse_values(p, n, rate):
     return p["amplitude"] * envelope * np.cos(phase)
 
 
-def _render(recipe, samples, card):
+def _render(recipe, samples, card, decoded=None):
     _check_sample_workspace(samples, len(card["active_channels"]))
     values = np.zeros((samples, len(card["active_channels"])), dtype=np.float64)
     if recipe["kind"] == "fragments":
@@ -223,6 +339,7 @@ def _render(recipe, samples, card):
                 p,
                 np.arange(offset, offset + count, dtype=np.float64),
                 card["sample_rate_hz"],
+                decoded,
             )
     elif recipe["kind"] != "zero":
         raise CompileError("Unknown Spectrum segment recipe")
@@ -231,14 +348,27 @@ def _render(recipe, samples, card):
     return np.rint(values * _FULL_SCALE).astype("<i2")
 
 
-def materialize_segment(program, segment_id):
+def materialize_segment(program, segment_id, *, _decoded=None):
     """Return packed, interleaved DAC samples for one bounded resident segment."""
     for segment in program["segments"]:
         if segment["id"] == segment_id:
             samples = _integer(segment["sample_count"], "segment samples", 1)
             if samples > program.get("max_tile_samples", 500000):
                 raise CompileError("Spectrum segment exceeds its materialization bound")
-            return _render(segment["recipe"], samples, program["card_spec"])
+            recipe = segment["recipe"]
+            if _decoded is None:
+                required = _sample_digests(
+                    f["pulse"] for f in recipe.get("fragments", ())
+                )
+                _decoded = _decode_assets(required, program.get("sample_assets", {}))
+            room = _remaining_tile_samples(
+                _decoded, program["card_spec"]["active_channels"]
+            )
+            if room is not None and samples > room:
+                raise CompileError(
+                    "Source and segment exceed managed sample work budget"
+                )
+            return _render(recipe, samples, program["card_spec"], _decoded)
     raise CompileError(f"Unknown Spectrum segment {segment_id!r}")
 
 
@@ -280,7 +410,9 @@ def _memory(card, segments):
     )
 
 
-def build_card_program(card_spec, pulses, duration_samples, *, max_tile_samples=500000):
+def build_card_program(
+    card_spec, pulses, duration_samples, *, max_tile_samples=500000, sample_assets=None
+):
     """Compile exact gate locations into finite native static sequence steps.
 
     Long all-channel idle spans use repeated zero segments; small remainders
@@ -289,7 +421,11 @@ def build_card_program(card_spec, pulses, duration_samples, *, max_tile_samples=
     """
     card = _card(card_spec)
     duration = _integer(duration_samples, "duration_samples")
-    targets = _pulses(pulses, card, duration)
+    pulses = list(pulses)
+    required = _sample_digests(pulses)
+    assets = sample_assets or {}
+    decoded = _decode_assets(required, assets)
+    targets = _pulses(pulses, card, duration, decoded)
     minimum = card["min_segment_samples"]
     maximum = _integer(max_tile_samples, "max_tile_samples", minimum)
     maximum = maximum // _ALIGNMENT * _ALIGNMENT
@@ -305,6 +441,17 @@ def build_card_program(card_spec, pulses, duration_samples, *, max_tile_samples=
         segments=[],
         steps=[],
     )
+    if required:
+        program["sample_assets"] = {
+            key: copy.deepcopy(assets[key]) for key in sorted(required)
+        }
+        room = _remaining_tile_samples(decoded, card["active_channels"])
+        if room is not None:
+            maximum = min(maximum, (room // _ALIGNMENT) * _ALIGNMENT)
+            if maximum < minimum:
+                raise CompileError(
+                    "Source and minimum segment exceed managed sample work budget"
+                )
     by_hash = {}
 
     def emit(start, count, loops=1, zero=False):
@@ -324,7 +471,7 @@ def build_card_program(card_spec, pulses, duration_samples, *, max_tile_samples=
                         )
                     )
             recipe = dict(kind="fragments", fragments=fragments)
-        packed = _render(recipe, count, card)
+        packed = _render(recipe, count, card, decoded)
         if not np.any(packed):
             recipe = {"kind": "zero"}
         digest = hashlib.sha256(packed.tobytes()).hexdigest()
@@ -337,7 +484,9 @@ def build_card_program(card_spec, pulses, duration_samples, *, max_tile_samples=
             )
             by_hash[key] = segment_id
             _memory(card, program["segments"])
-        elif not np.array_equal(packed, materialize_segment(program, segment_id)):
+        elif not np.array_equal(
+            packed, materialize_segment(program, segment_id, _decoded=decoded)
+        ):
             raise CompileError("Spectrum segment hash collision")
         while loops:
             steps = program["steps"]
@@ -444,11 +593,14 @@ def iter_program_samples(
     chunk = _integer(chunk_samples, "chunk_samples", 1)
     if not start <= stop <= program["physical_duration_samples"]:
         raise CompileError("Spectrum reconstruction window is out of range")
+    decoded = _decode_assets(
+        _sample_digests(program["pulses"]), program.get("sample_assets", {})
+    )
     for left, right, segment, _ in _walk(program):
         begin, end = max(left, start), min(right, stop)
         if begin >= end:
             continue
-        samples = materialize_segment(program, segment["id"])
+        samples = materialize_segment(program, segment["id"], _decoded=decoded)
         while begin < end:
             offset = (begin - left) % len(samples)
             count = min(chunk, len(samples) - offset, end - begin)

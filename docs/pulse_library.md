@@ -7,10 +7,21 @@
 ```python
 from taiyidsl import Gaussian, GaussianSquare, MHz, ns
 
-bell = Gaussian(sigma=16 * ns, cutoff_sigma=4, amplitude=0.2,
-                frequency=10 * MHz, sample_interval=0.8 * ns)
-flat = GaussianSquare(flat_duration=160 * ns, sigma=16 * ns, cutoff_sigma=4,
-                      amplitude=0.2, frequency=10 * MHz, sample_interval=0.8 * ns)
+bell = Gaussian(
+    sigma=16 * ns,
+    cutoff_sigma=4,
+    amplitude=0.2,
+    frequency=10 * MHz,
+    sample_interval=0.8 * ns,
+)
+flat = GaussianSquare(
+    flat_duration=160 * ns,
+    sigma=16 * ns,
+    cutoff_sigma=4,
+    amplitude=0.2,
+    frequency=10 * MHz,
+    sample_interval=0.8 * ns,
+)
 ```
 
 Each Gaussian edge spans `cutoff_sigma * sigma`. The truncated envelope is shifted to zero at its boundaries and normalized to one at its peak or plateau. The examples last 128 ns and 288 ns respectively. `GaussianSquare` is an alias for `FlatTopGaussian`, and `Gaussian` constructs the same shape with zero plateau. Both preserve the original analytic shape's 20 ns default interval. Specify the card interval for analytic shapes on Spectrum AWG.
@@ -24,8 +35,12 @@ from taiyidsl import Experiment, Pulse, Qubit, MHz, ns, play
 q0 = Qubit("q0")
 samples = np.hanning(800)
 pulse = Pulse.from_array(
-    samples, sample_interval=1 * ns, kind="envelope", resample="linear",
-    amplitude=0.2, frequency=10 * MHz,
+    samples,
+    sample_interval=1 * ns,
+    kind="envelope",
+    resample="linear",
+    amplitude=0.2,
+    frequency=10 * MHz,
 )
 exp = Experiment("sampled_envelope", [q0])
 with exp.average(1), exp.realtime():
@@ -55,9 +70,16 @@ Array pulses work on AWG-mode outputs in the `spectrum` and `artiq_spectrum` bac
 import numpy as np
 from taiyidsl import Pulse, PulseLibrary, ns
 
+
 def hann_burst(count, *, gain):
-    return Pulse.from_array(np.hanning(count), sample_interval=1 * ns,
-                           kind="waveform", resample="linear", amplitude=gain)
+    return Pulse.from_array(
+        np.hanning(count),
+        sample_interval=1 * ns,
+        kind="waveform",
+        resample="linear",
+        amplitude=gain,
+    )
+
 
 pulses = PulseLibrary()
 pulses.register("hann_burst", hann_burst)

@@ -64,6 +64,36 @@ For example, 800 values spaced at 1 ns occupy 800 ns and produce 1000 DAC sample
 
 Array pulses work on AWG-mode outputs in the `spectrum` and `artiq_spectrum` backends. Use a `triggered_sequence` for the hybrid configuration. A DDS20 output or a native ARTIQ output raises a compilation error for sampled pulses. See the [single-card](spectrum_standalone.md) and [hybrid](spectrum_hybrid.md) examples for lab configuration.
 
+## Sweep the carrier of an IQ pulse
+
+Use a complex envelope when you already know the amplitude `A` and phase `phi` at each sample. The Spectrum AWG renderer takes the real part of the envelope times the complex carrier. For a sine output, use `A * exp(1j * (phi - π/2))`. For a cosine output, use `A * exp(1j * phi)`.
+
+This example uses the `lab` from the [standalone AWG setup](spectrum_standalone.md#select-the-card-and-mode). The pulse starts at the beginning of the shot with zero frame offset.
+
+```python
+import numpy as np
+from taiyidsl import Experiment, Pulse, Qubit, SweepParameter, ns, play
+
+q0 = Qubit("q0")
+n = np.arange(1000)
+A = np.hanning(len(n))
+phi = 0.6 * np.sin(2 * np.pi * n / len(n))  # radians
+pulse = Pulse.from_array(
+    A * np.exp(1j * (phi - np.pi / 2)),
+    kind="iq",
+    sample_interval=0.8 * ns,
+)
+
+f = SweepParameter("carrier", [8, 10, 12], unit="MHz")
+exp = Experiment("iq_carrier_scan", [q0])
+with exp.average(1), exp.sweep(f), exp.realtime():
+    play(q0.rf, pulse, frequency=f, amplitude=0.5, phase=0)
+
+compiled = lab.compile(exp)
+```
+
+Each point reuses the same 800 ns envelope. At time `t` seconds from shot start, the requested output is `0.5 * A[n] * sin(2π * f * t + phi[n])` with `f` in hertz. To give the pulse a default carrier, set `frequency` in `Pulse.from_array()`. A frequency supplied to `play()` overrides that default for that play. You can likewise bind a sweep parameter to `amplitude` for an overall gain or to `phase` for an additional phase offset.
+
 ## Name a custom pulse
 
 ```python

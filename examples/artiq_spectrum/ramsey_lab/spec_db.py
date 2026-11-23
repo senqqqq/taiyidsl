@@ -3,6 +3,7 @@
 spec_db = {
     "A": {
         "address": "/dev/spcm0",  # local PCIe card identifier, not an IP address
+        "mode": "awg",
         "serial_number": "SIM_A",
         "model": "M4i.6631-x8",
         "active_channels": [0],
@@ -13,6 +14,7 @@ spec_db = {
     },
     "B": {
         "address": "/dev/spcm1",
+        "mode": "awg",
         "serial_number": "SIM_B",
         "model": "M4i.6631-x8",
         "active_channels": [0, 1],

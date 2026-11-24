@@ -54,13 +54,41 @@ uv run --locked python examples/spectrum_standalone.py --mode awg
 uv run --locked python examples/spectrum_standalone.py --mode dds
 ```
 
-Both exports include the timing and compiled card program. AWG validation inspects the quantized samples. DDS validation checks the hardware command sequence. To run on a bench, install the Spectrum native driver and the optional Python SDK (`uv sync --locked --extra spectrum`). Supply the physical serial number in the card record and prepare a fresh setup. Connect explicitly after compilation.
+Both exports include the timing and compiled card program. AWG validation inspects the quantized samples. DDS validation checks the hardware command sequence. To run on a bench, install the Spectrum native driver and the optional Python SDK (`uv sync --locked --extra spectrum`). Supply the physical serial number in the card record and prepare a fresh setup. If you also specify `address`, use the device path there, not in `serial_number`.
+
+## Run a shot and release the card
+
+Compiling and exporting do not open the card. For a physical lab, `lab.connect()` opens the card immediately. Keep the `with` block as short as you want the card to be reserved:
 
 ```python
 lab = LabConfig(setup, emulation=False)
 compiled = lab.compile(exp)
 with lab.connect() as session:
+    # run() waits for all shots but keeps the card open.
     receipt = session.run(compiled)
+# The session is now closed. Analyze the receipt here, without holding the card.
 ```
+
+You can run another compatible experiment inside the same block. When the block ends, whether normally or because of an exception, it calls `session.close()` for you. After playback setup, cleanup attempts to stop replay and DMA, disable the outputs and close the device handle. No separate stop command is needed after a successful run.
+
+If you manage the session yourself (for example, in a notebook), use `finally` so an exception cannot skip the close:
+
+```python
+session = lab.connect()
+try:
+    receipt = session.run(compiled)
+finally:
+    session.close()
+```
+
+Calling `close()` again is harmless. To run after closing, open a new session with `lab.connect()`.
+
+### Interrupting a run or finding the process that owns the card
+
+- **Your run is still in progress:** interrupt the Python process that called `run()` (Ctrl+C in its terminal, or **Interrupt Kernel** in a notebook). Once Python handles the interrupt, the cleanup path can run. `close()` from another thread is not an asynchronous stop: it waits for the same session lock as `run()`. An interrupted shot may already have emitted RF.
+- **Another script owns the card:** the SDK can report “not found” even for a present but busy card. On Linux, set `DEVICE` to the configured device node and run `fuser -v "$DEVICE"` or `lsof "$DEVICE"` to look for the owning process. End that script normally in its own terminal or notebook, then reconnect. An open file handle does not establish whether a waveform is being emitted; use a scope to verify the output.
+- **You only want to inspect the card:** in the [plain Python example](../examples/spectrum_standalone_plain.py), `ACTION = "compile"` stays offline (the default), `"check"` opens an available card and prints its identity without playing a shot, and `"run"` plays the experiment. `session.observed` is a snapshot of identity and capabilities, not live playback status. The standalone DSL does not monitor or stop another process's session.
+
+## Verify analog output
 
 For scope acceptance, connect the selected output to a properly terminated scope input and trigger on the first burst. Capture each mode separately. Measure the two 640 ns envelopes and the 1280 ns gap. Fit the carrier phase in each burst against a common time origin, including the dark interval, and check the additional quarter-turn. Record the card serial number, output range, scope timebase and compiled artifact identity with the capture. This bench procedure measures the analog output; an execution receipt records the driver's completion status.

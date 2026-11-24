@@ -100,7 +100,7 @@ def dds_sdk():
 
 
 def shot_input(mode, frequencies=(10, 11)):
-    lab = single_card_lab(mode, serial_number="101", emulation=False)
+    lab = single_card_lab(mode, serial_number="101", address=None, emulation=False)
     pulse = Square(640 * ns, amplitude=0.25)
     return lab, lab.compile(two_pulses(Qubit("q0"), pulse, list(frequencies), shots=2))
 
@@ -150,6 +150,49 @@ def test_repeated_awg_shots_rearm_one_resident_entry(tmp_path, monkeypatch):
     assert len(receipt["completed_shots"]) == 2
     assert sdk.log.count(("card_mode", sdk.SPC_REP_STD_SEQUENCE)) == 1
     assert sdk.log.count(("cmd", sdk.M2CMD_CARD_FORCETRIGGER)) == 2
+
+
+@pytest.mark.parametrize("fail_dma", [False, True])
+def test_awg_setup_never_commits_an_undefined_entry(tmp_path, monkeypatch, fail_dma):
+    monkeypatch.chdir(tmp_path)
+    lab, compiled = shot_input("awg", frequencies=(10,))
+    sdk, card = awg_sdk()
+    write_setup = card.write_setup
+    commits = []
+
+    def checked_setup():
+        mode = next(x[1] for x in reversed(sdk.log) if x[0] == "card_mode")
+        commits.append(mode)
+        if mode == sdk.SPC_REP_STD_SEQUENCE:
+            # The physical card validates step zero even on WRITESETUP without START.
+            assert any(x[0] == "dma" for x in sdk.log)
+            assert any(x[:3] == ("sequence", "step_memory", (0,)) for x in sdk.log)
+            assert ("sequence", "start_step", (0,), {}) in sdk.log
+        else:
+            assert mode == sdk.SPC_REP_STD_SINGLE
+            assert any(x[:2] == ("set_i", sdk.SPC_MEMSIZE) for x in sdk.log)
+            stop = max(i for i, x in enumerate(sdk.log) if x[0] == "stop")
+            assert all(("output", ch, False) in sdk.log[stop:] for ch in (0, 1))
+        write_setup()
+
+    card.write_setup = checked_setup
+    if fail_dma:
+
+        def fail_transfer(card):
+            raise RuntimeError("injected upload failure before step zero")
+
+        sdk.DataTransfer = fail_transfer
+        with pytest.raises(RuntimeError, match="injected upload failure") as caught:
+            with StandaloneSpectrumSession(lab, sdk=sdk) as session:
+                session.run(compiled)
+        assert not getattr(caught.value, "__notes__", [])
+        assert commits == [sdk.SPC_REP_STD_SINGLE]
+        assert not any(x[0] in {"start", "cmd"} for x in sdk.log)
+    else:
+        with StandaloneSpectrumSession(lab, sdk=sdk) as session:
+            assert len(session.run(compiled)["completed_shots"]) == 2
+        assert commits == [sdk.SPC_REP_STD_SEQUENCE, sdk.SPC_REP_STD_SINGLE]
+    assert sdk.log[-1] == ("close",)
 
 
 def test_awg_failure_preserves_partial_receipt_and_stops(tmp_path, monkeypatch):

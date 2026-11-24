@@ -327,6 +327,10 @@ def test_persistent_hold_closed_shots_start_once_and_stop_on_close():
     assert card.log.count("start") == 1
     assert card.log.count("reset") == 1
     assert card.log.count("stop") == 1  # initial configure only
+    prior = card.log.copy()
+    with pytest.raises(SpectrumRuntimeError, match="Close the live DDS session"):
+        adapter.configure_for_calibration(spec)
+    assert card.log == prior  # Recalibration must not interrupt a persistent hold.
     adapter.close()
     assert card.log[-2:] == ["stop", "close"]
 

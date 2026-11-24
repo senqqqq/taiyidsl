@@ -6,7 +6,6 @@ import time
 
 from ...backends.artiq_spectrum.dds import dds_channel_cores
 from ...backends.spectrum.dds import AMPLITUDE_STEP, FREQUENCY_STEP_HZ, PHASE_STEP_DEG
-from .._cleanup import run_cleanup
 from .awg import SegmentCache, SpcmAdapter, SpectrumRuntimeError
 from .dds import _close_number
 
@@ -90,16 +89,19 @@ class StandaloneSpcmCard(SpcmAdapter):
         if trigger.or_mask(0) or trigger.and_mask(0) or trigger.delay(0):
             raise SpectrumRuntimeError("Software trigger mask/delay readback mismatch")
         channels = self._configure_outputs(contract, awg=awg)
-        card.write_setup()
+        if awg:
+            # WRITESETUP validates the entry step, even on a stopped M4i.6631.
+            # upload() commits only after loading segments, steps and start_step(0).
+            self._sequence = sdk.Sequence(card)
+            self.upload(program, SegmentCache().load)
+        else:
+            card.write_setup()
         if (
             clock.mode() != sdk.SPC_CM_INTPLL
             or clock.sample_rate() != contract["sample_rate_hz"]
         ):
             raise SpectrumRuntimeError("Internal PLL/sample rate readback mismatch")
-        if awg:
-            self._sequence = sdk.Sequence(card)
-            self.upload(program, SegmentCache().load)
-        else:
+        if not awg:
             self._upload_dds(channels, program)
             for channel in channels:
                 channel.enable(True)
@@ -212,21 +214,3 @@ class StandaloneSpcmCard(SpcmAdapter):
             terminal_frame_committed, timeout_s, "DDS terminal mute did not execute"
         )
         card.stop()
-
-    def close(self):
-        card = self._card
-        actions = []
-        if card is not None and self._contract is not None:
-            actions.append(("stop single-card playback", self.stop))
-
-            def disable_outputs():
-                for channel in self._sdk.Channels(card, card_enable=3):
-                    channel.enable(False)
-                card.write_setup()
-
-            actions.append(("disable Spectrum outputs", disable_outputs))
-        actions.append(("close Spectrum card", super().close))
-        try:
-            run_cleanup(actions)
-        finally:
-            self._contract = None

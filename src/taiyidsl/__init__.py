@@ -105,6 +105,7 @@ from .dsl.pulses import (
 )
 from .dsl.sections import Section, add, layer, section
 from .dsl.values import SweepParameter
+from .dsl.waveform_csv import load_waveform_csv
 from .ir import CompileError, PhysicalPlan, ScheduledEvent
 from .lab import LabConfig, initialization_lab, reference_lab, reference_setup
 from .native import NativeKernelPackage, NativeModule, NativeProgram, NativeStage
@@ -179,6 +180,7 @@ __all__ = [
     "SampledPulse",
     "PulseLibrary",
     "load_iq_csv",
+    "load_waveform_csv",
     "GaussianSquare",
     "Gaussian",
     "FlatTopGaussian",

@@ -48,6 +48,7 @@ from .values import _signal as _signal
 from .values import resolve as resolve
 from .values import validate_count as validate_count
 from .values import validate_value as validate_value
+from .waveform_csv import load_waveform_csv as load_waveform_csv
 
 __all__ = [
     "SweepParameter",
@@ -59,6 +60,7 @@ __all__ = [
     "SampledPulse",
     "PulseLibrary",
     "load_iq_csv",
+    "load_waveform_csv",
     "Gaussian",
     "GaussianSquare",
     "FlatTopGaussian",

@@ -5,7 +5,7 @@ Import the experiment-authoring API from `taiyidsl`. Importing the library works
 | Task | Interface | Guide |
 | --- | --- | --- |
 | Define an experiment | `Experiment`, `Square`, `FlatTopGaussian`, units, `play`, `delay`, `trig`, `acquire` | [Authoring](experiment_authoring.md) |
-| Define or register a pulse, import CSV or NumPy samples | `Pulse`, `Square`, `Gaussian`, `GaussianSquare`, `SampledPulse`, `load_iq_csv()`, `Pulse.from_array()`, `PulseLibrary` | [Pulse shapes and sample grids](pulse_library.md) |
+| Define or register a pulse, import CSV or NumPy samples | `Pulse`, `Square`, `Gaussian`, `GaussianSquare`, `SampledPulse`, `load_waveform_csv()`, `load_iq_csv()`, `Pulse.from_array()`, `PulseLibrary` | [Pulse shapes and sample grids](pulse_library.md) |
 | Use function-style scopes | `experiment`, `average`, `sweep`, `realtime`, `triggered_sequence` | [Authoring and triggers](authoring_and_triggers.md) |
 | Set physical parameters and wiring | `Qubit`, `Position`, `DeviceSetup`, `LabConfig`, `OpticsConfig` | [Descriptors](device_setup_descriptor.md) |
 | Reuse a sequence | `Section`, `section`, `add`, `layer`, `barrier`, `qubit_operation`, `QubitOperations`, `PairCalibration` | [Sections and operations](sections_and_operations.md) |

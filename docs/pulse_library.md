@@ -100,7 +100,28 @@ compiled = lab.compile(exp)
 
 Each point reuses the same 800 ns envelope. At time `t` seconds from shot start, the requested output is `0.5 * A[n] * cos(2π * f * t + phi[n])` with `f` in hertz. To give the pulse a default carrier, set `frequency` in `Pulse.from_array()`. A frequency supplied to `play()` overrides that default for that play. You can likewise bind a sweep parameter to `amplitude` for an overall gain or to `phase` for an additional phase offset.
 
-## Read a CSV and pad the pulse
+## Explore and crop a waveform CSV
+
+`load_waveform_csv(path)` reads a rectangular CSV into a one-dimensional NumPy structured array. Each row is a record. Use `table.dtype.names` to see all column names, `table["name"]` for a single column, and a slice or a boolean mask to select rows. Columns can contain labels, times, real values, or complex values written as `0.2-0.4j` or `0.2-0.4i`. Values retain their original scale. Row order and repeated time stamps are preserved.
+
+For example, a file can contain several named waveforms with a separate time axis for each:
+
+```python
+from taiyidsl import load_waveform_csv
+
+table = load_waveform_csv("10.2_waveforms.csv")
+print(table.dtype.names)
+shaped = table[table["scheme"] == "pulse_shaped"]
+window = shaped[(shaped["time_us"] >= 4) & (shaped["time_us"] < 8)]
+time_us = window["time_us"]
+iq_khz = window["inphase_khz"] + 1j * window["quadrature_khz"]
+```
+
+The window contains the original rows whose time lies in `[4, 8)` µs. This selection creates no new boundary samples. A real waveform column or an existing complex column can be selected directly, for example `window["voltage"]` or `window["z"]` if those names appear in the file. To play irregular time nodes, choose how to handle jumps and resample to a uniform time grid with a known interval. Convert physical values such as kHz or volts to normalized samples using the scale appropriate to the experiment before calling `Pulse.from_array()`.
+
+The default is UTF-8 (with optional BOM), comma-delimited, with a header of unique nonempty names. For a headerless file, use `header=False` to obtain `col0`, `col1`, etc. Use `delimiter=";"` for a semicolon-separated file, and `text_columns=("id",)` to retain identifiers such as `001` verbatim. Numeric columns with empty cells use NaN. A column mixing numbers and labels retains its text.
+
+## Read a normalized IQ CSV and pad the pulse
 
 Save one uniformly spaced sample per row, with a header. For example, `waveforms/burst.csv` could contain four samples spaced 1 ns apart, with normalized amplitude and phase in degrees.
 

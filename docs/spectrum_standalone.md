@@ -64,7 +64,8 @@ Compiling and exporting do not open the card. For a physical lab, `lab.connect()
 lab = LabConfig(setup, emulation=False)
 compiled = lab.compile(exp)
 with lab.connect() as session:
-    receipt = session.run(compiled)  # Wait for all scheduled shots; the card is still open.
+    # run() waits for all shots but keeps the card open.
+    receipt = session.run(compiled)
 # The session is now closed. Analyze the receipt here, without holding the card.
 ```
 

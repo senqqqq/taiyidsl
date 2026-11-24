@@ -21,6 +21,22 @@ affected examples or guides. Keep `main` usable by the laboratory; instrument
 acceptance remains separate from offline CI. The personal `senqqqq/taiyidsl`
 repository is a synchronized copy, not a separate development line.
 
+### Command-line identity for the personal copy
+
+When working on behalf of `senqqqq` in `senqqqq/taiyidsl`, use that account
+and the requested branch. Use `git` for commits and pushes and the GitHub CLI
+(`gh pr create`) for pull requests; do not use browser automation.
+
+- Before committing, check `git branch --show-current`, `git var GIT_AUTHOR_IDENT`
+  and `git var GIT_COMMITTER_IDENT`. Both identities must belong to `senqqqq`;
+  use repository-local Git settings rather than changing the global identity.
+- Before pushing, check `git remote -v` and the account authenticated for the
+  push URL. For SSH, verify the username in the greeting for that same SSH host,
+  port and key. The name recorded in a commit does not select the SSH account.
+- Before opening a PR, run `gh api user --hostname github.com --jq .login` and
+  confirm it returns `senqqqq`. A browser login does not authenticate `gh`.
+  If the required identity cannot be verified, stop rather than using another account.
+
 ## Development environment
 
 Use uv to manage CPython, the virtual environment, and dependencies. The project

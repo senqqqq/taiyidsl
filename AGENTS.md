@@ -14,6 +14,7 @@ Follow the generated experiment report rules in CONTRIBUTING. Distinguish export
 - Inspect prose and links for documentation edits. Exercise executable examples and documentation generators when their behavior changes. Run Ruff on changed Python files.
 - For shared scheduling, time units, phase, IR or backends, check the affected semantics and targets. Expand coverage when failures or uncertain dependencies warrant it or when preparing a release. Use real ARTIQ compilation for affected generated programs and native call chains. Report checks actually performed.
 - Use `.test-tmp-pytest` for focused checks. Remove temporary directories created for parallel jobs when those checks finish.
+- For Spectrum AWG changes, preserve the [stopped-card sequence commit order](docs/spectrum_awg_sequence.md#when-the-driver-validates-the-start-step) in both standalone and hybrid paths. Exercise incomplete uploads on the SDK double; do not use a live trigger to test setup.
 
 ## Files and evidence
 

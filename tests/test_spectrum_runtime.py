@@ -304,7 +304,7 @@ class FakeSdk:
             "SPC_TMASK_EXT0 SPC_TM_POS COUPLING_DC M2CMD_DATA_STARTDMA "
             "M2CMD_DATA_WAITDMA SPCSEQ_END SPCSEQ_ENDLOOPALWAYS "
             "M2CMD_CARD_ENABLETRIGGER M2CMD_CARD_WAITREADY M2CMD_DATA_STOPDMA "
-            "SPCM_STOPLVL_ZERO"
+            "SPCM_STOPLVL_ZERO SPC_REP_STD_SINGLE SPC_MEMSIZE"
         ).split()
         for index, name in enumerate(names, 10):
             setattr(self, name, index)
@@ -362,9 +362,19 @@ class FakeSdk:
 
     def Sequence(self, card):
         def record(name):
-            return lambda *args, **kwargs: self.log.append(
-                ("sequence", name, args, kwargs)
-            )
+            def call(*args, **kwargs):
+                self.log.append(("sequence", name, args, kwargs))
+                if name == "max_segments":
+                    card.steps.clear()
+                    card.loaded.clear()
+                elif name == "write_segment":
+                    card.segment = args[0]
+                elif name == "step_memory":
+                    card.steps[args[0]] = kwargs["segment_index"]
+                elif name == "start_step":
+                    card.entry = args[0]
+
+            return call
 
         return SimpleNamespace(
             **{
@@ -390,6 +400,7 @@ class FakeSdk:
 
             def start_buffer_transfer(self, *flags):
                 sdk.log.append(("dma", flags, self.buffer.copy()))
+                card.loaded.add(card.segment)
 
         return Transfer()
 
@@ -399,6 +410,10 @@ class FakeCard:
         self.sdk = sdk
         self.state = 4
         self.channel_mask = 0
+        self.mode = sdk.SPC_REP_STD_SEQUENCE  # Unknown prior session; no valid table.
+        self.entry = 0
+        self.steps = {}
+        self.loaded = set()
 
     def open(self):
         self.sdk.log.append(("open",))
@@ -428,10 +443,20 @@ class FakeCard:
         self.sdk.log.append(("stop", flags))
 
     def card_mode(self, value):
+        self.mode = value
         self.sdk.log.append(("card_mode", value))
         return value
 
+    def set_i(self, reg, value):
+        self.sdk.log.append(("set_i", reg, value))
+
     def write_setup(self):
+        if self.mode == self.sdk.SPC_REP_STD_SEQUENCE:
+            if (
+                self.entry not in self.steps
+                or self.steps[self.entry] not in self.loaded
+            ):
+                raise ValueError(f"Sequence check: start step ({self.entry}) not valid")
         self.sdk.log.append(("write_setup",))
 
     def timeout(self, value):
@@ -575,3 +600,113 @@ def test_fingerprint_changes_with_cable_range_and_clock():
         changed = copy.deepcopy(spec)
         changed[key] = value
         assert hardware_fingerprint(changed) != initial
+
+
+def test_hybrid_sequence_commit_staging_and_probe_only_close():
+    sdk = FakeSdk()
+    adapter = SpcmAdapter("101", sdk=sdk)
+    adapter.probe()
+    adapter.close()
+    assert sdk.log == [("open",), ("close",)]
+    adapter.configure(contract())
+    assert ("write_setup",) not in sdk.log
+    assert ("trigger", "or_mask", sdk.SPC_TMASK_EXT0) in sdk.log
+    with pytest.raises(SpectrumRuntimeError, match="Upload a complete"):
+        adapter.arm()
+    adapter.upload(program(contract()), SegmentCache().load)
+    assert sdk.log[-2:] == [("sequence", "start_step", (0,), {}), ("write_setup",)]
+    assert not any(x[0] == "start" for x in sdk.log)
+    adapter.close()
+    assert sdk.card.mode == sdk.SPC_REP_STD_SINGLE
+    assert sdk.log[-4:] == [
+        ("output", 0, False),
+        ("output", 1, False),
+        ("write_setup",),
+        ("close",),
+    ]
+    assert not any(x[0] == "clock_write" for x in sdk.log)
+
+
+@pytest.mark.parametrize("operation", ["replace_bank", "select_entry"])
+def test_failed_upload_or_entry_commit_cannot_arm_stale_bank(monkeypatch, operation):
+    sdk = FakeSdk()
+    adapter = SpcmAdapter("101", sdk=sdk)
+    adapter.configure(contract())
+    data = program(contract())
+    adapter.upload(data, SegmentCache().load)
+
+    def fail(*args):
+        raise OSError("injected bank failure")
+
+    with monkeypatch.context() as m, pytest.raises(IOError, match="bank failure"):
+        if operation == "select_entry":
+            m.setattr(sdk.card, "write_setup", fail)
+            adapter.select_entry(0)
+        else:
+            adapter.upload(data, fail)
+    with pytest.raises(SpectrumRuntimeError, match="Upload a complete"):
+        adapter.arm()
+    with pytest.raises(SpectrumRuntimeError, match="resident entry"):
+        adapter.select_entry(0)
+    adapter.close()
+    assert sdk.card.mode == sdk.SPC_REP_STD_SINGLE
+    assert sdk.log[-1] == ("close",)
+
+
+def test_calibration_rejects_stale_identity_after_failed_clock_commit(monkeypatch):
+    sdk = FakeSdk()
+    adapter = SpcmAdapter("101", sdk=sdk, clock_session_id="old")
+
+    def reject_commit():
+        assert sdk.card.mode == sdk.SPC_REP_STD_SINGLE
+        assert sdk.log[-2:] == [("output", 0, False), ("output", 1, False)]
+        raise OSError("clock commit failed")
+
+    monkeypatch.setattr(sdk.card, "write_setup", reject_commit)
+    with pytest.raises(IOError, match="clock commit failed"):
+        adapter.configure_for_calibration(contract())
+    assert adapter.clock_session_id != "old"
+    assert not any(x[0] == "start" for x in sdk.log)
+
+
+def test_hybrid_cleanup_error_keeps_upload_failure_and_stops_other_card(monkeypatch):
+    log, adapters, manifest = fixture()
+    adapters["b"].failure = "upload"
+
+    def bad_stop():
+        raise OSError("cannot confirm mute")
+
+    monkeypatch.setattr(adapters["b"], "stop", bad_stop)
+    runner = SpectrumRunner(adapters, allow_unverified=True)
+    with pytest.raises(SpectrumRuntimeError, match="upload") as error:
+        runner.run_point(manifest, 0, lambda _: pytest.fail("unexpected ARTIQ launch"))
+    assert any("cannot confirm mute" in note for note in error.value.__notes__)
+    assert ("a", "stop") in log
+
+
+@pytest.mark.parametrize("schema", [1, 2])
+def test_real_adapter_partial_second_upload_never_launches_first(monkeypatch, schema):
+    from test_spectrum_banks import resident_fixture
+
+    _, _, manifest = fixture() if schema == 1 else resident_fixture()
+    sdks = [FakeSdk(), FakeSdk()]
+    adapters = {}
+    for name, serial, sdk in zip(("a", "b"), (101, 102), sdks, strict=True):
+        monkeypatch.setattr(sdk, "Card", lambda *, serial_number, card=sdk.card: card)
+        monkeypatch.setattr(sdk.card, "sn", lambda serial=serial: serial)
+        adapter = SpcmAdapter(str(serial), sdk=sdk)
+        monkeypatch.setattr(adapter, "is_hardware", False)  # Injected SDK only.
+        adapters[name] = adapter
+
+    def fail(*args):
+        raise OSError("second card DMA failed")
+
+    monkeypatch.setattr(sdks[1], "DataTransfer", fail)
+    runner = SpectrumRunner(adapters, allow_unverified=True)
+    with pytest.raises(IOError, match="second card DMA failed") as caught:
+        runner.run_point(manifest, 0, lambda _: pytest.fail("unexpected ARTIQ launch"))
+    assert not getattr(caught.value, "__notes__", [])
+    for sdk in sdks:
+        assert sdk.card.mode == sdk.SPC_REP_STD_SINGLE
+        assert ("output", 0, False) in sdk.log and ("output", 1, False) in sdk.log
+        assert not any(x[0] == "start" for x in sdk.log)

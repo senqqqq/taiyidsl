@@ -25,6 +25,7 @@ from ...sample_assets import expand_sample_manifest
 from ...spectrum_identity import _canonical
 from ...spectrum_identity import calibration_fingerprint as calibration_fingerprint
 from ...spectrum_identity import hardware_fingerprint as hardware_fingerprint
+from .._cleanup import run_cleanup
 
 
 class SpectrumRuntimeError(RuntimeError):
@@ -358,13 +359,12 @@ class SpectrumRunner:
             receipt["status"] = "complete"
             receipt["artiq_result"] = result
             return receipt
-        except BaseException:
-            for adapter in reversed(touched):
-                try:
-                    adapter.stop()
-                except Exception:
-                    pass  # Preserve the triggering exception while stopping all cards.
-            self.abort()
+        except BaseException as error:
+            run_cleanup(
+                [("stop touched card", adapter.stop) for adapter in reversed(touched)]
+                + [("abort Spectrum group", self.abort)],
+                primary_error=error,
+            )
             raise
 
     def invalidate(self, *, preserve_dds=False):
@@ -377,11 +377,9 @@ class SpectrumRunner:
             self._persistent_cards.clear()
         self._resident_key = None
         self._resident_cards = []
-        for name in reversed(names):
-            try:
-                self.adapters[name].stop()
-            except Exception:
-                pass
+        run_cleanup(
+            [(f"stop {name}", self.adapters[name].stop) for name in reversed(names)]
+        )
 
     def abort(self):
         """Stop a failed run and invalidate the planned atom state."""
@@ -409,8 +407,8 @@ class SpectrumRunner:
         """Preflight all cards before upload, leaving them stopped and resident."""
         try:
             return self._load_bank(manifest, bank)
-        except BaseException:
-            self.abort()
+        except BaseException as error:
+            run_cleanup([("abort Spectrum group", self.abort)], primary_error=error)
             raise
 
     def _load_bank(self, manifest, bank):
@@ -469,20 +467,16 @@ class SpectrumRunner:
                     name, item["contract"], observed, adapter, profile, item["program"]
                 )
         self.invalidate(preserve_dds=True)
-        try:
-            for name, (item, _) in cards.items():
-                if item["contract"].get("mode", "awg") == "dds":
-                    # DDS bank entries are submitted one shot at a time while
-                    # the controller keeps its previous nonzero hold output.
-                    continue
-                self._resident_cards.append(name)
-                self.adapters[name].configure(item["contract"])
-                self.adapters[name].upload(item["program"], self.cache.load)
-            self._resident_key = key
-            return True
-        except BaseException:
-            self.abort()
-            raise
+        for name, (item, _) in cards.items():
+            if item["contract"].get("mode", "awg") == "dds":
+                # DDS bank entries are submitted one shot at a time while
+                # the controller keeps its previous nonzero hold output.
+                continue
+            self._resident_cards.append(name)
+            self.adapters[name].configure(item["contract"])
+            self.adapters[name].upload(item["program"], self.cache.load)
+        self._resident_key = key
+        return True
 
     def run_resident_point(self, manifest, point, artiq_runner):
         """Select one finite entry and re-arm it, without repeating resident DMA."""
@@ -574,8 +568,8 @@ class SpectrumRunner:
                 receipt["dds_output"] = "continuous_until_session_close"
             receipt["status"] = "complete"
             return receipt
-        except BaseException:
-            self.abort()
+        except BaseException as error:
+            run_cleanup([("abort Spectrum group", self.abort)], primary_error=error)
             raise
 
 
@@ -659,20 +653,40 @@ class SpcmAdapter:
         This operates hardware; it is never called implicitly by the runner.
         Collect a new measured calibration before attempting a normal run.
         """
+        if self._contract is not None and self._contract.get("mode") == "dds":
+            raise SpectrumRuntimeError(
+                "Close the live DDS session before recalibration"
+            )
         card, sdk = self._open(), self._sdk
-        card.stop()
-        card.timeout(10_000)
-        clock = sdk.Clock(card)
-        clock.mode(sdk.SPC_CM_EXTREFCLOCK)
-        clock.reference_clock(contract.get("reference_clock_hz", 125_000_000))
-        clock.sample_rate(contract["sample_rate_hz"])
-        card.write_setup()
+        # Once a clock change is attempted the old calibration cannot be trusted,
+        # even if a later write/readback fails. Never commit an inherited step table.
         self.clock_session_id = uuid.uuid4().hex
+        self._uploaded = False
+        self._sequence = None
+        try:
+            card.stop()
+            self._armed = False
+            card.timeout(10_000)
+            self._stage_stopped_single()
+            clock = sdk.Clock(card)
+            clock.mode(sdk.SPC_CM_EXTREFCLOCK)
+            clock.reference_clock(contract.get("reference_clock_hz", 125_000_000))
+            clock.sample_rate(contract["sample_rate_hz"])
+            self._commit_muted_outputs()
+        except BaseException as error:
+            # No program exists yet, even when this is a fresh DDS calibration.
+            run_cleanup(
+                [("release clock setup", lambda: self._stop_and_mute(awg=True))],
+                primary_error=error,
+            )
+            raise
         self.configure(contract)
         return self.probe()
 
     def configure(self, contract):
         card, sdk = self._open(), self._sdk
+        self._uploaded = False
+        self._sequence = None
         observed = self.probe()
         for key in ("sample_rate_hz", "reference_clock_hz"):
             if observed[key] != contract.get(key, 125_000_000):
@@ -681,7 +695,10 @@ class SpcmAdapter:
                 )
         if observed["clock_mode"] != "external_reference":
             raise SpectrumRuntimeError("External reference is not configured")
+        # Take ownership before the first mutation, including a partial setup.
+        self._contract = copy.deepcopy(contract)
         card.stop()
+        self._armed = False
         card.timeout(10_000)
         if card.card_mode(sdk.SPC_REP_STD_SEQUENCE) != sdk.SPC_REP_STD_SEQUENCE:
             raise SpectrumRuntimeError("Device did not enter static sequence mode")
@@ -700,10 +717,9 @@ class SpcmAdapter:
         for setting, expected in trigger_settings:
             if getattr(trigger, setting)(expected) != expected:
                 raise SpectrumRuntimeError(f"Trigger {setting} readback mismatch")
-        card.write_setup()
+        # Stage only. Even while stopped, WRITESETUP validates the entry step.
+        # upload() commits after DMA, the entire step table and start_step(0).
         self._sequence = sdk.Sequence(card)
-        self._contract = copy.deepcopy(contract)
-        self._uploaded = self._armed = False
 
     def _configure_outputs(self, contract, *, awg=True):
         card, sdk = self._card, self._sdk
@@ -737,6 +753,8 @@ class SpcmAdapter:
     def upload(self, program, segment_loader):
         if self._sequence is None or self._armed:
             raise SpectrumRuntimeError("Configure a stopped card before uploading")
+        # Repartitioning destroys the old bank. A failed replacement is not armable.
+        self._uploaded = False
         sdk, card, sequence = self._sdk, self._card, self._sequence
         sequence.max_segments(program["memory"]["segment_slots"])
         segment_indices = {}
@@ -771,8 +789,10 @@ class SpcmAdapter:
             raise SpectrumRuntimeError("Select a resident entry on a stopped card")
         if type(step) is not int or step not in self._entries:
             raise SpectrumRuntimeError("Unknown resident Spectrum entry")
+        self._uploaded = False
         self._sequence.start_step(step)
         self._card.write_setup()
+        self._uploaded = True
 
     def arm(self):
         if not self._uploaded or self._armed:
@@ -803,14 +823,50 @@ class SpcmAdapter:
             )
         self._armed = False
 
-    def stop(self):
-        if self._card is not None:
-            self._card.stop(self._sdk.M2CMD_DATA_STOPDMA)
-        self._armed = False
+    def _stage_stopped_single(self):
+        # A clock/mute-only commit must not validate an old or partial sequence.
+        # The single-replay length is legal on this model. Never start this mode.
+        sdk, card = self._sdk, self._card
+        if card.card_mode(sdk.SPC_REP_STD_SINGLE) != sdk.SPC_REP_STD_SINGLE:
+            raise SpectrumRuntimeError(
+                "Device did not enter stopped single-replay mode"
+            )
+        card.set_i(sdk.SPC_MEMSIZE, 4096)
 
-    def close(self):
-        if self._card is not None:
-            self._card.close()
-        self._card = None
+    def _commit_muted_outputs(self):
+        for channel in self._sdk.Channels(self._card, card_enable=3):
+            channel.enable(False)
+        self._card.write_setup()
+
+    def stop(self):
         self._sequence = None
         self._armed = self._uploaded = False
+        if self._card is None or self._contract is None:
+            return  # Probe-only sessions own no playback setup.
+        self._stop_and_mute(awg=self._contract.get("mode", "awg") == "awg")
+        self._contract = None
+
+    def _stop_and_mute(self, *, awg):
+        actions = [
+            (
+                "stop Spectrum replay/DMA",
+                lambda: self._card.stop(self._sdk.M2CMD_DATA_STOPDMA),
+            )
+        ]
+        if awg:
+            actions.append(("leave AWG sequence mode", self._stage_stopped_single))
+        actions.append(("disable Spectrum outputs", self._commit_muted_outputs))
+        run_cleanup(actions)
+
+    def close(self):
+        try:
+            if self._card is not None:
+                run_cleanup(
+                    [
+                        ("release Spectrum setup", self.stop),
+                        ("close Spectrum card", self._card.close),
+                    ]
+                )
+        finally:
+            self._card = self._sequence = self._contract = None
+            self._armed = self._uploaded = False

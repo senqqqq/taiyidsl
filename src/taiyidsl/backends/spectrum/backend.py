@@ -113,7 +113,7 @@ class _ShotScheduler(SpectrumPlaybackScheduler):
 
 class SpectrumBackend(Backend):
     name = "spectrum"
-    version = "2"
+    version = "3"
     target = "Single software-started M4i.6631-x8, AWG sequence or DDS20"
     phase_policy = "shot_relative_to_card_playback_start"
     capabilities = _Capabilities(

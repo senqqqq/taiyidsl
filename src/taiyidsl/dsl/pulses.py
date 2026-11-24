@@ -24,6 +24,9 @@ class Pulse:
         sample_interval,
         kind,
         resample="strict",
+        pad_before=None,
+        pad_after=None,
+        pad_both=None,
         amplitude=None,
         frequency=_UNSET,
         phase=_UNSET,
@@ -35,7 +38,13 @@ class Pulse:
         The last sample occupies one full sample interval. Strict playback uses
         the declared grid. Linear interpolation must be selected explicitly.
         Envelope and IQ samples use the drive's carrier and phase controls.
+        pad_before and pad_after reserve zero-output time around the samples.
+        Supply pad_both alone to use the same duration on each side.
         """
+        if pad_both is not None:
+            if pad_before is not None or pad_after is not None:
+                raise ValueError("Use pad_both alone or use pad_before and pad_after")
+            pad_before = pad_after = pad_both
         if kind not in ("envelope", "iq", "waveform"):
             raise ValueError("Sample kind must be envelope, iq or waveform")
         if kind == "waveform" and (frequency is not _UNSET or phase is not _UNSET):
@@ -62,6 +71,8 @@ class Pulse:
             sample_interval=sample_interval,
             kind=kind,
             resample=resample,
+            pad_before=0 if pad_before is None else pad_before,
+            pad_after=0 if pad_after is None else pad_after,
             amplitude=amplitude,
             frequency=None if frequency is _UNSET else frequency,
             phase=0 if phase is _UNSET else phase,
@@ -214,6 +225,8 @@ class SampledPulse(Pulse):
     sample_interval: Quantity
     kind: str
     resample: str = "strict"
+    pad_before: Quantity = 0 * ns
+    pad_after: Quantity = 0 * ns
     amplitude: object = None
     phase: object = 0
     frequency: object = None
@@ -231,6 +244,14 @@ class SampledPulse(Pulse):
         if interval <= 0:
             raise ValueError("sample_interval must be a positive static time")
         object.__setattr__(self, "sample_interval", Quantity(interval, "time"))
+        for name in ("pad_before", "pad_after"):
+            value = getattr(self, name)
+            if isinstance(value, SweepParameter):
+                raise TypeError(f"{name} must be a static time")
+            seconds = as_fraction(value, "time")
+            if seconds < 0:
+                raise ValueError(f"{name} must be nonnegative")
+            object.__setattr__(self, name, Quantity(seconds, "time"))
         if self.kind == "waveform":
             if (
                 self.frequency not in (None, 0)
@@ -258,7 +279,9 @@ class SampledPulse(Pulse):
 
     @property
     def duration(self):
-        return self.sample_interval * self.sample_count
+        return (
+            self.pad_before + self.sample_interval * self.sample_count + self.pad_after
+        )
 
     @property
     def samples(self):

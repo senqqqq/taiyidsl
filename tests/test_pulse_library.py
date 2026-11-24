@@ -16,11 +16,13 @@ from taiyidsl import (
     Gaussian,
     GaussianSquare,
     HalfSinePhase,
+    MHz,
     Pulse,
     PulseLibrary,
     Qubit,
     SampledPulse,
     Square,
+    SweepParameter,
     ns,
     play,
     us,
@@ -123,10 +125,60 @@ def test_iq_snapshot_and_controls():
     assert json_value(pulse)["phase_modulation"]["kind"] == "half_sine"
 
 
+@pytest.mark.parametrize("kind", ["envelope", "iq", "waveform"])
+def test_static_padding_extends_exact_duration_and_preserves_source_asset(kind):
+    options = {"sample_interval": 0.8 * ns, "kind": kind}
+    original = Pulse.from_array([0.25, -0.5, 1], **options)
+    padded = Pulse.from_array(
+        original.samples, **options, pad_before=ns / 3, pad_after=2e-9
+    )
+    assert padded.pad_before == ns / 3
+    assert padded.pad_after == 2 * ns
+    assert padded.duration == Fraction(71, 15) * ns
+    assert padded.sample_count == original.sample_count
+    assert padded.sample_asset() == original.sample_asset()
+    assert padded.sample_digest == original.sample_digest
+    ir = json.loads(json.dumps(json_value(padded)))
+    assert ir.pop("pad_before_s") == {"numerator": 1, "denominator": 3_000_000_000}
+    assert ir.pop("pad_after_s") == {"numerator": 1, "denominator": 500_000_000}
+    assert ir == json_value(original)
+    trailing = replace(padded, pad_before=0)
+    assert trailing.samples.base is padded.samples.base
+    assert "pad_before_s" not in json_value(trailing)
+    assert json_value(replace(trailing, pad_after=0)) == json_value(original)
+
+
+@pytest.mark.parametrize("name", ["pad_before", "pad_after"])
+@pytest.mark.parametrize(
+    ("value", "error"),
+    [
+        (-0.1 * ns, ValueError),
+        (1 * MHz, ValueError),
+        (float("nan"), ValueError),
+        (True, TypeError),
+        (SweepParameter("padding", [0, 1], "ns"), TypeError),
+    ],
+)
+def test_invalid_padding_rejected_at_construction(name, value, error):
+    with pytest.raises(error):
+        Pulse.from_array([0], kind="envelope", sample_interval=ns, **{name: value})
+
+
 def test_unit_iq_phasors_retain_their_original_components():
     source = np.exp(1j * np.linspace(0, 2 * np.pi, 513))
     pulse = Pulse.from_array(source, sample_interval=ns, kind="iq")
     np.testing.assert_array_equal(pulse.samples, source)
+
+
+def test_symmetric_padding_is_a_duration_per_side():
+    options = {"kind": "waveform", "sample_interval": ns}
+    symmetric = Pulse.from_array([0.25], pad_both=1 * us, **options)
+    explicit = Pulse.from_array([0.25], pad_before=us, pad_after=us, **options)
+    assert symmetric == explicit
+    assert symmetric.duration == 2001 * ns
+    for side in ("pad_before", "pad_after"):
+        with pytest.raises(ValueError, match="pad_both"):
+            Pulse.from_array([0.25], pad_both=us, **{side: 0}, **options)
 
 
 @pytest.mark.parametrize(

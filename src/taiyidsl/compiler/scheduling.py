@@ -591,6 +591,13 @@ class Scheduler:
                         "resample": pulse.resample,
                     },
                 }
+                for name in ("pad_before", "pad_after"):
+                    pad = as_fraction(getattr(pulse, name), "time")
+                    if pad:
+                        waveform["sampled"][f"{name}_s"] = {
+                            "numerator": pad.numerator,
+                            "denominator": pad.denominator,
+                        }
                 if pulse.kind == "waveform":
                     # Raw samples already represent the complete output voltage.
                     defaults = None

@@ -48,6 +48,10 @@ def validate_sampled_route(node, sample_rate_hz):
         raise CompileError(
             f"Sampled pulse duration is off the AWG grid at {node.source}"
         )
+    for name in ("pad_before", "pad_after"):
+        pad = as_fraction(getattr(pulse, name), "time") * rate
+        if pad.denominator != 1:
+            raise CompileError(f"{name} is off the AWG sample grid at {node.source}")
 
 
 class SpectrumPlaybackScheduler(Scheduler):

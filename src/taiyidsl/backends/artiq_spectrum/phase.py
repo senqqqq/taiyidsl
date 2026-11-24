@@ -119,12 +119,15 @@ class OutputPhaseState:
         phase_scale,
         modulation,
         modulation_mode="local",
+        modulation_duration_ticks=None,
     ):
         """Return start phase and provenance; update once at the logical end.
 
         Call only for a nonzero pulse, before waveform tiling or calibration
         shifts. A carry transfers m(1), including a nonzero entrance jump m(0),
         while pulse.phase remains local. Idle holds the last physical frequency.
+        A padded pulse advances its carrier for its entire duration and its
+        modulation only during the unpadded source interval.
         """
         if duration_ticks <= 0 or start_ticks < self.last_end_ticks:
             raise CompileError(
@@ -147,8 +150,13 @@ class OutputPhaseState:
         end_cycles = (
             start_cycles + Fraction(str(frequency_hz)) * duration_ticks * self.tick
         ) % 1
+        active_ticks = (
+            duration_ticks
+            if modulation_duration_ticks is None
+            else modulation_duration_ticks
+        )
         details = modulation_characteristics(
-            modulation, float(duration_ticks * self.tick), frequency_hz, phase_scale
+            modulation, float(active_ticks * self.tick), frequency_hz, phase_scale
         )
         inherited = self.modulation_phase_rad
         terminal = inherited

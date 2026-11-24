@@ -63,7 +63,7 @@ def native_event(event, factor):
 
 class ArtiqSpectrumBackend(Backend):
     name = "artiq_spectrum"
-    version = "5"
+    version = "6"
     target = "ARTIQ 9 master / M4i.6631-x8 AWG sequence and DDS20 transport"
     phase_policy = (
         "unified_frame_with_sequence_or_shot_carrier_reference_and_explicit_reset"
@@ -316,7 +316,15 @@ def _validate_raw_controls(event, binding, phase_correction, state, members):
 
 
 def _pulse_phase(
-    event, binding, state, frequency, correction, device, card, diagnostics
+    event,
+    binding,
+    state,
+    frequency,
+    correction,
+    device,
+    card,
+    diagnostics,
+    modulation_duration_mu,
 ):
     params = event.params
     phase_evolution = state.pulse(
@@ -326,6 +334,7 @@ def _pulse_phase(
         phase_scale=binding.phase_scale,
         modulation=params.get("phase_modulation"),
         modulation_mode=params.get("phase_modulation_mode", "local"),
+        modulation_duration_ticks=modulation_duration_mu,
     )
     if "sampled" in params:
         phase_evolution["frequency_check_scope"] = (
@@ -440,6 +449,16 @@ def resolve_card_pulses(
             if start_sample < 0:
                 raise CompileError("Channel delay correction exceeds trigger pre-roll")
             duration = _exact_integer(Fraction(event.duration_mu, 4), event.source)
+            envelope = dict(params.get("sampled", {"kind": "square"}))
+            active_samples = duration
+            for name in ("pad_before", "pad_after"):
+                pad = envelope.pop(f"{name}_s", None)
+                if pad is not None:
+                    count = _exact_integer(
+                        Fraction(**pad) * Fraction(str(card.sample_rate_hz)), name
+                    )
+                    envelope[f"{name}_samples"] = count
+                    active_samples -= count
             device = setup.devices[binding.device]
             raw = params.get("sampled", {}).get("interpretation") == "waveform"
             if not raw and (
@@ -466,8 +485,8 @@ def resolve_card_pulses(
                     device,
                     card,
                     diagnostics,
+                    active_samples * 4,
                 )
-            envelope = params.get("sampled", {"kind": "square"})
             if params.get("shape") == "flat_top_gaussian":
                 if Fraction(str(params["sample_interval_s"])) != Fraction(
                     1, card.sample_rate_hz

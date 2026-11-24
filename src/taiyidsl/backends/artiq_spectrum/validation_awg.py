@@ -5,6 +5,7 @@ Replay/materialization is shared; expected samples are evaluated independently.
 
 import hashlib
 import math
+from fractions import Fraction
 
 import numpy as np
 
@@ -31,18 +32,34 @@ def _expected_window(pulses, channels, rate, start, stop, decoded):
     _check_sample_workspace(stop - start, len(channels))
     expected = np.zeros((stop - start, len(channels)), dtype=np.float64)
     for pulse in pulses:
-        a = max(start, pulse["start_sample"])
-        b = min(stop, pulse["start_sample"] + pulse["duration_samples"])
+        env = pulse["envelope"]
+        first = pulse["start_sample"] + env.get("pad_before_samples", 0)
+        end = (
+            pulse["start_sample"]
+            + pulse["duration_samples"]
+            - env.get("pad_after_samples", 0)
+        )
+        a = max(start, first)
+        b = min(stop, end)
         if a >= b:
             continue
         n = np.arange(a - pulse["start_sample"], b - pulse["start_sample"], dtype=float)
         duration = pulse["duration_samples"]
-        angle = pulse["phase_rad"] + 2 * math.pi * (
-            (n * pulse["frequency_hz"] / rate) % 1
-        )
+        before = env.get("pad_before_samples", 0)
+        omega = pulse["frequency_hz"]
+        if before:
+            # Anchor this window at its exact carrier cycle before advancing
+            # through the requested DAC samples, independent of fragment layout.
+            at_window = (
+                Fraction(str(omega)) * (a - pulse["start_sample"]) / Fraction(str(rate))
+            )
+            cycles = float(at_window % 1) + np.arange(b - a) * omega / rate
+        else:
+            cycles = n * omega / rate
+        angle = pulse["phase_rad"] + 2 * math.pi * (cycles % 1)
         modulation = pulse.get("phase_modulation")
         if modulation:
-            x = n / duration
+            x = np.arange(a - first, b - first, dtype=float) / (end - first)
             if modulation["kind"] == "half_sine":
                 pm = modulation["amplitude"] * np.sin(math.pi * x)
             else:
@@ -52,7 +69,6 @@ def _expected_window(pulses, channels, rate, start, stop, decoded):
             angle += pulse["phase_scale"] * pm
         for step in pulse.get("phase_steps", []):
             angle[n >= step["sample"]] += step["delta_rad"]
-        env = pulse["envelope"]
         amp = np.full(len(n), pulse["amplitude"])
         if env["kind"] == "flat_top_gaussian":
             edge = env["cutoff_sigma"] * env["sigma_samples"]
@@ -72,7 +88,9 @@ def _expected_window(pulses, channels, rate, start, stop, decoded):
             source = decoded[env["sample_digest"]]
             # Evaluate the source at actual DAC times independently of the
             # segment renderer's integer quotient/remainder implementation.
-            position = n * (len(source) / duration)
+            position = np.arange(a - first, b - first, dtype=float) * (
+                len(source) / (end - first)
+            )
             left = np.minimum(position.astype(np.int64), len(source) - 1)
             right = np.minimum(left + 1, len(source) - 1)
             fraction = position - left
@@ -159,8 +177,16 @@ def validate_program(program, *, expected_pulses=None, chunk_samples=500000):
         if not np.any(packed):
             windows = [
                 (
-                    max(left, p["start_sample"]),
-                    min(right, p["start_sample"] + p["duration_samples"]),
+                    max(
+                        left,
+                        p["start_sample"] + p["envelope"].get("pad_before_samples", 0),
+                    ),
+                    min(
+                        right,
+                        p["start_sample"]
+                        + p["duration_samples"]
+                        - p["envelope"].get("pad_after_samples", 0),
+                    ),
                 )
                 for p in targets
                 if p["amplitude"] != 0

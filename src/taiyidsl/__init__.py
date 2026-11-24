@@ -91,6 +91,7 @@ from .dsl.operations import (
     ramsey_body,
     rb_body,
 )
+from .dsl.pulse_io import load_iq_csv
 from .dsl.pulses import (
     FlatTopGaussian,
     Gaussian,
@@ -104,6 +105,7 @@ from .dsl.pulses import (
 )
 from .dsl.sections import Section, add, layer, section
 from .dsl.values import SweepParameter
+from .dsl.waveform_csv import load_waveform_csv
 from .ir import CompileError, PhysicalPlan, ScheduledEvent
 from .lab import LabConfig, initialization_lab, reference_lab, reference_setup
 from .native import NativeKernelPackage, NativeModule, NativeProgram, NativeStage
@@ -177,6 +179,8 @@ __all__ = [
     "Pulse",
     "SampledPulse",
     "PulseLibrary",
+    "load_iq_csv",
+    "load_waveform_csv",
     "GaussianSquare",
     "Gaussian",
     "FlatTopGaussian",

@@ -16,6 +16,7 @@ from taiyidsl import (
     Pulse,
     Qubit,
     SweepParameter,
+    load_iq_csv,
     ns,
     play,
 )
@@ -26,6 +27,41 @@ from taiyidsl.sample_assets import expand_sample_manifest
 
 SAMPLES = [0.125, -0.625, 0.25, 0.875, -0.75, -0.125, 0.625, 0.375]
 AMPLITUDES = (0.25, 0.75)
+
+
+def test_exported_padded_iq_replays_without_source_csv(tmp_path):
+    path = tmp_path / "drive.csv"
+    path.write_text("A,phi\n0.5,0\n0.5,90\n0.5,180\n0.5,270\n", encoding="utf-8")
+    pulse = Pulse.from_array(
+        load_iq_csv(path, phase_unit="deg"),
+        kind="iq",
+        sample_interval=ns,
+        resample="linear",
+        pad_before=1.6 * ns,
+        pad_after=2.4 * ns,
+    )
+    path.unlink()
+    q = Qubit("q")
+    exp = Experiment("padded_csv", [q])
+    frequency = SweepParameter("carrier", [25, 50], unit="MHz")
+    with exp.average(1), exp.sweep(frequency), exp.realtime():
+        with exp.repeat(2):
+            play(q.rf, pulse, amplitude=1, frequency=frequency)
+
+    files = card_lab().compile(exp).export(tmp_path / "export")
+    manifest = expand_sample_manifest(load_single_source(files["manifest"], pulse))
+    # Linear interpolation of four quarter-turn phasors on the active 0.8 ns grid.
+    envelope = np.array([0.5, 0.1 + 0.4j, -0.3 + 0.2j, -0.3 - 0.2j, -0.5j])
+    for point, hz in zip(manifest["points"], [25e6, 50e6], strict=True):
+        expected = np.zeros(20)
+        for first in [2, 12]:
+            times = np.arange(first, first + 5) * 0.8e-9
+            expected[first : first + 5] = (
+                envelope * np.exp(2j * np.pi * hz * times)
+            ).real
+        np.testing.assert_array_equal(
+            reconstruct_window(point["program"], 0, 20)[:, 0], np.rint(32767 * expected)
+        )
 
 
 def sampled_scan(hybrid=False):

@@ -1,10 +1,9 @@
 """Finite, resident Spectrum AWG programs, without instrument access.
 
 The JSON representation contains recipes and content-addressed sampled inputs.
-``phase_rad`` is
-the resolved carrier phase at the pulse's first sample; calibration prefixes
-therefore do not enter the carrier calculation here. Samples cover [0, N), and
-local modulation uses u = n/N. Polynomial coefficients are in ascending order.
+``phase_rad`` is the resolved carrier phase at the scheduled pulse start.
+The carrier evolves through optional zero padding. Local modulation uses
+u = n/N across the active samples. Polynomial coefficients are in ascending order.
 The real RF carrier convention is amplitude * envelope * cos(phase).
 All arrays have shape (samples, active_channels), little-endian int16, C order.
 """
@@ -171,7 +170,9 @@ def _check_sampled(pulse, card, decoded):
         raise CompileError("Unsupported Spectrum resampling policy")
     if env["resample"] == "strict" and ratio != 1:
         raise CompileError("Sampled pulse interval differs from the AWG sample grid")
-    if count * ratio != pulse["duration_samples"]:
+    before = _integer(env.get("pad_before_samples", 0), "leading pad")
+    after = _integer(env.get("pad_after_samples", 0), "trailing pad")
+    if before + count * ratio + after != pulse["duration_samples"]:
         raise CompileError("Sampled pulse duration differs from its source samples")
     if kind == "waveform" and (
         pulse["frequency_hz"]
@@ -204,6 +205,11 @@ def _pulses(pulses, card, duration, decoded=None):
             raise CompileError("Spectrum amplitude would clip")
         p["phase_scale"] = _finite(p.get("phase_scale", 1), "phase_scale")
         env = p.get("envelope", {"kind": "square"})
+        if (
+            env["kind"] != "sampled"
+            and {"pad_before_samples", "pad_after_samples"} & env.keys()
+        ):
+            raise CompileError("Spectrum sample padding requires a sampled envelope")
         if env["kind"] == "flat_top_gaussian":
             sigma = _finite(env["sigma_samples"], "sigma_samples")
             cutoff = _finite(env["cutoff_sigma"], "cutoff_sigma")
@@ -267,15 +273,12 @@ def _pulses(pulses, card, duration, decoded=None):
     return result
 
 
-def _sampled_values(pulse, n, decoded):
-    env = pulse["envelope"]
-    source = decoded[env["sample_digest"]]
+def _sampled_values(source, n, duration):
     start = int(n[0])
-    if len(source) == pulse["duration_samples"]:
+    if len(source) == duration:
         return source[start : start + len(n)]
     # Anchor each fragment to the original pulse. Integer division fixes the
     # first source index even when a late tile follows a very long idle span.
-    duration = pulse["duration_samples"]
     first, remainder = divmod(start * len(source), duration)
     offsets = np.arange(len(n), dtype=np.int64) * len(source) + remainder
     lower, weight = np.divmod(offsets, duration)
@@ -286,13 +289,28 @@ def _sampled_values(pulse, n, decoded):
 
 def _pulse_values(p, n, rate, decoded):
     env = p["envelope"]
+    duration = p["duration_samples"]
+    carrier_index = n
+    initial_phase = p["phase_rad"]
     if env["kind"] == "sampled":
-        samples = _sampled_values(p, n, decoded)
+        before = env.get("pad_before_samples", 0)
+        active = duration - before - env.get("pad_after_samples", 0)
+        sample_index = n - before
+        if sample_index[0] < 0 or sample_index[-1] >= active:
+            raise CompileError("Spectrum fragment extends into sampled pulse padding")
+        samples = _sampled_values(decoded[env["sample_digest"]], sample_index, active)
         if env["interpretation"] == "waveform":
             return p["amplitude"] * samples
-    u = n / p["duration_samples"]
-    phase = p["phase_rad"] + 2 * np.pi * np.remainder(
-        n * (p["frequency_hz"] / rate), 1.0
+        u = sample_index / active
+        if before:
+            # Preserve sub-cycle phase even after a long resident zero segment.
+            cycles = before * Fraction(str(p["frequency_hz"])) / Fraction(str(rate))
+            initial_phase += 2 * math.pi * float(cycles % 1)
+            carrier_index = sample_index
+    else:
+        u = n / duration
+    phase = initial_phase + 2 * np.pi * np.remainder(
+        carrier_index * (p["frequency_hz"] / rate), 1.0
     )
     mod = p.get("phase_modulation")
     if mod:
@@ -453,14 +471,27 @@ def build_card_program(
                     "Source and minimum segment exceed managed sample work budget"
                 )
     by_hash = {}
+    active_intervals = sorted(
+        (
+            (
+                p["start_sample"] + p["envelope"].get("pad_before_samples", 0),
+                p["start_sample"]
+                + p["duration_samples"]
+                - p["envelope"].get("pad_after_samples", 0),
+                p,
+            )
+            for p in targets
+        ),
+        key=lambda window: window[0],
+    )
 
     def emit(start, count, loops=1, zero=False):
         recipe = {"kind": "zero"}
         if not zero:
             fragments = []
-            for p in targets:
-                left = max(start, p["start_sample"])
-                right = min(start + count, p["start_sample"] + p["duration_samples"])
+            for active_start, active_end, p in active_intervals:
+                left = max(start, active_start)
+                right = min(start + count, active_end)
                 if right > left:
                     fragments.append(
                         dict(
@@ -529,11 +560,11 @@ def build_card_program(
                 start += count
 
     ranges = []
-    for p in targets:
+    for active_start, active_end, p in active_intervals:
         if p["amplitude"] == 0:
             continue
-        start = p["start_sample"] // _ALIGNMENT * _ALIGNMENT
-        end = p["start_sample"] + p["duration_samples"] + _ALIGNMENT - 1
+        start = active_start // _ALIGNMENT * _ALIGNMENT
+        end = active_end + _ALIGNMENT - 1
         end = end // _ALIGNMENT * _ALIGNMENT
         end = min(physical, max(end, start + minimum))
         start = min(start, end - minimum)

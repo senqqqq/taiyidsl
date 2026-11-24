@@ -91,6 +91,7 @@ from .dsl.operations import (
     ramsey_body,
     rb_body,
 )
+from .dsl.pulse_io import load_iq_csv
 from .dsl.pulses import (
     FlatTopGaussian,
     Gaussian,
@@ -177,6 +178,7 @@ __all__ = [
     "Pulse",
     "SampledPulse",
     "PulseLibrary",
+    "load_iq_csv",
     "GaussianSquare",
     "Gaussian",
     "FlatTopGaussian",

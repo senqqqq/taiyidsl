@@ -53,6 +53,13 @@ def json_value(value):
             "frequency": json_value(value.frequency),
             "phase": json_value(value.phase),
         }
+        for name in ("pad_before", "pad_after"):
+            seconds = getattr(value, name).value
+            if seconds:
+                result[f"{name}_s"] = {
+                    "numerator": seconds.numerator,
+                    "denominator": seconds.denominator,
+                }
         if value.phase_modulation is not None:
             result["phase_modulation"] = json_value(value.phase_modulation)
         if value.phase_modulation_mode != "local":

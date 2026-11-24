@@ -30,6 +30,7 @@ from .instructions import strict_timing as strict_timing
 from .instructions import trig as trig
 from .instructions import trigplay as trigplay
 from .nodes import Node as Node
+from .pulse_io import load_iq_csv as load_iq_csv
 from .pulses import FlatTopGaussian as FlatTopGaussian
 from .pulses import Gaussian as Gaussian
 from .pulses import GaussianSquare as GaussianSquare
@@ -57,6 +58,7 @@ __all__ = [
     "Pulse",
     "SampledPulse",
     "PulseLibrary",
+    "load_iq_csv",
     "Gaussian",
     "GaussianSquare",
     "FlatTopGaussian",

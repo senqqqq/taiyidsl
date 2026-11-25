@@ -154,6 +154,8 @@ For both cases B used two zero segments, two steps and 32640 resident bytes. At 
 
 Both cards in this example share a 125 MHz reference and a common trigger. It configures no StarHub. `trigger_latency_samples=500`, `trigger_lead_mu=512` and `epoch_grid_mu=32` are unmeasured example contracts. Group `_mu` values use the native ARTIQ machine unit, 1 ns here. The internal hybrid tick is 200 ps and the DAC sample grid is 800 ps. Native ARTIQ export retains native mu. Timing that misses a required grid is rejected without rounding or adding a gap.
 
+Without a common reference, the [internal PLL bench policy](device_setup_descriptor.md#one-awg-on-the-bench-without-a-shared-reference) still uses the real ARTIQ TTL and EXT0. It preserves sample timing within the waveform but does not establish absolute phase or calibrated latency relative to the core. Two independent internal PLLs can be used in one explicit `setpoints_only` AWG group; neither configuration falls back automatically. See [clock and calibration options](hybrid_session_options.md).
+
 For actual deployment, install the optional Python SDK and the Spectrum native driver. Offline use needs neither.
 
 ```powershell
@@ -165,10 +167,9 @@ Configure the native ARTIQ `device_db` and any result adapter explicitly. Supply
 ```python
 from taiyidsl.runtime.spectrum.awg import SpcmAdapter, SpectrumRunner
 
-# The laboratory launcher supplies real_group, measured_sessions and generated_experiment.
+# The laboratory launcher supplies real_group and generated_experiment.
 adapters = {
-    name: SpcmAdapter(card.serial_number, clock_session_id=measured_sessions[name])
-    for name, card in real_group.cards.items()
+    name: SpcmAdapter(card.serial_number) for name, card in real_group.cards.items()
 }
 generated_experiment.spectrum_runner = SpectrumRunner(
     adapters,
@@ -181,7 +182,7 @@ Constructing an adapter does not open a card. Probing or explicitly configuring 
 
 ## Derive calibration from measured captures
 
-`group.calibration` carries the revision, card fingerprints, clock sessions, per-channel integer sample shifts and exact-frequency `frequency_points`. Each frequency entry has gain, `phase_offset_rad` and phase uncertainty. A carrier must have one exact frequency match. Adding a new sweep frequency requires a matching measurement. Do not substitute a 150 MHz record for 200 MHz. Card, firmware, range, wiring and clock-session changes invalidate the affected records. `configure_for_calibration()` explicitly configures hardware and creates a clock session. A normal runner never silently relocks the PLL to satisfy a check.
+`group.calibration` carries the revision, card fingerprints, per-channel integer sample shifts and exact-frequency `frequency_points`. Each frequency entry has gain, `phase_offset_rad` and phase uncertainty. A carrier must have one exact frequency match. Adding a new sweep frequency requires a matching measurement. Do not substitute a 150 MHz record for 200 MHz. Card, firmware, range or wiring changes and PLL relocks can invalidate calibration. Runtime does not detect past relocks. `configure_for_calibration()` explicitly configures hardware. A normal runner never silently relocks the PLL to satisfy a check.
 
 The offline tools in `taiyidsl.spectrum_calibration` do not operate a scope or card. `load_capture_npz(path, metadata)` reads `voltage`, `envelope` and `reference_phase_rad` arrays and calls `fit_rf_trace()`. The reference phase must already include the Kasli epoch, target carrier and local modulation. Metadata identifies the channel, carrier, trigger, rearm and lock IDs, capture time, independently measured envelope delay, fixed deskew and measurement uncertainty.
 
@@ -198,7 +199,6 @@ profile = calibrate_channels(
     post_shift_records,
     revision="lab-controlled-revision",
     card_fingerprints=measured_card_fingerprints,
-    clock_session_ids=measured_sessions,
     timing_calibration=measured_envelope_timing,
 )
 report = analyze_measurements(
@@ -223,7 +223,7 @@ Capture the Kasli reference, ARTIQ trigger and three AWG outputs simultaneously.
 - 10000 triggers and 100 stop/rearm cycles per required channel.
 - 30 minutes of data within a single lock for each required channel.
 - 10000 simultaneous captures for every required channel pair.
-- Three distinct, independently calibrated locks with profiles bound to their actual clock sessions.
+- Three distinct, independently calibrated locks. For this offline acceptance campaign, record `lock_id` in the calibration captures: the profile retains `measurement_lock_id` and the dataset hash. Neither is a connection token.
 
 Missing coverage leaves physical acceptance unverified. Calibration and validation datasets must be independent, and validation must measure corrected hardware. Predictions or replayed synthetic captures cannot establish acceptance.
 

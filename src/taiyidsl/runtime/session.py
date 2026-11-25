@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import copy
 import json
-import os
 import queue
 import subprocess
 import threading
 import uuid
 from pathlib import Path
 
+from . import worker_env
 from ._cleanup import run_cleanup
 
 
@@ -53,7 +53,7 @@ class HardwareSession:
     another experiment runner.
     """
 
-    def __init__(self, lab, *, clock_session_ids=None):
+    def __init__(self, lab):
         if lab.emulation:
             raise RuntimeError("HardwareSession is unavailable in emulation mode")
         if not hasattr(lab.setup, "_device_db"):
@@ -64,13 +64,6 @@ class HardwareSession:
         # Qubit values contain immutable MappingProxyType fields; use their
         # explicit serialization snapshot rather than pickle-based deepcopy.
         self.lab.qubits = tuple(qubit.snapshot() for qubit in lab.qubits)
-        self.clock_session_ids = dict(clock_session_ids or {})
-        cards = set(getattr(lab.setup, "_spectrum_addresses", {}))
-        if set(self.clock_session_ids) - cards or any(
-            not isinstance(value, str) or not value
-            for value in self.clock_session_ids.values()
-        ):
-            raise ValueError("clock_session_ids require known cards and nonempty IDs")
         self._process = None
         self._messages = queue.Queue()
         self._stderr = None
@@ -88,7 +81,8 @@ class HardwareSession:
                 ) from exc
             if not line:
                 raise RuntimeError(
-                    f"ARTIQ worker exited; see {self.directory / 'worker.log'}"
+                    f"ARTIQ worker exited; execution state is unknown. "
+                    f"See {self.directory / 'worker.log'}"
                 )
             response = json.loads(line)
             if not response.get("ok"):
@@ -105,12 +99,11 @@ class HardwareSession:
         if self._process is not None:
             return self
         root = Path.cwd()
-        python = (
-            Path(self.lab.artiq_python)
-            if self.lab.artiq_python
-            else root / ".toolchains/artiq9/clang64/bin/python.exe"
+        command, environment = worker_env.launch(
+            self.lab.artiq_python,
+            spectrum=self.lab.setup.spectrum is not None,
+            mode="serve",
         )
-        python = python.resolve(strict=True)
         self.directory = root / "output/hardware_sessions" / uuid.uuid4().hex
         self.directory.mkdir(parents=True)
         setup = self.lab.setup
@@ -120,26 +113,13 @@ class HardwareSession:
             if setup.spectrum is not None
             else None,
             "addresses": setup._spectrum_addresses,
-            "clock_session_ids": self.clock_session_ids,
         }
         config = self.directory / "connection.json"
         config.write_text(json.dumps(request, indent=2), encoding="utf-8")
-        environment = os.environ.copy()
-        # Source package remains identical; binary dependencies come from ARTIQ.
-        package_root = str(Path(__file__).resolve().parents[2])
-        environment["PYTHONPATH"] = (
-            package_root + os.pathsep + environment.get("PYTHONPATH", "")
-        )
-        environment["PYTHONIOENCODING"] = "utf-8"
-        binaries = python.parent
-        environment["PATH"] = str(binaries) + os.pathsep + environment.get("PATH", "")
-        msys_bin = binaries.parent.parent / "usr/bin"
-        if msys_bin.is_dir():
-            environment["PATH"] = str(msys_bin) + os.pathsep + environment["PATH"]
         self._stderr = (self.directory / "worker.log").open("w", encoding="utf-8")
         try:
             self._process = subprocess.Popen(
-                [str(python), "-u", "-m", "taiyidsl.runtime.worker", str(config)],
+                command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=self._stderr,
@@ -164,6 +144,15 @@ class HardwareSession:
 
             self._reader = threading.Thread(target=receive_lines, daemon=True)
             self._reader.start()
+            report = self._receive(60)
+            worker_env.verify(report)
+            (self.directory / "worker_environment.json").write_text(
+                json.dumps(report, indent=2), encoding="utf-8"
+            )
+            process.stdin.write(
+                json.dumps({"command": "connect", "config": str(config)}) + "\n"
+            )
+            process.stdin.flush()
             self.observed = self._receive(60)
         except BaseException as error:
             run_cleanup(

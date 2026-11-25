@@ -3030,11 +3030,11 @@ real_exp = rf_ramsey(
     prepare=real_prepare, readout=real_readout, shots=100,
 )
 real_compiled = real_lab.compile(real_exp)
-with real_lab.connect(clock_session_ids=measured_clock_session_ids) as session:
+with real_lab.connect() as session:
     receipt = session.run(real_compiled)
 ```
 
-`real_setup` contains verified wiring/calibrations. Register every atom exposed to shared outputs in `calibrated_qubits`. Set `artiq_python` to the laboratory ARTIQ environment. `connect` verifies identities and clocks and `run` uploads and executes. Supply the current continuous clock session identifier. The execution receipt records instrument commands. Camera triggering, frame retrieval and durable commit are distinct steps. `HardwareSession.run()` here has no detector-adapter injection. See [readout adapters](../readout_adapters.md), [durable execution](../streamed_execution.md) and [native components](../native_components.md).
+`real_setup` contains verified wiring/calibrations. Register every atom exposed to shared outputs in `calibrated_qubits`. Set `artiq_python` to the laboratory ARTIQ environment. `connect` verifies identities and clocks and `run` uploads and executes. No clock-session token is needed. The execution receipt records instrument commands. Camera triggering, frame retrieval and durable commit are distinct steps. `HardwareSession.run()` here has no detector-adapter injection. See [readout adapters](../readout_adapters.md), [durable execution](../streamed_execution.md) and [native components](../native_components.md).
 """)
 md(r"""
 ## 21. References and applicability

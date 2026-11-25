@@ -7,11 +7,11 @@ import importlib.util
 import json
 import pprint
 import sys
-import traceback
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+from ..config.spectrum import EXTERNAL_REFERENCE, hybrid_output_basis
 from ..sample_assets import expand_sample_manifest
 from ._cleanup import run_cleanup
 
@@ -89,6 +89,11 @@ def _loaded_program(source, plan):
                     break
 
 
+def _execution_policy(contract, group_basis):
+    clock = contract.get("clock_policy", EXTERNAL_REFERENCE)
+    return clock, hybrid_output_basis(clock, group_basis)
+
+
 class Worker:
     def __init__(self, config, directory):
         self.config, self.directory = config, directory
@@ -112,7 +117,7 @@ class Worker:
         from artiq.master.worker_db import DeviceManager
 
         from ..config.descriptor import resolve_device
-        from .spectrum.awg import SpcmAdapter, SpectrumRunner
+        from .spectrum.awg import SpcmAdapter, SpectrumRunner, _check_clock
         from .spectrum.dds import SpcmDDSAdapter
 
         device_file = self.directory / "device_db_snapshot.py"
@@ -137,20 +142,15 @@ class Worker:
                 adapter = adapter_type(
                     contract["serial_number"],
                     address=self.config["addresses"].get(uid),
-                    clock_session_id=self.config["clock_session_ids"].get(uid),
                 )
                 self.adapters[uid] = adapter
                 actual = adapter.probe()
                 for key in ("model", "serial_number"):
                     if str(actual[key]) != str(contract[key]):
                         raise ValueError(f"{uid}: connected {key} differs from spec_db")
-                for key in ("sample_rate_hz", "reference_clock_hz"):
-                    if actual[key] != contract[key]:
-                        raise ValueError(f"{uid}: connected {key} differs from spec_db")
-                if actual["is_demo"] or actual["clock_mode"] != "external_reference":
-                    raise ValueError(
-                        f"{uid}: real card with external reference required"
-                    )
+                if actual["is_demo"]:
+                    raise ValueError(f"{uid}: a physical Spectrum card is required")
+                _check_clock(uid, contract, actual)
                 if contract.get("mode", "awg") == "dds" and (
                     not actual.get("dds_available")
                     or not actual.get("dds20_available")
@@ -164,9 +164,6 @@ class Worker:
             "connected": True,
             "hardware_executed": False,
             "cards": observed,
-            "clock_session_ids": {
-                key: adapter.clock_session_id for key, adapter in self.adapters.items()
-            },
         }
 
     def run(self, directory):
@@ -198,11 +195,24 @@ class Worker:
             for event in point["logical_events"]
         ):
             raise ValueError("No detector result adapter is configured")
-        # Check all cards and measured calibration before any generated
+        # Check all cards and their declared calibration policy before any generated
         # initialization kernel, upload or native build can run.
+        policies = {
+            uid: _execution_policy(contract, group.get("output_basis"))
+            for group in (self.config.get("spectrum") or {}).get("groups", {}).values()
+            for uid, contract in group["cards"].items()
+        }
         for point in manifest.get("points", []):
             for group in point.get("groups", []):
                 for uid, card in group["cards"].items():
+                    contract = card["contract"]
+                    if _execution_policy(
+                        contract, contract.get("output_basis")
+                    ) != policies.get(uid):
+                        raise ValueError(
+                            f"{uid}: compiled clock/output policy differs "
+                            "from connected setup"
+                        )
                     adapter = self.adapters[uid]
                     observed = adapter.probe()
                     _preflight_contract(
@@ -212,7 +222,6 @@ class Worker:
                         uid,
                         card["contract"],
                         observed,
-                        adapter,
                         group["calibration"],
                         card["program"],
                     )
@@ -255,38 +264,3 @@ class Worker:
         if manager is not None:
             actions.append(("close ARTIQ devices", manager.close_devices))
         run_cleanup(actions)
-
-
-def main():
-    path = Path(sys.argv[1]).resolve(strict=True)
-    worker = Worker(json.loads(path.read_text(encoding="utf-8")), path.parent)
-    protocol = sys.stdout
-    # User native methods and drivers can print without corrupting the protocol.
-    sys.stdout = sys.stderr
-
-    def reply(result=None, error=None):
-        protocol.write(
-            json.dumps({"ok": error is None, "result": result, "error": error}) + "\n"
-        )
-        protocol.flush()
-
-    try:
-        reply(worker.connect())
-        for line in sys.stdin:
-            command = json.loads(line)
-            if command["command"] == "close":
-                break
-            if command["command"] != "run":
-                raise ValueError("Unknown worker command")
-            reply(worker.run(command["directory"]))
-    except BaseException as error:
-        # Close before serializing the failure so cleanup notes reach the host.
-        # A failed physical attempt invalidates the entire worker session.
-        run_cleanup([("failed worker", worker.close)], primary_error=error)
-        reply(error=traceback.format_exc())
-    finally:
-        worker.close()
-
-
-if __name__ == "__main__":
-    main()

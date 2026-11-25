@@ -627,11 +627,11 @@ lab = LabConfig(
 exp = ramsey(q0, 1 * kHz, delays, pi2_pulse, phase=0 * deg,
              prepare=real_prepare_MOT, readout=real_readout, shots=100)
 compiled = lab.compile(exp)
-with lab.connect(clock_session_ids=measured_clock_session_ids) as session:
+with lab.connect() as session:
     receipt = session.run(compiled)
 ```
 
-`artiq_python` selects the independent ARTIQ interpreter. The laboratory owns the clock-session ID. It is valid while the reference remains locked and wiring unchanged. Connect checks card identity and clocks. Run uploads, initializes and executes. The execution receipt records the hardware action. Image transfer requires the laboratory's result adapter. [ARTIQ toolchain](../artiq_toolchain.md)
+`artiq_python` selects the independent ARTIQ interpreter. Remeasure physical phase after clock or wiring changes. Connect checks card identity and clocks. Run uploads, initializes and executes. The execution receipt records the hardware action. Image transfer requires the laboratory's result adapter. [ARTIQ toolchain](../artiq_toolchain.md)
 """)
 md(r"""
 ## 10. Save the experiment as a laboratory package

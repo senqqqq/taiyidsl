@@ -28,3 +28,5 @@ artiq_demo/
 .env.local
 .env.*.local
 /local_config/
+/docs/tutorials/device_db.py
+/spcmdrv_debug.txt

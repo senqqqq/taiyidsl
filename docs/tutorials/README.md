@@ -22,6 +22,8 @@ Select the project CPython 3.12 kernel and use **Restart Kernel → Run All**. T
 | [Advanced hybrid control](hybrid_from_scratch.ipynb) | Combine native components, two-qubit RB, disk compilation, joint readout and durable shot records | `output/tutorial_from_scratch/` |
 | [中文版：原生 MOT、GM 冷却、态制备与 578 nm 钟谱](native_mot_clock_zh.ipynb) | Integrate atom-control sources and its device database with a Spectrum clock probe in one shot | `output/native_lab_tutorial/` |
 | [中文版：单卡 Spectrum 调试 578 nm 钟谱探测脉冲](spectrum_clock_578_zh.ipynb) | Inspect a five-frequency AWG scan and play a center-frequency burst on a standalone card for scope checks | `output/spectrum_clock_578/` |
+| [中文版：Kasli TTL 触发单卡 Spectrum](artiq_spectrum_single_ttl_clock_zh.ipynb) | Compile a two-pulse AWG waveform offline; explicitly opt in to one hardware shot with an internal PLL and an EXT0 edge | No default output; hardware sessions write receipts |
+| [中文版：Kasli 双 TTL 触发两张 Spectrum 卡](artiq_spectrum_dual_ttl_clock_zh.ipynb) | One shot: ttl20 → spcm0, ttl21 → spcm1; independent internal PLLs, no claim of phase alignment | No default output; hardware sessions write receipts |
 
 Reruns update demonstration outputs. Keep measured data in a separate location. The published notebooks contain source cells with cleared execution outputs.
 
@@ -47,7 +49,7 @@ Yb tune-up covers RF Rabi/Ramsey in two dimensions, refocusing, spin lock, error
 
 Introductory examples register the GreenMOT fixture via `NativeKernelPackage.from_package`. Its initialization calls `core.reset()` and `finalize_method` runs per shot. For independent components, `NativeModule.from_package` and `NativeProgram` support session initialization/finalization and a separate after-shot hook. Keep the lifecycle of the chosen integration. The [native walkthrough](native_components_walkthrough.md) shows both paths, the [component guide](../native_components.md) details contracts, and the [sample laboratory package](../../examples/lab_extension/README.md) includes readout adapters.
 
-For real hardware, supply verified wiring, actual device identities, calibration, an ARTIQ interpreter and the identifier of the running continuous-clock session. `lab.connect()` checks the connection. `session.run()` uploads and executes. The context manager releases owned resources. Confirm multi-card trigger skew, sample synchronization, DMA/step table, re-arm and analog phase/amplitude on instruments. A compiled trigger or camera receipt does not include frames. The direct `HardwareSession.run()` API has no detector-adapter injection point. Match real frames to point/shot/attempt, distinguish zero counts from missing frames and recover persisted data before considering another shot. See [readout adapters](../readout_adapters.md) and [durable execution](../streamed_execution.md).
+For real hardware, supply verified wiring, actual device identities, an ARTIQ interpreter and the appropriate [output basis](../hybrid_session_options.md). `lab.connect()` checks the connection. `session.run()` uploads and executes. The context manager releases owned resources. Confirm multi-card trigger skew, sample synchronization, DMA/step table, re-arm and analog phase/amplitude on instruments. A compiled trigger or camera receipt does not include frames. The direct `HardwareSession.run()` API has no detector-adapter injection point. Match real frames to point/shot/attempt, distinguish zero counts from missing frames and recover persisted data before considering another shot. See [readout adapters](../readout_adapters.md) and [durable execution](../streamed_execution.md).
 
 Advanced hybrid uses an illustrative CZ and synthetic RB results. Replace the gate and calibrate the actual interaction before interpreting physical performance. Disk compilation bounds managed buffers. The experiment, RB words, indexes and Python objects can grow outside that budget. See [streamed execution](../streamed_execution.md). Validate interactive report navigation in a browser, including chunk changes, zoom, long windows and source links. Record browser checks, disconnected [ARTIQ compilation](../artiq_toolchain.md), captured device timing and measured physical results separately.
 
@@ -60,6 +62,7 @@ Advanced hybrid uses an illustrative CZ and synthetic RB results. Replace the ga
 | Yb tune-up | [build_yb171_tuneup_notebook.py](../../scripts/build_yb171_tuneup_notebook.py) |
 | Advanced hybrid | [build_hybrid_tutorial.py](../../scripts/build_hybrid_tutorial.py) |
 | Native MOT and 578 nm spectroscopy (Chinese) | [build_native_lab_tutorial.py](../../scripts/build_native_lab_tutorial.py) |
+| Two-card TTL scope test (Chinese) | [build_dual_ttl_tutorial.py](../../scripts/build_dual_ttl_tutorial.py) |
 | Standalone Spectrum clock probe (Chinese) | [build_spectrum_clock_tutorial.py](../../scripts/build_spectrum_clock_tutorial.py) |
 
 Change the generators and their source inputs together. Transport reads configuration cells from the generated plain notebook. Generate Ramsey first.

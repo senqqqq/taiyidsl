@@ -436,7 +436,7 @@ def setup_from_descriptor(descriptor, *, device_db=None, spec_db=None):
     for name, group in descriptor.get("sync_groups", {}).items():
         _keys(
             group,
-            {"cards", "triggers", "trigger", "timing", "calibration"},
+            {"cards", "triggers", "trigger", "timing", "calibration", "output_basis"},
             f"sync group {name}",
             ("cards",),
         )
@@ -487,6 +487,7 @@ def setup_from_descriptor(descriptor, *, device_db=None, spec_db=None):
                 if output.card in selected
             },
             trigger_devices=canonical,
+            output_basis=group.get("output_basis"),
             calibration=group.get(
                 "calibration", {"status": "unmeasured", "revision": "unmeasured"}
             ),

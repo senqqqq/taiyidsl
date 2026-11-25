@@ -3,6 +3,7 @@
 import hashlib
 import io
 import json
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -128,7 +129,6 @@ def test_connect_failure_closes_partial_resources_without_masking_interrupt(
     class Adapter:
         def __init__(self, serial_number, **kwargs):
             self.name = serial_number
-            self.clock_session_id = "test"
 
         def probe(self):
             calls.append("probe " + self.name)
@@ -173,7 +173,6 @@ def test_connect_failure_closes_partial_resources_without_masking_interrupt(
             }
         },
         "addresses": {},
-        "clock_session_ids": {},
     }
     worker = Worker(config, tmp_path)
     with pytest.raises(KeyboardInterrupt) as caught:
@@ -357,16 +356,28 @@ def test_worker_timeout_retains_unknown_outcome_when_cleanup_fails():
     assert calls == ["log"]
 
 
-def test_session_launch_uses_package_root_and_fresh_message_queue(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize("stale", [False, True])
+def test_session_handshake_precedes_connect_and_uses_a_fresh_message_queue(
+    tmp_path, monkeypatch, stale
 ):
     current = session()
     current._messages.put("")
     observed = {}
 
+    hello = session_module.worker_env.identity()
+    if stale:
+        hello["source_sha256"] = "stale"
+
     class Process:
         stdin = io.StringIO()
-        stdout = io.StringIO('{"ok": true, "result": {"connected": true}}\n')
+        stdout = io.StringIO(
+            json.dumps({"ok": True, "result": hello})
+            + '\n{"ok": true, "result": {"connected": true}}\n'
+        )
+
+        def terminate(self):
+            observed["sent"] = self.stdin.getvalue()
+
         status = None
 
         def poll(self):
@@ -394,13 +405,18 @@ def test_session_launch_uses_package_root_and_fresh_message_queue(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(session_module.subprocess, "Popen", launch)
     monkeypatch.setattr(session_module.threading, "Thread", Thread)
+    if stale:
+        with pytest.raises(RuntimeError, match="source_sha256 mismatch"):
+            current.open()
+        assert observed["sent"] == ""
+        assert current._process is None
+        return
     assert current.open().observed == {"connected": True}
-    assert observed["command"][3] == "taiyidsl.runtime.worker"
-    package_root = str(Path(session_module.__file__).resolve().parents[2])
-    assert (
-        observed["env"]["PYTHONPATH"].split(session_module.os.pathsep)[0]
-        == package_root
-    )
+    assert json.loads(process.stdin.getvalue())["command"] == "connect"
+    assert observed["command"][0] == str(Path(sys.executable).absolute())
+    assert "taiyidsl.runtime.worker_entry" in observed["command"]
+    if os.name != "nt":
+        assert "PYTHONPATH" not in observed["env"]
     current.close()
     assert process.stdin.closed and process.stdout.closed and observed["stderr"].closed
 

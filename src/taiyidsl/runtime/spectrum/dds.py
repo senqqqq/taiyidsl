@@ -100,10 +100,8 @@ class SpcmDDSAdapter(SpcmAdapter):
     performed exclusively when the caller explicitly invokes these methods.
     """
 
-    def __init__(self, serial_number, *, address=None, sdk=None, clock_session_id=None):
-        super().__init__(
-            serial_number, address=address, sdk=sdk, clock_session_id=clock_session_id
-        )
+    def __init__(self, serial_number, *, address=None, sdk=None):
+        super().__init__(serial_number, address=address, sdk=sdk)
         self._dds = None
         self._running = False
         self._hold = None

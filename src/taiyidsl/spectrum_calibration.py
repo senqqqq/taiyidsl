@@ -118,7 +118,7 @@ def load_capture_npz(path, metadata):
     return result
 
 
-def _validated_records(records):
+def _validated_records(records, *, require_lock=True):
     if not isinstance(records, (list, tuple)) or not records:
         raise ValueError("At least one measurement record is required")
     result = []
@@ -136,7 +136,10 @@ def _validated_records(records):
         item["gain"] = _finite(record.get("gain", 1.0), "gain")
         if item["gain"] <= 0:
             raise ValueError("Measured transfer gain must be positive")
-        for key in ("trigger_id", "rearm_id", "lock_id"):
+        keys = ["trigger_id", "rearm_id"]
+        if require_lock or "lock_id" in item:
+            keys.append("lock_id")
+        for key in keys:
             if key not in item or not isinstance(item[key], (str, int)):
                 raise ValueError(f"Measurement record requires {key}")
         result.append(item)
@@ -209,7 +212,6 @@ def calibrate_channels(
     *,
     revision,
     card_fingerprints,
-    clock_session_ids,
     timing_calibration,
 ):
     """Estimate fixed corrections from a dedicated calibration dataset.
@@ -228,7 +230,13 @@ def calibrate_channels(
     This two-step procedure avoids compensating one delay twice. It establishes
     a calibration estimate, not a passed independent stability test.
     """
-    records = _validated_records(records)
+    records = _validated_records(records, require_lock=False)
+    locks = {str(row["lock_id"]) for row in records if "lock_id" in row}
+    if len(locks) > 1 or (locks and any("lock_id" not in row for row in records)):
+        raise ValueError(
+            "A calibration dataset must describe one measured lock "
+            "or omit lock_id throughout"
+        )
     if not isinstance(revision, str) or not revision:
         raise ValueError("Calibration requires a nonempty revision")
     by_channel = defaultdict(list)
@@ -237,14 +245,8 @@ def calibrate_channels(
     channels = {}
     for channel, samples in by_channel.items():
         card, output = channel.rsplit(":", 1)
-        if (
-            output not in ("0", "1")
-            or not card_fingerprints.get(card)
-            or not clock_session_ids.get(card)
-        ):
-            raise ValueError(
-                f"{channel}: hardware and clock session identities required"
-            )
+        if output not in ("0", "1") or not card_fingerprints.get(card):
+            raise ValueError(f"{channel}: hardware fingerprint required")
         timing = timing_calibration[channel]
         delay = _finite(timing.get("delay_ns"), "uncorrected delay_ns")
         rate = _finite(timing.get("sample_rate_hz"), "sample_rate_hz")
@@ -313,7 +315,8 @@ def calibrate_channels(
         "status": "measured",
         "revision": revision,
         "card_fingerprints": dict(card_fingerprints),
-        "clock_session_ids": dict(clock_session_ids),
+        # Optional capture provenance for offline validation, never used to run a shot.
+        **({"measurement_lock_id": locks.pop()} if locks else {}),
         "channels": channels,
         "calibration_dataset_sha256": _digest(records),
         "physical_acceptance": "not_verified",
@@ -429,7 +432,8 @@ def analyze_measurements(
             str(item["lock_id"]) not in lock_calibrations
             or record_calibration.get("status") != "measured"
             or item.get("calibration_revision") != record_calibration.get("revision")
-            or not record_calibration.get("clock_session_ids")
+            or record_calibration.get("measurement_lock_id") != str(item["lock_id"])
+            or not record_calibration.get("calibration_dataset_sha256")
         ):
             unproven_locks.add(item["lock_id"])
         card, channel = name.rsplit(":", 1)
@@ -545,13 +549,13 @@ def analyze_measurements(
         incomplete.append("missing independently bound calibration for lock sessions")
     if uncalibrated_frequencies:
         incomplete.append("missing exact-frequency or sample-shift calibration")
-    distinct_sessions = {
-        json.dumps(item.get("clock_session_ids", {}), sort_keys=True)
-        for item in lock_calibrations.values()
-        if item.get("status") == "measured"
+    measured_datasets = {
+        lock_calibrations[str(lock)].get("calibration_dataset_sha256")
+        for lock in locks
+        if str(lock) in lock_calibrations and lock not in unproven_locks
     }
-    if len(distinct_sessions) < 3:
-        incomplete.append("fewer than 3 distinct calibrated clock sessions")
+    if len(measured_datasets) < 3:
+        incomplete.append("fewer than 3 independent per-lock calibration datasets")
     if any(pair_counts.get(pair, 0) < 10_000 for pair in required_pairs):
         incomplete.append("fewer than 10000 simultaneous captures per required pair")
     if any(waveform_missing.values()):

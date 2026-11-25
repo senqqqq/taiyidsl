@@ -46,7 +46,8 @@ def calibration(channels=("a:0", "b:0", "b:1"), lock="0"):
     return {
         "status": "measured",
         "revision": f"measured-{lock}",
-        "clock_session_ids": {"a": f"a-session-{lock}", "b": f"b-session-{lock}"},
+        "measurement_lock_id": lock,
+        "calibration_dataset_sha256": f"test-dataset-{lock}",
         "channels": {
             channel: {
                 "phase_offset_rad": -0.01,
@@ -119,7 +120,6 @@ def test_calibration_has_correct_correction_sign_gain_and_deskew():
         rows,
         revision="bench",
         card_fingerprints={"a": "fingerprint"},
-        clock_session_ids={"a": "session"},
         timing_calibration={
             "a:0": {
                 "delay_ns": 5.0,
@@ -128,6 +128,7 @@ def test_calibration_has_correct_correction_sign_gain_and_deskew():
             }
         },
     )
+    assert "clock_session_ids" not in profile
     item = profile["channels"]["a:0"]
     assert item["phase_offset_rad"] == pytest.approx(-math.radians(12))
     assert item["gain"] == pytest.approx(0.8)
@@ -157,7 +158,6 @@ def test_fractional_delay_phase_is_measured_after_shift_and_frequency_exact():
     kwargs = {
         "revision": "fractional",
         "card_fingerprints": {"a": "fingerprint"},
-        "clock_session_ids": {"a": "session"},
         "timing_calibration": {
             "a:0": {
                 "delay_ns": 4.4,
@@ -167,6 +167,11 @@ def test_fractional_delay_phase_is_measured_after_shift_and_frequency_exact():
         },
     }
     profile = calibrate_channels(rows, **kwargs)
+    # Instrument captures for ordinary calibration need no clock identity.
+    no_locks = [{k: v for k, v in row.items() if k != "lock_id"} for row in rows]
+    unbound = calibrate_channels(no_locks, **kwargs)
+    assert "measurement_lock_id" not in unbound
+    assert unbound["channels"] == profile["channels"]
     high = resolve_channel_calibration(profile, "a", 0, 200e6)
     low = resolve_channel_calibration(profile, "a", 0, 100e6)
     assert high["phase_offset_rad"] == pytest.approx(-math.radians(28.8))
@@ -185,7 +190,6 @@ def test_uncorrected_phase_dataset_cannot_be_marked_measured():
             [record(delay_ns=4.4)],
             revision="bad",
             card_fingerprints={"a": "fingerprint"},
-            clock_session_ids={"a": "session"},
             timing_calibration={
                 "a:0": {
                     "delay_ns": 4.4,
@@ -250,7 +254,7 @@ def test_complete_independent_measurement_campaign_passes():
     assert report["lock_count"] == 3
     assert report["longest_single_lock_span_s"] >= 1800
     wrong = copy.deepcopy(profiles)
-    wrong["2"]["clock_session_ids"] = wrong["1"]["clock_session_ids"]
+    wrong["2"]["calibration_dataset_sha256"] = wrong["1"]["calibration_dataset_sha256"]
     assert (
         analyze_measurements(rows, profiles["0"], lock_calibrations=wrong)["status"]
         == "not_verified"

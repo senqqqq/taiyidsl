@@ -8,6 +8,7 @@ from dataclasses import replace
 from taiyidsl.compiler.scheduling import Scheduler, resolve_frames
 from taiyidsl.compiler.timebase import native_factor
 from taiyidsl.compiler.trigger_routes import resolve_trigger_signal
+from taiyidsl.config.spectrum import SETPOINTS_ONLY
 from taiyidsl.dsl.pulses import HalfSinePhase, PolynomialPhase, SampledPulse
 from taiyidsl.dsl.values import resolve
 from taiyidsl.ir import CompileError, ScheduledEvent
@@ -269,6 +270,13 @@ class SpectrumScheduler(SpectrumPlaybackScheduler):
                     )
                 if child_group not in self.groups:
                     raise CompileError(f"Unknown Spectrum group {child_group}")
+                if (
+                    self.groups[child_group].effective_output_basis == SETPOINTS_ONLY
+                    and node.params.get("phase_reference", "sequence") != "sequence"
+                ):
+                    raise CompileError(
+                        "Setpoint playback does not support shot-wide phase"
+                    )
                 resolve_trigger_signal(
                     self.groups[child_group],
                     self.mapping,

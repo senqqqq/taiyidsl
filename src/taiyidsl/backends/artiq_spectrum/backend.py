@@ -63,7 +63,7 @@ def native_event(event, factor):
 
 class ArtiqSpectrumBackend(Backend):
     name = "artiq_spectrum"
-    version = "6"
+    version = "8"
     target = "ARTIQ 9 master / M4i.6631-x8 AWG sequence and DDS20 transport"
     phase_policy = (
         "unified_frame_with_sequence_or_shot_carrier_reference_and_explicit_reset"
@@ -661,6 +661,8 @@ def _lower(logical, setup, mapping, diagnostics):
                 "trigger_width_mu": group.trigger_width_mu,
                 "artiq_tick_seconds": setup.spectrum.artiq_tick_seconds,
             }
+            if group.output_basis is not None:
+                contract["output_basis"] = group.output_basis
             if card.mode == "dds":
                 from taiyidsl.backends.artiq_spectrum.dds import build_dds_program
 

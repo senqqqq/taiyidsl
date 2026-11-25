@@ -5,7 +5,8 @@ import json
 
 import numpy as np
 import pytest
-from test_spectrum_runtime import FakeAdapter, FakeSdk, contract, program
+from spectrum_sdk_double import FakeSdk
+from test_spectrum_runtime import FakeAdapter, contract, program
 
 from taiyidsl.backends.artiq_spectrum.awg import build_card_program, reconstruct_window
 from taiyidsl.backends.artiq_spectrum.banks import (

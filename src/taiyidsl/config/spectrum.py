@@ -14,6 +14,28 @@ from fractions import Fraction
 
 HYBRID_TICK_SECONDS = 0.2e-9
 SAMPLE_RATE_HZ = 1_250_000_000
+EXTERNAL_REFERENCE = "external_reference"
+INTERNAL_PLL_BENCH = "internal_pll_bench"
+MEASURED = "measured"
+SETPOINTS_ONLY = "setpoints_only"
+
+
+def hybrid_output_basis(clock_policy, output_basis=None):
+    """Resolve legacy defaults, never execution intent from profile contents."""
+    if output_basis is None:
+        return SETPOINTS_ONLY if clock_policy == INTERNAL_PLL_BENCH else MEASURED
+    if output_basis not in (MEASURED, SETPOINTS_ONLY):
+        raise ValueError(f"Unknown Spectrum output_basis: {output_basis!r}")
+    if clock_policy == INTERNAL_PLL_BENCH and output_basis == MEASURED:
+        raise ValueError("Internal PLL bench only supports uncorrected setpoints")
+    return output_basis
+
+
+def uncorrected_bench_profile(profile):
+    """A bench shot must not silently apply or downgrade a measured profile."""
+    return profile.get("status") == "unmeasured" and not (
+        profile.keys() - {"status", "revision"}
+    )
 
 
 def _integer(value, name, minimum=0):
@@ -27,7 +49,7 @@ class SpectrumCard:
     active_channels: tuple[int, ...] = (0, 1)
     model: str = "M4i.6631-x8"
     sample_rate_hz: int = SAMPLE_RATE_HZ
-    reference_clock_hz: int = 125_000_000
+    reference_clock_hz: int | None = None
     memory_bytes: int = 4 * 1024**3
     output_range_mv: int = 500
     trigger_latency_samples: int = 500
@@ -39,6 +61,7 @@ class SpectrumCard:
     # latency above. None deliberately requires a timing profile before lowering.
     dds_trigger_latency_ns: float | None = None
     dds_amplitude_slope_step_per_s: float | None = None
+    clock_policy: str = EXTERNAL_REFERENCE
 
     def __post_init__(self):
         if not isinstance(self.serial_number, str) or not self.serial_number:
@@ -84,8 +107,18 @@ class SpectrumCard:
             or self.sample_rate_hz != SAMPLE_RATE_HZ
         ):
             raise ValueError("The M4i.6631 implementation requires 1.25 GS/s")
-        if self.reference_clock_hz != 125_000_000:
-            raise ValueError("The reference clock contract requires 125 MHz")
+        if self.clock_policy == EXTERNAL_REFERENCE:
+            if self.reference_clock_hz is None:
+                object.__setattr__(self, "reference_clock_hz", 125_000_000)
+            elif self.reference_clock_hz != 125_000_000:
+                raise ValueError("The reference clock contract requires 125 MHz")
+        elif self.clock_policy == INTERNAL_PLL_BENCH:
+            if self.mode != "awg" or self.reference_clock_hz is not None:
+                raise ValueError(
+                    "Internal PLL bench permits AWG only, without a reference frequency"
+                )
+        else:
+            raise ValueError(f"Unknown Spectrum clock_policy: {self.clock_policy!r}")
         _integer(self.memory_bytes, "memory_bytes", 1)
         _integer(self.trigger_latency_samples, "trigger_latency_samples")
         _integer(self.output_range_mv, "output_range_mv", 80)
@@ -104,6 +137,8 @@ class SpectrumCard:
     def to_dict(self):
         """Preserve legacy AWG dictionaries while recording explicit DDS mode."""
         result = asdict(self)
+        if self.clock_policy == EXTERNAL_REFERENCE:
+            del result["clock_policy"]  # Preserve existing contracts and hashes.
         if self.mode == "awg":
             for key in (
                 "mode",
@@ -176,6 +211,10 @@ class StandaloneSpectrumConfig:
             raise ValueError("Standalone Spectrum requires a card name")
         if not isinstance(self.card, SpectrumCard) or not self.outputs:
             raise ValueError("Standalone Spectrum requires one card and its outputs")
+        if self.card.clock_policy == INTERNAL_PLL_BENCH:
+            raise ValueError(
+                "Standalone Spectrum already uses internal clock and software trigger"
+            )
         _validate_outputs(self.outputs, {self.card_name: self.card})
         _integer(self.max_tile_samples, "max_tile_samples", 384)
         if self.max_tile_samples > 500_000:
@@ -242,6 +281,7 @@ class SpectrumGroup:
     # select a different wire while reusing the original timing/calibration.
     trigger_signal: str | None = None
     trigger_devices: dict[str, str] | None = None
+    output_basis: str | None = None
 
     def __post_init__(self):
         if (self.trigger_device is None) == (self.trigger_devices is None):
@@ -273,6 +313,24 @@ class SpectrumGroup:
             raise TypeError("cards must contain SpectrumCard contracts")
         if len({c.serial_number for c in self.cards.values()}) != len(self.cards):
             raise ValueError("Two card names cannot select the same serial number")
+        if self.internal_clock_bench and len(self.cards) > 1:
+            if self.output_basis != SETPOINTS_ONLY or not all(
+                card.clock_policy == INTERNAL_PLL_BENCH for card in self.cards.values()
+            ):
+                raise ValueError(
+                    "Internal PLL bench defaults to one Spectrum card; multiple cards "
+                    "require all internal PLLs and explicit "
+                    "output_basis='setpoints_only'"
+                )
+        if self.effective_output_basis == SETPOINTS_ONLY:
+            if any(card.mode != "awg" for card in self.cards.values()):
+                raise ValueError(
+                    "setpoints_only is for AWG playback, not DDS transport"
+                )
+            if not uncorrected_bench_profile(self.calibration):
+                raise ValueError(
+                    "setpoints_only requires unmeasured, uncorrected setpoints"
+                )
         _validate_outputs(self.outputs, self.cards)
         for name in ("trigger_lead_mu", "trigger_width_mu", "epoch_grid_mu"):
             _integer(getattr(self, name), name, 1)
@@ -287,6 +345,18 @@ class SpectrumGroup:
         object.__setattr__(self, "cards", copy.deepcopy(dict(self.cards)))
         object.__setattr__(self, "outputs", copy.deepcopy(dict(self.outputs)))
         object.__setattr__(self, "calibration", copy.deepcopy(dict(self.calibration)))
+
+    @property
+    def internal_clock_bench(self):
+        return any(
+            card.clock_policy == INTERNAL_PLL_BENCH for card in self.cards.values()
+        )
+
+    @property
+    def effective_output_basis(self):
+        return hybrid_output_basis(
+            next(iter(self.cards.values())).clock_policy, self.output_basis
+        )
 
     @property
     def sample_rate_hz(self):
@@ -323,6 +393,12 @@ class SpectrumConfig:
         if ratio.denominator != 1:
             raise ValueError("ARTIQ tick must be an integral multiple of 200 ps")
         serials, outputs, triggers, card_names = set(), set(), set(), set()
+        if len(self.groups) != 1 and any(
+            g.internal_clock_bench for g in self.groups.values()
+        ):
+            raise ValueError(
+                "Internal PLL bench cannot share a setup with another Spectrum group"
+            )
         for group in self.groups.values():
             new_serials = {card.serial_number for card in group.cards.values()}
             if serials & new_serials or outputs & set(group.outputs):
@@ -352,6 +428,8 @@ class SpectrumConfig:
             group["cards"] = {
                 uid: card.to_dict() for uid, card in self.groups[name].cards.items()
             }
+            if group["output_basis"] is None:
+                group.pop("output_basis")
             if group["trigger_signal"] is None:
                 group.pop("trigger_signal")
             if group["trigger_devices"] is None:

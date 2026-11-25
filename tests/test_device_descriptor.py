@@ -447,7 +447,6 @@ def test_connect_only_probes_hardware_and_accepts_equal_numeric_clocks(
     class Adapter:
         def __init__(self, serial, **kwargs):
             self.serial = serial
-            self.clock_session_id = "test_session"
 
         def probe(self):
             calls.append(self.serial)
@@ -475,7 +474,6 @@ def test_connect_only_probes_hardware_and_accepts_equal_numeric_clocks(
             "device_db": device_db,
             "spectrum": setup.spectrum.to_dict(),
             "addresses": {},
-            "clock_session_ids": {},
         },
         tmp_path,
     )

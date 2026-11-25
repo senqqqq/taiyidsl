@@ -56,7 +56,9 @@ def test_real_sdk_import_from_jupyter_environment(tmp_path, monkeypatch):
     assert result.returncode == 0, result.stderr
 
 
-def build(launcher, calibrated, *, bench=False, phase_reference="sequence"):
+def build(
+    launcher, calibrated, *, bench=False, phase_reference="sequence", output_basis=None
+):
     db = {
         "core": {
             "class": "Core",
@@ -72,6 +74,8 @@ def build(launcher, calibrated, *, bench=False, phase_reference="sequence"):
         }
     }
     group = {"cards": ["A"], "trigger": "ttl20"}
+    if output_basis is not None:
+        group["output_basis"] = output_basis
     if bench:
         spec["A"]["clock_policy"] = "internal_pll_bench"
     descriptor = {
@@ -115,7 +119,6 @@ def build(launcher, calibrated, *, bench=False, phase_reference="sequence"):
                     card["contract"], {"firmware": "00000001/00000002"}
                 )
             },
-            "clock_session_ids": {"A": "SIM"},
             "channels": {
                 "A:0": {
                     "sample_rate_hz": 1.25e9,
@@ -134,24 +137,7 @@ def build(launcher, calibrated, *, bench=False, phase_reference="sequence"):
     return lab, compiled
 
 
-@pytest.mark.skipif(
-    not os.getenv("TAIYIDSL_TEST_NIX_PYTHON"), reason="requires the built Nix worker"
-)
-@pytest.mark.parametrize(
-    "case,error",
-    [
-        ("success", None),
-        ("uncalibrated", "measured calibration"),
-        ("partial_upload", "injected DMA"),
-        ("not_ready", "ready"),
-        ("disconnect", "state is unknown"),
-        ("bench", None),
-        ("bench_partial_upload", "injected DMA"),
-        ("bench_drift", "read back"),
-        ("bench_wrong_source", "read back"),
-    ],
-)
-def test_nix_session(tmp_path, monkeypatch, case, error):
+def isolated_launcher(tmp_path, monkeypatch, case):
     worker = Path(os.environ["TAIYIDSL_TEST_NIX_PYTHON"]).absolute()
     double = Path(__file__).with_name("isolated_worker_double.py").resolve()
     launcher = tmp_path / "double"
@@ -164,8 +150,36 @@ def test_nix_session(tmp_path, monkeypatch, case, error):
     monkeypatch.setenv("TAIYIDSL_TEST_CASE", case)
     monkeypatch.setenv("TAIYIDSL_TEST_EVENTS", str(events))
     monkeypatch.chdir(tmp_path)
+    return launcher, events
+
+
+@pytest.mark.skipif(
+    not os.getenv("TAIYIDSL_TEST_NIX_PYTHON"), reason="requires the built Nix worker"
+)
+@pytest.mark.parametrize(
+    "case,error",
+    [
+        ("success", None),
+        ("external_setpoints", None),
+        ("uncalibrated", "measured calibration"),
+        ("partial_upload", "injected DMA"),
+        ("not_ready", "ready"),
+        ("disconnect", "state is unknown"),
+        ("bench", None),
+        ("bench_partial_upload", "injected DMA"),
+        ("bench_drift", "read back"),
+        ("bench_wrong_source", "read back"),
+    ],
+)
+def test_nix_session(tmp_path, monkeypatch, case, error):
+    launcher, events = isolated_launcher(tmp_path, monkeypatch, case)
     bench = case.startswith("bench")
-    lab, compiled = build(launcher, not bench and case != "uncalibrated", bench=bench)
+    lab, compiled = build(
+        launcher,
+        not bench and case not in {"uncalibrated", "external_setpoints"},
+        bench=bench,
+        output_basis="setpoints_only" if case == "external_setpoints" else None,
+    )
     if case == "bench_wrong_source":
         with pytest.raises(RuntimeError, match=error):
             lab.connect()
@@ -177,14 +191,18 @@ def test_nix_session(tmp_path, monkeypatch, case, error):
             "point_0",
         }.intersection(events.read_text().splitlines())
         return
-    with (
-        lab.connect() if bench else lab.connect(clock_session_ids={"A": "SIM"})
-    ) as session:
+    with lab.connect() as session:
         if error is None:
             for _ in range(2):
                 receipt = session.run(compiled)
                 assert receipt["completed_shots"] == [{"point": 0, "shot": 0}]
                 assert receipt["physical_acceptance"] == "not_verified"
+                if case == "external_setpoints":
+                    card = receipt["spectrum_receipts"][0]["receipt"]["cards"]["A"]
+                    assert card["output_basis"] == "setpoints_only"
+                    assert card["clock_mode"] == "external_reference"
+                    assert card["reference_clock_hz"] == 125_000_000
+                    assert card["analog_delay_gain_absolute_phase"] == "not_verified"
                 if bench:
                     card = receipt["spectrum_receipts"][0]["receipt"]["cards"]["A"]
                     assert card["clock_mode"] == "internal_pll"
@@ -203,9 +221,12 @@ def test_nix_session(tmp_path, monkeypatch, case, error):
         "SDK/native output belongs in worker.log"
         in (session.directory / "worker.log").read_text()
     )
-    assert log.count("point_0") == {"success": 2, "bench": 2, "disconnect": 1}.get(
-        case, 0
-    )
+    assert log.count("point_0") == {
+        "success": 2,
+        "external_setpoints": 2,
+        "bench": 2,
+        "disconnect": 1,
+    }.get(case, 0)
     assert "clock_write" not in log
     if case != "disconnect":
         assert log[-1] == "closed core"

@@ -53,7 +53,7 @@ class HardwareSession:
     another experiment runner.
     """
 
-    def __init__(self, lab, *, clock_session_ids=None):
+    def __init__(self, lab):
         if lab.emulation:
             raise RuntimeError("HardwareSession is unavailable in emulation mode")
         if not hasattr(lab.setup, "_device_db"):
@@ -64,13 +64,6 @@ class HardwareSession:
         # Qubit values contain immutable MappingProxyType fields; use their
         # explicit serialization snapshot rather than pickle-based deepcopy.
         self.lab.qubits = tuple(qubit.snapshot() for qubit in lab.qubits)
-        self.clock_session_ids = dict(clock_session_ids or {})
-        cards = set(getattr(lab.setup, "_spectrum_addresses", {}))
-        if set(self.clock_session_ids) - cards or any(
-            not isinstance(value, str) or not value
-            for value in self.clock_session_ids.values()
-        ):
-            raise ValueError("clock_session_ids require known cards and nonempty IDs")
         self._process = None
         self._messages = queue.Queue()
         self._stderr = None
@@ -120,7 +113,6 @@ class HardwareSession:
             if setup.spectrum is not None
             else None,
             "addresses": setup._spectrum_addresses,
-            "clock_session_ids": self.clock_session_ids,
         }
         config = self.directory / "connection.json"
         config.write_text(json.dumps(request, indent=2), encoding="utf-8")

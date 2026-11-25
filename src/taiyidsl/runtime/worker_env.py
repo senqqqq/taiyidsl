@@ -16,7 +16,7 @@ from pathlib import Path
 
 from taiyidsl import __version__
 
-PROTOCOL = 1
+PROTOCOL = 2
 LAUNCHER_ENV = "TAIYIDSL_ARTIQ_PYTHON"
 
 

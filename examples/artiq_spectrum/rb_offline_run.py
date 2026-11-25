@@ -17,7 +17,6 @@ class OfflineCard:
 
     def __init__(self, name, contract, calls):
         self.name, self.contract, self.calls = name, contract, calls
-        self.clock_session_id = f"offline-{name}"
         self.armed = False
 
     def probe(self):

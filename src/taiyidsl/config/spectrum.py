@@ -16,6 +16,19 @@ HYBRID_TICK_SECONDS = 0.2e-9
 SAMPLE_RATE_HZ = 1_250_000_000
 EXTERNAL_REFERENCE = "external_reference"
 INTERNAL_PLL_BENCH = "internal_pll_bench"
+MEASURED = "measured"
+SETPOINTS_ONLY = "setpoints_only"
+
+
+def hybrid_output_basis(clock_policy, output_basis=None):
+    """Resolve legacy defaults, never execution intent from profile contents."""
+    if output_basis is None:
+        return SETPOINTS_ONLY if clock_policy == INTERNAL_PLL_BENCH else MEASURED
+    if output_basis not in (MEASURED, SETPOINTS_ONLY):
+        raise ValueError(f"Unknown Spectrum output_basis: {output_basis!r}")
+    if clock_policy == INTERNAL_PLL_BENCH and output_basis == MEASURED:
+        raise ValueError("Internal PLL bench only supports uncorrected setpoints")
+    return output_basis
 
 
 def uncorrected_bench_profile(profile):
@@ -268,6 +281,7 @@ class SpectrumGroup:
     # select a different wire while reusing the original timing/calibration.
     trigger_signal: str | None = None
     trigger_devices: dict[str, str] | None = None
+    output_basis: str | None = None
 
     def __post_init__(self):
         if (self.trigger_device is None) == (self.trigger_devices is None):
@@ -299,12 +313,23 @@ class SpectrumGroup:
             raise TypeError("cards must contain SpectrumCard contracts")
         if len({c.serial_number for c in self.cards.values()}) != len(self.cards):
             raise ValueError("Two card names cannot select the same serial number")
-        if self.internal_clock_bench:
-            if len(self.cards) != 1:
-                raise ValueError("Internal PLL bench permits only one Spectrum card")
+        if self.internal_clock_bench and len(self.cards) > 1:
+            if self.output_basis != SETPOINTS_ONLY or not all(
+                card.clock_policy == INTERNAL_PLL_BENCH for card in self.cards.values()
+            ):
+                raise ValueError(
+                    "Internal PLL bench defaults to one Spectrum card; multiple cards "
+                    "require all internal PLLs and explicit "
+                    "output_basis='setpoints_only'"
+                )
+        if self.effective_output_basis == SETPOINTS_ONLY:
+            if any(card.mode != "awg" for card in self.cards.values()):
+                raise ValueError(
+                    "setpoints_only is for AWG playback, not DDS transport"
+                )
             if not uncorrected_bench_profile(self.calibration):
                 raise ValueError(
-                    "Internal PLL bench requires unmeasured, uncorrected setpoints"
+                    "setpoints_only requires unmeasured, uncorrected setpoints"
                 )
         _validate_outputs(self.outputs, self.cards)
         for name in ("trigger_lead_mu", "trigger_width_mu", "epoch_grid_mu"):
@@ -325,6 +350,12 @@ class SpectrumGroup:
     def internal_clock_bench(self):
         return any(
             card.clock_policy == INTERNAL_PLL_BENCH for card in self.cards.values()
+        )
+
+    @property
+    def effective_output_basis(self):
+        return hybrid_output_basis(
+            next(iter(self.cards.values())).clock_policy, self.output_basis
         )
 
     @property
@@ -397,6 +428,8 @@ class SpectrumConfig:
             group["cards"] = {
                 uid: card.to_dict() for uid, card in self.groups[name].cards.items()
             }
+            if group["output_basis"] is None:
+                group.pop("output_basis")
             if group["trigger_signal"] is None:
                 group.pop("trigger_signal")
             if group["trigger_devices"] is None:

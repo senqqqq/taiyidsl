@@ -6,7 +6,8 @@ import numpy as np
 
 
 class FakeSdk:
-    def __init__(self):
+    def __init__(self, serial=101):
+        self.serial = serial
         self.log = []
         names = (
             "SPC_PCIMEMSIZE SPC_PCIVERSION SPC_PCIMODULEVERSION "
@@ -29,7 +30,7 @@ class FakeSdk:
         self.card = FakeCard(self)
 
     def Card(self, **kwargs):
-        assert kwargs == {"serial_number": 101}
+        assert kwargs == {"serial_number": self.serial}
         return self.card
 
     def Clock(self, card):
@@ -130,7 +131,7 @@ class FakeCard:
         self.sdk.log.append(("open",))
 
     def sn(self):
-        return 101
+        return self.sdk.serial
 
     def product_name(self):
         return "M4i.6631-x8"

@@ -24,6 +24,8 @@ import numpy as np
 from ...config.spectrum import (
     EXTERNAL_REFERENCE,
     INTERNAL_PLL_BENCH,
+    SETPOINTS_ONLY,
+    hybrid_output_basis,
     uncorrected_bench_profile,
 )
 from ...sample_assets import expand_sample_manifest
@@ -39,7 +41,6 @@ class SpectrumRuntimeError(RuntimeError):
 
 class SpectrumAdapter(Protocol):
     is_hardware: bool
-    clock_session_id: str
 
     def probe(self) -> dict: ...
 
@@ -156,14 +157,20 @@ def _check_clock(card_id, contract, observed):
         )
 
 
+def _basis(contract):
+    return hybrid_output_basis(
+        contract.get("clock_policy", EXTERNAL_REFERENCE), contract.get("output_basis")
+    )
+
+
 def _card_receipt(contract, observed):
-    if contract.get("clock_policy") != INTERNAL_PLL_BENCH:
-        return dict(observed)
+    policy = contract.get("clock_policy", EXTERNAL_REFERENCE)
     return {
         **observed,
-        "clock_policy": INTERNAL_PLL_BENCH,
-        "output_basis": "setpoints_only",
-        "shared_reference": False,
+        "clock_policy": policy,
+        "output_basis": _basis(contract),
+        # A clock register cannot prove common wiring or continuous lock.
+        "shared_reference": False if policy == INTERNAL_PLL_BENCH else None,
         "analog_delay_gain_absolute_phase": "not_verified",
     }
 
@@ -215,6 +222,8 @@ def _preflight_contract(card_id, contract, program, observed, *, validate=True):
         "clock_policy", EXTERNAL_REFERENCE
     ):
         raise SpectrumRuntimeError(f"{card_id}: rendered program clock policy mismatch")
+    if _basis(program["card_spec"]) != _basis(contract):
+        raise SpectrumRuntimeError(f"{card_id}: rendered program output basis mismatch")
     expected_fw = contract.get("firmware")
     if expected_fw not in (None, "", "unmeasured") and expected_fw != observed.get(
         "firmware"
@@ -228,14 +237,16 @@ def _preflight_contract(card_id, contract, program, observed, *, validate=True):
         raise SpectrumRuntimeError(f"{card_id}: waveform channel layout mismatch")
 
 
-def _validate_calibration(card_id, contract, observed, adapter, profile, program):
+def _validate_calibration(card_id, contract, observed, profile, program):
     from ...spectrum_calibration import resolve_channel_calibration
 
-    bench = contract.get("clock_policy") == INTERNAL_PLL_BENCH
+    bench = _basis(contract) == SETPOINTS_ONLY
     if bench:
-        if not uncorrected_bench_profile(profile):
+        if contract.get("mode", "awg") != "awg" or not uncorrected_bench_profile(
+            profile
+        ):
             raise SpectrumRuntimeError(
-                f"{card_id}: internal PLL bench requires uncorrected setpoints"
+                f"{card_id}: setpoints_only requires an AWG and uncorrected setpoints"
             )
     elif profile.get("status") != "measured" or not profile.get("revision"):
         raise SpectrumRuntimeError(f"{card_id}: measured calibration is required")
@@ -252,10 +263,6 @@ def _validate_calibration(card_id, contract, observed, adapter, profile, program
     if profile.get("card_fingerprints", {}).get(card_id) != expected:
         raise SpectrumRuntimeError(
             f"{card_id}: calibration hardware fingerprint mismatch"
-        )
-    if profile.get("clock_session_ids", {}).get(card_id) != adapter.clock_session_id:
-        raise SpectrumRuntimeError(
-            f"{card_id}: clock session changed; recalibration needed"
         )
     if contract.get("mode", "awg") == "dds":
         timing = profile.get("dds_timing", {}).get(card_id, {})
@@ -376,7 +383,6 @@ class SpectrumRunner:
                         card_id,
                         item["contract"],
                         observed,
-                        adapter,
                         profile,
                         item["program"],
                     )
@@ -442,12 +448,18 @@ class SpectrumRunner:
                         "A card belongs to multiple active groups"
                     )
                 result[name] = (item, group.get("calibration", {}))
-                if (
-                    item["contract"].get("clock_policy") == INTERNAL_PLL_BENCH
-                    and len(self.adapters) != 1
+            contracts = [card["contract"] for card in group["cards"].values()]
+            if len(self.adapters) > 1 and any(
+                c.get("clock_policy") == INTERNAL_PLL_BENCH for c in contracts
+            ):
+                if set(group["cards"]) != set(self.adapters) or not all(
+                    c.get("clock_policy") == INTERNAL_PLL_BENCH
+                    and c.get("output_basis") == SETPOINTS_ONLY
+                    for c in contracts
                 ):
                     raise SpectrumRuntimeError(
-                        "Internal PLL bench requires a single-card session"
+                        "Multi-card internal PLL requires one explicit "
+                        "setpoints_only AWG group"
                     )
         return result
 
@@ -512,7 +524,7 @@ class SpectrumRunner:
             _preflight_contract(name, item["contract"], item["program"], observed)
             if not self.allow_unverified:
                 _validate_calibration(
-                    name, item["contract"], observed, adapter, profile, item["program"]
+                    name, item["contract"], observed, profile, item["program"]
                 )
         self.invalidate(preserve_dds=True)
         for name, (item, _) in cards.items():
@@ -578,7 +590,6 @@ class SpectrumRunner:
                             name,
                             item["contract"],
                             observed,
-                            adapter,
                             profile,
                             item["program"],
                         )
@@ -625,14 +636,12 @@ class SpcmAdapter:
     """Official SDK adapter for one explicitly identified M4i.6631-x8 card.
 
     No instrument is opened until ``probe`` or explicit configuration is called.
-    A new adapter session invalidates prior phase calibration unless the caller
-    supplies the identity of a continuously monitored, unchanged clock session.
-    Clock relock/cable changes must invalidate that identity externally.
+    Clock readbacks do not establish lock continuity or absolute analog phase.
     """
 
     is_hardware = True
 
-    def __init__(self, serial_number, *, address=None, sdk=None, clock_session_id=None):
+    def __init__(self, serial_number, *, address=None, sdk=None):
         serial = str(serial_number)
         if not serial.isdecimal() or int(serial) <= 0:
             raise ValueError("A positive physical card serial number is required")
@@ -640,7 +649,6 @@ class SpcmAdapter:
         if address is not None and (not isinstance(address, str) or not address):
             raise ValueError("Spectrum address must be nonempty text")
         self.address = address
-        self.clock_session_id = clock_session_id or uuid.uuid4().hex
         self._sdk = sdk
         self._card = None
         self._sequence = None
@@ -739,9 +747,7 @@ class SpcmAdapter:
                 "Close the live DDS session before recalibration"
             )
         card, sdk = self._open(), self._sdk
-        # Once a clock change is attempted the old calibration cannot be trusted,
-        # even if a later write/readback fails. Never commit an inherited step table.
-        self.clock_session_id = uuid.uuid4().hex
+        # Never commit an inherited step table, even if a later write fails.
         self._uploaded = False
         self._sequence = None
         try:

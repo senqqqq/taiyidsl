@@ -168,7 +168,7 @@ class LabConfig:
             )
         return setup
 
-    def connect(self, *, clock_session_ids=None):
+    def connect(self):
         """Open an explicit hardware session; compilation always stays offline.
 
         ARTIQ sessions own a separate worker. A standalone Spectrum session
@@ -178,14 +178,12 @@ class LabConfig:
             raise RuntimeError("emulation=True permits offline compilation only")
         backend = self.backend if isinstance(self.backend, str) else self.backend.name
         if backend == "spectrum":
-            if clock_session_ids:
-                raise ValueError("Standalone Spectrum uses the card's internal clock")
             from .runtime.spectrum.standalone import StandaloneSpectrumSession
 
             return StandaloneSpectrumSession(self).open()
         from .runtime.session import HardwareSession
 
-        return HardwareSession(self, clock_session_ids=clock_session_ids).open()
+        return HardwareSession(self).open()
 
     def describe(self):
         """Inspect the offline authoring configuration without opening hardware.

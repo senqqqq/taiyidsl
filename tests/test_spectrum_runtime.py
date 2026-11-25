@@ -53,7 +53,6 @@ class FakeAdapter:
 
     def __init__(self, name, spec, log):
         self.name, self.spec, self.log = name, spec, log
-        self.clock_session_id = f"session-{name}"
         self.failure = None
         self.becomes_ready = True
 
@@ -128,9 +127,6 @@ def measured_profile(adapters):
         "card_fingerprints": {
             name: hardware_fingerprint(adapter.spec, adapter.probe())
             for name, adapter in adapters.items()
-        },
-        "clock_session_ids": {
-            name: adapter.clock_session_id for name, adapter in adapters.items()
         },
         "channels": {
             f"{name}:{channel}": {
@@ -207,15 +203,16 @@ def test_not_ready_never_launches_and_stops_both():
     assert ("a", "stop") in log and ("b", "stop") in log
 
 
-def test_measured_profile_binds_clock_session_and_firmware():
+def test_measured_profile_runs_without_connection_token_and_binds_hardware():
     log, adapters, manifest = fixture()
     profile = measured_profile(adapters)
     install_profile(manifest, profile)
     runner = SpectrumRunner(adapters)
     assert runner.run_point(manifest, 0, lambda _: 42)["artiq_result"] == 42
-    adapters["b"].clock_session_id = "after-relock"
+    profile["card_fingerprints"]["b"] = "different-setup"
+    install_profile(manifest, profile)
     log.clear()
-    with pytest.raises(SpectrumRuntimeError, match="clock session"):
+    with pytest.raises(SpectrumRuntimeError, match="hardware fingerprint"):
         runner.run_point(manifest, 0, lambda _: None)
     assert all(operation == "probe" for _, operation in log)
 
@@ -351,13 +348,11 @@ def test_sdk_trigger_registers_must_read_back_exactly(setting):
 def test_clock_reconfiguration_requires_explicit_recalibration():
     sdk = FakeSdk()
     adapter = SpcmAdapter("101", sdk=sdk)
-    original = adapter.clock_session_id
     sdk.clock["reference_clock"] = 10_000_000
     with pytest.raises(SpectrumRuntimeError, match="Clock setup changed"):
         adapter.configure(contract())
     assert not [item for item in sdk.log if item[0] == "clock_write"]
     adapter.configure_for_calibration(contract())
-    assert adapter.clock_session_id != original
     assert sdk.clock["reference_clock"] == 125_000_000
 
 
@@ -493,9 +488,9 @@ def test_failed_upload_or_entry_commit_cannot_arm_stale_bank(monkeypatch, operat
     assert sdk.log[-1] == ("close",)
 
 
-def test_calibration_rejects_stale_identity_after_failed_clock_commit(monkeypatch):
+def test_failed_clock_commit_keeps_card_disarmed(monkeypatch):
     sdk = FakeSdk()
-    adapter = SpcmAdapter("101", sdk=sdk, clock_session_id="old")
+    adapter = SpcmAdapter("101", sdk=sdk)
 
     def reject_commit():
         assert sdk.card.mode == sdk.SPC_REP_STD_SINGLE
@@ -505,7 +500,8 @@ def test_calibration_rejects_stale_identity_after_failed_clock_commit(monkeypatc
     monkeypatch.setattr(sdk.card, "write_setup", reject_commit)
     with pytest.raises(IOError, match="clock commit failed"):
         adapter.configure_for_calibration(contract())
-    assert adapter.clock_session_id != "old"
+    with pytest.raises(SpectrumRuntimeError, match="Upload a complete"):
+        adapter.arm()
     assert not any(x[0] == "start" for x in sdk.log)
 
 

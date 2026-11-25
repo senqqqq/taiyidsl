@@ -57,15 +57,12 @@ unchanged; no IPython plotting package is required in the worker.
 
 ## Execution and evidence
 
-Confirm exclusive access before calling `lab.connect(...)`. The default hybrid
-run requires [measured calibration and a verified clock session](device_setup_descriptor.md#connect-and-run).
-The explicit [single-AWG internal-clock bench policy](device_setup_descriptor.md#one-awg-on-the-bench-without-a-shared-reference) instead runs uncorrected setpoints. The worker sends a software report before
+Confirm exclusive access before calling `lab.connect()`. External reference defaults to measured calibration. An AWG group may instead explicitly choose uncorrected setpoints with external reference or internal PLLs. See [configure clocks and calibration](hybrid_session_options.md). The worker sends a software report before
 receiving a configuration or touching devices. A mismatched checkout/worker
 must be rebuilt, not forced. The report is saved as `worker_environment.json`
 alongside `connection.json`, `worker.log` and per-run exports/receipts. Native
 and SDK output go to the log, not the JSON protocol. A lost connection does not
-justify repeating a shot. The external-reference calibration gates and AWG upload/ready sequence
-are unchanged. Do not reuse a calibration ID as evidence of clock continuity.
+justify repeating a shot. Only readbacks, not clock continuity or analog timing, are established by the session.
 
 To test a built Nix worker **without connecting to instruments**, run the suite
 below. Its import test inherits Jupyter's inline plotting setting on the host

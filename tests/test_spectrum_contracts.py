@@ -386,7 +386,6 @@ class _LifecycleCard:
         self.armed = False
         self.fail_arm = False
         self.fail_complete = False
-        self.clock_session_id = f"test-session-{name}"
 
     def _record(self, operation):
         self.log.append((self.name, operation))

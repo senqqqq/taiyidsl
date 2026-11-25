@@ -11,7 +11,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-from ..config.spectrum import EXTERNAL_REFERENCE
+from ..config.spectrum import EXTERNAL_REFERENCE, hybrid_output_basis
 from ..sample_assets import expand_sample_manifest
 from ._cleanup import run_cleanup
 
@@ -89,6 +89,11 @@ def _loaded_program(source, plan):
                     break
 
 
+def _execution_policy(contract, group_basis):
+    clock = contract.get("clock_policy", EXTERNAL_REFERENCE)
+    return clock, hybrid_output_basis(clock, group_basis)
+
+
 class Worker:
     def __init__(self, config, directory):
         self.config, self.directory = config, directory
@@ -137,7 +142,6 @@ class Worker:
                 adapter = adapter_type(
                     contract["serial_number"],
                     address=self.config["addresses"].get(uid),
-                    clock_session_id=self.config["clock_session_ids"].get(uid),
                 )
                 self.adapters[uid] = adapter
                 actual = adapter.probe()
@@ -160,9 +164,6 @@ class Worker:
             "connected": True,
             "hardware_executed": False,
             "cards": observed,
-            "clock_session_ids": {
-                key: adapter.clock_session_id for key, adapter in self.adapters.items()
-            },
         }
 
     def run(self, directory):
@@ -197,18 +198,20 @@ class Worker:
         # Check all cards and their declared calibration policy before any generated
         # initialization kernel, upload or native build can run.
         policies = {
-            uid: contract.get("clock_policy", EXTERNAL_REFERENCE)
+            uid: _execution_policy(contract, group.get("output_basis"))
             for group in (self.config.get("spectrum") or {}).get("groups", {}).values()
             for uid, contract in group["cards"].items()
         }
         for point in manifest.get("points", []):
             for group in point.get("groups", []):
                 for uid, card in group["cards"].items():
-                    if card["contract"].get(
-                        "clock_policy", EXTERNAL_REFERENCE
+                    contract = card["contract"]
+                    if _execution_policy(
+                        contract, contract.get("output_basis")
                     ) != policies.get(uid):
                         raise ValueError(
-                            f"{uid}: compiled clock policy differs from connected setup"
+                            f"{uid}: compiled clock/output policy differs "
+                            "from connected setup"
                         )
                     adapter = self.adapters[uid]
                     observed = adapter.probe()
@@ -219,7 +222,6 @@ class Worker:
                         uid,
                         card["contract"],
                         observed,
-                        adapter,
                         group["calibration"],
                         card["program"],
                     )

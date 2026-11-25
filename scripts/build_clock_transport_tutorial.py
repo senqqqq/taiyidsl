@@ -428,12 +428,12 @@ t_settle = 10.24 * us
         prepare=real_prepare, readout=real_readout, shots=100,
     )
     real_compiled = real_lab.compile(real_exp)
-    with real_lab.connect(clock_session_ids=measured_clock_session_ids) as session:
+    with real_lab.connect() as session:
         receipt = session.run(real_compiled)
         # Keep subsequent runs inside this context so card C maintains the trap.
     ```
 
-    Connect verifies devices and clocks, then run uploads and executes. Supply the separate ARTIQ interpreter and current clock-session identity. Leaving the context stops DDS. After a fault the previous position is unknown and automatic transport retry is unavailable. The returned receipt records execution. Frame acquisition and data commit require a [readout adapter](../readout_adapters.md).
+    Connect verifies devices and clocks, then run uploads and executes. Supply the separate ARTIQ interpreter. Leaving the context stops DDS. After a fault the previous position is unknown and automatic transport retry is unavailable. The returned receipt records execution. Frame acquisition and data commit require a [readout adapter](../readout_adapters.md).
     """)
     md(r"""
     ## 12. Change settings and validate the result

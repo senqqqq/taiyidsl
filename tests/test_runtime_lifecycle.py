@@ -129,7 +129,6 @@ def test_connect_failure_closes_partial_resources_without_masking_interrupt(
     class Adapter:
         def __init__(self, serial_number, **kwargs):
             self.name = serial_number
-            self.clock_session_id = "test"
 
         def probe(self):
             calls.append("probe " + self.name)
@@ -174,7 +173,6 @@ def test_connect_failure_closes_partial_resources_without_masking_interrupt(
             }
         },
         "addresses": {},
-        "clock_session_ids": {},
     }
     worker = Worker(config, tmp_path)
     with pytest.raises(KeyboardInterrupt) as caught:

@@ -34,9 +34,10 @@ def main():
         with events.open("a", encoding="utf-8") as stream:
             print(event, file=stream)
 
-    sdk = runpy.run_path(str(Path(__file__).with_name("spectrum_sdk_double.py")))[
+    sdk_type = runpy.run_path(str(Path(__file__).with_name("spectrum_sdk_double.py")))[
         "FakeSdk"
-    ]()
+    ]
+    sdk = sdk_type()
     sdk.__spec__ = importlib.util.find_spec("spcm")
     core_sdk = SimpleNamespace(
         __spec__=importlib.util.find_spec("spcm_core"), spcm_hOpen=blocked
@@ -53,6 +54,19 @@ def main():
     sdk.log = Log()
     if case.startswith("bench") and case != "bench_wrong_source":
         sdk.clock.update(mode=sdk.SPC_CM_INTPLL, reference_clock=10_000_000)
+    if case == "dual_tutorial":
+        endpoints = {f"/dev/spcm{i}": sdk_type(101 + i) for i in range(2)}
+        for endpoint in endpoints.values():
+            endpoint.clock["mode"] = endpoint.SPC_CM_INTPLL
+            endpoint.log = Log()
+        sdk.Card = lambda address: endpoints[address].card
+
+        # The SDK namespace returns controllers bound to the selected card.
+        def dispatch(method):
+            return lambda card, *a, **kw: getattr(card.sdk, method)(card, *a, **kw)
+
+        for method in ("Clock", "Channels", "Trigger", "Sequence", "DataTransfer"):
+            setattr(sdk, method, dispatch(method))
     if case == "not_ready":
         sdk.card.status = lambda: sdk.M2STAT_CARD_READY
 
@@ -72,10 +86,15 @@ def main():
     class Devices:
         def __init__(self, db):
             assert db.get("core")["arguments"]["host"] == "unit-test.invalid"
+            self.devices = {
+                "core": Core(),
+                "ttl20": SimpleNamespace(channel=20),
+                "ttl21": SimpleNamespace(channel=21),
+            }
             os.write(1, b"SDK/native output belongs in worker.log\n")
 
         def get(self, name):
-            return {"core": Core(), "ttl20": object()}[name]
+            return self.devices[name]
 
         def close_devices(self):
             record("closed core")

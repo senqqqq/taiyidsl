@@ -10,7 +10,11 @@ import ast
 import hashlib
 import html
 
-from ..config.spectrum import INTERNAL_PLL_BENCH
+from ..config.spectrum import (
+    EXTERNAL_REFERENCE,
+    INTERNAL_PLL_BENCH,
+    hybrid_output_basis,
+)
 from .resources import RUNTIME_SOURCES, runtime_source_bytes
 
 
@@ -26,6 +30,14 @@ def card_execution(item):
         {"setting": name, "value": value, "source": source}
         for name, value, source in (
             ("serial_number", contract["serial_number"], "contract"),
+            (
+                "output_basis",
+                hybrid_output_basis(
+                    contract.get("clock_policy", EXTERNAL_REFERENCE),
+                    contract.get("output_basis"),
+                ),
+                "compiled policy",
+            ),
             (
                 "clock.mode",
                 "SPC_CM_INTPLL"
@@ -236,10 +248,10 @@ def execution_html(execution, output):
             "tables show each card, setting and resolved SDK argument.</p>",
             "<h3>Clock initialization and recalibration</h3>",
             "<p><code>configure_for_calibration()</code> explicitly selects the "
-            "external reference and sample rate, starts a new clock session and "
+            "external reference and sample rate and "
             "invalidates earlier phase calibration. The default synchronized path "
-            "requires valid measured calibration. The single-AWG internal PLL bench "
-            "path does not call this method: it verifies the internal clock, plays "
+            "requires valid measured calibration. The setpoints-only AWG path "
+            "does not call this method: it verifies the declared clock, plays "
             "uncorrected setpoints and does not verify analog delay, gain, or "
             "absolute phase relative to ARTIQ.</p>",
             method_block(

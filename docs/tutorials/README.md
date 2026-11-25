@@ -22,6 +22,7 @@ Select the project CPython 3.12 kernel and use **Restart Kernel → Run All**. T
 | [Advanced hybrid control](hybrid_from_scratch.ipynb) | Combine native components, two-qubit RB, disk compilation, joint readout and durable shot records | `output/tutorial_from_scratch/` |
 | [中文版：原生 MOT、GM 冷却、态制备与 578 nm 钟谱](native_mot_clock_zh.ipynb) | Integrate atom-control sources and its device database with a Spectrum clock probe in one shot | `output/native_lab_tutorial/` |
 | [中文版：单卡 Spectrum 调试 578 nm 钟谱探测脉冲](spectrum_clock_578_zh.ipynb) | Inspect a five-frequency AWG scan and play a center-frequency burst on a standalone card for scope checks | `output/spectrum_clock_578/` |
+| [中文版：Kasli TTL 触发单卡 Spectrum](artiq_spectrum_single_ttl_clock_zh.ipynb) | Compile a two-pulse AWG waveform offline; explicitly opt in to one hardware shot with an internal PLL and an EXT0 edge | No default output; hardware sessions write receipts |
 
 Reruns update demonstration outputs. Keep measured data in a separate location. The published notebooks contain source cells with cleared execution outputs.
 

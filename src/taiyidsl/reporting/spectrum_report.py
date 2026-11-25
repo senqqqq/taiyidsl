@@ -10,6 +10,7 @@ import ast
 import hashlib
 import html
 
+from ..config.spectrum import INTERNAL_PLL_BENCH
 from .resources import RUNTIME_SOURCES, runtime_source_bytes
 
 
@@ -25,7 +26,13 @@ def card_execution(item):
         {"setting": name, "value": value, "source": source}
         for name, value, source in (
             ("serial_number", contract["serial_number"], "contract"),
-            ("clock.mode", "SPC_CM_EXTREFCLOCK", "adapter; checked each shot"),
+            (
+                "clock.mode",
+                "SPC_CM_INTPLL"
+                if contract.get("clock_policy") == INTERNAL_PLL_BENCH
+                else "SPC_CM_EXTREFCLOCK",
+                "adapter; checked each shot",
+            ),
             ("clock.reference_clock [Hz]", contract["reference_clock_hz"], "contract"),
             ("clock.sample_rate [Hz]", contract["sample_rate_hz"], "contract"),
             ("card_mode", "SPC_REP_STD_SEQUENCE", "adapter"),
@@ -230,8 +237,11 @@ def execution_html(execution, output):
             "<h3>Clock initialization and recalibration</h3>",
             "<p><code>configure_for_calibration()</code> explicitly selects the "
             "external reference and sample rate, starts a new clock session and "
-            "invalidates earlier phase calibration. Hardware operation requires "
-            "the real card serial numbers and a new measured calibration.</p>",
+            "invalidates earlier phase calibration. The default synchronized path "
+            "requires valid measured calibration. The single-AWG internal PLL bench "
+            "path does not call this method: it verifies the internal clock, plays "
+            "uncorrected setpoints and does not verify analog delay, gain, or "
+            "absolute phase relative to ARTIQ.</p>",
             method_block(
                 "Explicit clock initialization source",
                 "SpcmAdapter.configure_for_calibration",

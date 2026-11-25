@@ -72,7 +72,7 @@ This wiring sends `q0.rf` and `q1.rf` to one physical field. To choose the calib
 
 Each `instruments.*.device` refers to its database entry, and each physical endpoint is declared once. ARTIQ channels reference existing device names. The reader resolves aliases and derives AD9910 SPI, CPLD and system-clock properties from the database. It uses the ARTIQ 9 driver's `refclk/clk_div/pll_en` rules and rejects the unsupported `pll_n` constructor argument. A core alias is allowed, and all ARTIQ instruments in the descriptor must resolve to the same core. Different names cannot claim the same RTIO output. TTLs and AD9910s are supported for DSL playback. Native packages can use other devices. Optional `channels.*.timing` entries supply output delays and other timing declarations while preserving the driver topology.
 
-Spectrum `address` can select a local driver device or a remote VISA identifier. After opening the card the adapter checks `serial_number`. Settings use `SpectrumCard` field names for sample rate, reference clock, enabled channels and output range. The current backend requires M4i.6631-x8, 1.25 GS/s and a 125 MHz reference. Defaults are software settings. Group `timing` gives compile-time constraints and `calibration` supplies measurements. Use singular `trigger` for a shared trigger line.
+Spectrum `address` can select a local driver device or a remote VISA identifier. After opening the card the adapter checks `serial_number`. Settings use `SpectrumCard` field names for sample rate, reference clock, enabled channels and output range. The default hybrid policy requires M4i.6631-x8, 1.25 GS/s and a 125 MHz external reference. Defaults are software settings. Group `timing` gives compile-time constraints and `calibration` supplies measurements. Use singular `trigger` for a shared trigger line.
 
 For a global field, put `sharing="global"` on the channel and map every covered logical signal to its alias. `setup.connections()` returns signal-to-port rows. `setup.trigger_connections()` returns TTL-to-card rows. Both return copies.
 
@@ -119,16 +119,37 @@ For example, `instruments["artiq"]["connection"]` gives the core driver class an
 
 The DSL controls phase, segmentation, the common timeline and trigger scheduling. The driver operates the hardware. Connecting and running check the existing clock configuration. Changing clocks requires new synchronization calibration.
 
+## One AWG on the bench without a shared reference
+
+For a single `artiq_spectrum` AWG triggered by an ARTIQ TTL into EXT0, set
+`spec_db["A"]["clock_policy"] = "internal_pll_bench"` **before** creating the
+setup and compiling. Do not supply an external `reference_clock_hz` or a
+calibration profile. The card must already be set to internal PLL at 1.25 GS/s;
+make any necessary change separately, with the card stopped and exclusively
+owned. Connect and run verify the selected mode and rate; neither writes clocks
+nor falls back when they differ. A stale external-reference register is unused.
+Use the usual `with lab.connect() as session: receipt = session.run(compiled)`.
+
+The TTL starts a finite replay; sample spacing and relative phases within that
+replay come from the card, not the core. Do not use this for shot-wide phase,
+multiple cards, DDS transport or calibrated synchronization. A successful card
+receipt says `output_basis="setpoints_only"`, `shared_reference=false`, and
+`analog_delay_gain_absolute_phase="not_verified"`. Arm/readiness, completion,
+waveform integrity and identity checks still apply. Removing the option restores
+the strict policy on **recompilation**, not on an already compiled shot. The
+separate `spectrum` backend already uses an internal PLL with software triggers;
+it does not exercise the ARTIQ TTL wire.
+
 ## Connect and run
 
-Constructing `LabConfig(..., emulation=False, artiq_python=...)` still works offline. `lab.connect()` starts the separate ARTIQ process, reads the pinned `device_db`, connects the core through ARTIQ's DeviceManager and opens Spectrum cards through `spcm`. The default interpreter is `.toolchains/artiq9/clang64/bin/python.exe`. Supply other installations explicitly. Install `spcm` and its native driver in the selected hardware environment.
+Constructing `LabConfig(..., emulation=False, artiq_python=...)` still works offline. `lab.connect()` starts the separate ARTIQ process, reads the pinned `device_db`, connects the core through ARTIQ's DeviceManager and opens Spectrum cards through `spcm`. Select the worker with `artiq_python` or `TAIYIDSL_ARTIQ_PYTHON`; only Windows defaults to `.toolchains/artiq9/clang64/bin/python.exe`. See the [Linux Nix worker and offline diagnostic](nix_hardware_worker.md). Install `spcm` and its native driver in the selected hardware environment.
 
 ```python
 with lab.connect(clock_session_ids=verified_clock_sessions) as session:
     receipt = session.run(compiled)
 ```
 
-A new connection gets a fresh clock-session ID by default. Supply an existing ID only if the lab continuously monitored the clock and confirmed that it did not relock. Run requires measured calibration bound to the correct hardware fingerprint and live clock session. Copying the ID from a calibration file or changing the emulation flag does not establish those conditions. Reconfigure and recalibrate explicitly after a clock change.
+A new connection gets a fresh clock-session ID by default. Supply an existing ID only if the lab continuously monitored the clock and confirmed that it did not relock. Under the default external-reference policy, run requires measured calibration bound to the correct hardware fingerprint and live clock session. Copying the ID from a calibration file or changing the emulation flag does not establish those conditions. Reconfigure and recalibrate explicitly after a clock change.
 
 `session.run(compiled)` exports and runs the same compiled object. The runner preflights, uploads, waits for readiness, runs one top-level kernel, then waits for completion. Exiting the context closes the devices. Receipts and workspaces live under `output/hardware_sessions/`. Worker and native-code output goes to `worker.log`. The native package uses its declared ARTIQ build-argument defaults. The lab must supply any required argument without a default. The session neither prompts through the ARTIQ GUI nor creates a DatasetDB.
 

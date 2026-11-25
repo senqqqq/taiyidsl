@@ -14,17 +14,22 @@ concurrency:
 
 jobs:
   checks:
-    name: Python 3.12 / ${{ matrix.os }}
+    name: Python ${{ matrix.python }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        python: ["3.12.15"]
+        include:
+          - os: ubuntu-latest
+            python: "3.13"
     env:
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
       UV_LINK_MODE: copy
+      UV_PYTHON: ${{ matrix.python }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,7 +43,7 @@ jobs:
           enable-cache: true
 
       - name: Install pinned Python
-        run: uv python install
+        run: uv python install "${{ matrix.python }}"
 
       - name: Install Node for HTML script validation
         uses: actions/setup-node@v7
@@ -73,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: offline-results-${{ matrix.os }}
+          name: offline-results-${{ matrix.os }}-${{ matrix.python }}
           retention-days: 7
           if-no-files-found: warn
           path: |

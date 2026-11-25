@@ -88,7 +88,8 @@ needs the [separate ARTIQ toolchain](docs/artiq_toolchain.md), native drivers
 and laboratory configuration. `uv sync --locked --extra spectrum` installs
 the optional Spectrum Python SDK; the lock selects `spcm 1.13.4`, the checked
 version. A permitted dependency range is not evidence for every SDK version.
-See [installation and repository contents](docs/repository_contents.md).
+See [installation and repository contents](docs/repository_contents.md). For a Linux ARTIQ + Spectrum session, use
+the [Nix hardware worker](docs/nix_hardware_worker.md) alongside the uv authoring kernel.
 
 ## Extending a laboratory experiment
 

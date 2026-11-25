@@ -269,6 +269,13 @@ class SpectrumScheduler(SpectrumPlaybackScheduler):
                     )
                 if child_group not in self.groups:
                     raise CompileError(f"Unknown Spectrum group {child_group}")
+                if (
+                    self.groups[child_group].internal_clock_bench
+                    and node.params.get("phase_reference", "sequence") != "sequence"
+                ):
+                    raise CompileError(
+                        "Internal PLL bench does not support shot-wide phase"
+                    )
                 resolve_trigger_signal(
                     self.groups[child_group],
                     self.mapping,

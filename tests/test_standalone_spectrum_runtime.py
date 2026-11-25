@@ -4,8 +4,8 @@ import json
 from types import SimpleNamespace
 
 import pytest
+from spectrum_sdk_double import FakeChannel, FakeSdk
 from test_spectrum_dds_runtime import fixture as transport_sdk
-from test_spectrum_runtime import FakeChannel, FakeSdk
 
 from examples.spectrum_standalone import single_card_lab, two_pulses
 from taiyidsl import Qubit, Square, ns

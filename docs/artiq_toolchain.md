@@ -1,6 +1,6 @@
 # The ARTIQ toolchain, device database and RPC
 
-TaiyiDSL runs on uv-managed CPython 3.12. Generate the experiment there and compile its kernel in the separate ARTIQ 9 environment. The Windows reference installation uses the official MSYS2 distribution in `.toolchains/artiq9`. The launcher sets PATH and TEMP/TMP for the child and restores the caller's environment. FPGA gateware is managed separately.
+TaiyiDSL runs on uv-managed CPython 3.12. Generate the experiment there and compile its kernel in the separate ARTIQ 9 environment. For a reproducible Linux session deployment, use the [Nix hardware worker](nix_hardware_worker.md). The Windows reference installation uses the official MSYS2 distribution in `.toolchains/artiq9`. The launcher sets PATH and TEMP/TMP for the child and restores the caller's environment. FPGA gateware is managed separately.
 
 ## Reproducing the reference installation
 

@@ -63,7 +63,7 @@ def native_event(event, factor):
 
 class ArtiqSpectrumBackend(Backend):
     name = "artiq_spectrum"
-    version = "6"
+    version = "7"
     target = "ARTIQ 9 master / M4i.6631-x8 AWG sequence and DDS20 transport"
     phase_policy = (
         "unified_frame_with_sequence_or_shot_carrier_reference_and_explicit_reset"

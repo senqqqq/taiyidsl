@@ -4,6 +4,8 @@ import hashlib
 import json
 from collections.abc import Mapping
 
+from .config.spectrum import INTERNAL_PLL_BENCH
+
 
 def _canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -43,7 +45,10 @@ def hardware_fingerprint(contract: Mapping, observed: Mapping | None = None) -> 
     }
     values["serial_number"] = str(values["serial_number"])
     values["active_channels"] = list(values["active_channels"] or ())
-    values["reference_clock_hz"] = values["reference_clock_hz"] or 125_000_000
+    if contract.get("clock_policy") == INTERNAL_PLL_BENCH:
+        values["clock_policy"] = INTERNAL_PLL_BENCH
+    else:
+        values["reference_clock_hz"] = values["reference_clock_hz"] or 125_000_000
     if contract.get("mode", "awg") == "dds":
         values.pop("trigger_latency_samples", None)
         values.update(

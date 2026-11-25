@@ -154,6 +154,8 @@ For both cases B used two zero segments, two steps and 32640 resident bytes. At 
 
 Both cards in this example share a 125 MHz reference and a common trigger. It configures no StarHub. `trigger_latency_samples=500`, `trigger_lead_mu=512` and `epoch_grid_mu=32` are unmeasured example contracts. Group `_mu` values use the native ARTIQ machine unit, 1 ns here. The internal hybrid tick is 200 ps and the DAC sample grid is 800 ps. Native ARTIQ export retains native mu. Timing that misses a required grid is rejected without rounding or adding a gap.
 
+Without a common reference, the [single-AWG internal PLL bench policy](device_setup_descriptor.md#one-awg-on-the-bench-without-a-shared-reference) still uses the real ARTIQ TTL and EXT0. It preserves sample timing within the waveform but does not establish absolute phase or calibrated latency relative to the core. It is not a fallback for this two-card setup.
+
 For actual deployment, install the optional Python SDK and the Spectrum native driver. Offline use needs neither.
 
 ```powershell
